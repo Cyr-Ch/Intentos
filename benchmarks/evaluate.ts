@@ -112,7 +112,7 @@ async function main() {
         run_id: rs.runId,
         final_state: outcome.state,
         expected_route: t.expected_route,
-        route_correct: route === t.expected_route,
+        route_correct: route === t.expected_route || (t.accepted_routes ?? []).includes(route),
         task_tests_passed: cmd("pytest_hidden_task") ? cmd("pytest_hidden_task")!.status === "passed" && (cmd("pytest_hidden_task")!.tests_passed ?? 0) > 0 : null,
         invariants_preserved: trackOk("business_invariant"),
         architecture_compliant: trackOk("architecture"),

@@ -138,16 +138,21 @@ export class LiveCodexEngine implements CodingEngine {
       const streamed = await thread.runStreamed(req.prompt, { outputSchema: req.outputSchema, signal });
       let finalText = "";
       let usage: Usage | null = null;
+      let completed = false;
+      let lastError: string | null = null;
       const items: unknown[] = [];
       for await (const ev of streamed.events) {
         req.onEvent?.({ timestamp: new Date().toISOString(), type: ev.type, payload: ev });
         if (ev.type === "item.completed") {
           items.push(ev.item);
           if (ev.item.type === "agent_message") finalText = ev.item.text;
-        } else if (ev.type === "turn.completed") usage = ev.usage;
-        else if (ev.type === "turn.failed") throw new Error(`Codex planner turn failed: ${ev.error.message}`);
-        else if (ev.type === "error") throw new Error(`Codex planner stream error: ${ev.message}`);
+        } else if (ev.type === "turn.completed") {
+          usage = ev.usage;
+          completed = true;
+        } else if (ev.type === "turn.failed") throw new Error(`Codex planner turn failed: ${ev.error.message}`);
+        else if (ev.type === "error") lastError = ev.message; // may be a transient "Reconnecting…" notice; fatal only if the turn never completes
       }
+      if (!completed) throw new Error(`Codex planner stream ended without turn.completed${lastError ? `: ${lastError}` : ""}`);
       return { text: finalText, usage, threadId: thread.id, simulated: false, engine: this.name, model: this.settings.model, items };
     } finally {
       clear();
@@ -163,6 +168,8 @@ export class LiveCodexEngine implements CodingEngine {
       const streamed = await thread.runStreamed(req.prompt, { signal });
       let finalResponse = "";
       let usage: Usage | null = null;
+      let completed = false;
+      let lastError: string | null = null;
       const items: unknown[] = [];
       const reportedChanges = new Set<string>();
       for await (const ev of streamed.events) {
@@ -171,10 +178,13 @@ export class LiveCodexEngine implements CodingEngine {
           items.push(ev.item);
           if (ev.item.type === "agent_message") finalResponse = ev.item.text;
           if (ev.item.type === "file_change") for (const c of ev.item.changes) reportedChanges.add(c.path);
-        } else if (ev.type === "turn.completed") usage = ev.usage;
-        else if (ev.type === "turn.failed") throw new Error(`Codex implementer turn failed: ${ev.error.message}`);
-        else if (ev.type === "error") throw new Error(`Codex implementer stream error: ${ev.message}`);
+        } else if (ev.type === "turn.completed") {
+          usage = ev.usage;
+          completed = true;
+        } else if (ev.type === "turn.failed") throw new Error(`Codex implementer turn failed: ${ev.error.message}`);
+        else if (ev.type === "error") lastError = ev.message;
       }
+      if (!completed) throw new Error(`Codex implementer stream ended without turn.completed${lastError ? `: ${lastError}` : ""}`);
       return { finalResponse, usage, threadId: thread.id, simulated: false, engine: this.name, model: this.settings.model, items, reportedChanges: [...reportedChanges] };
     } finally {
       clear();

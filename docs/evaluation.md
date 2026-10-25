@@ -24,18 +24,22 @@ the checkout API), ARCH-001 (API layer imports `decimal`) and the hidden task te
 quote level). The "good" patch, which extends `DiscountPolicy.applicable_discounts`, passes all 20 project tests,
 4 hidden task tests, 11 invariant tests, 24 counterexample probes and 5 architecture rules.
 
-### Live Codex
+### Live Codex (model `gpt-5.6-terra`, ChatGPT session, 2026-10-25)
 
-A real read-only planner run (model `gpt-5.6-terra`, thread `01a174f7-…`) produced a schema-valid contract with zero
-compiler errors: requirements cited real evidence IDs, `DiscountPolicy`/`PricingService` were marked `must_reuse`
-with the approved decision as basis, allowed paths were narrowed to three files, and the compiler injected only
-INV-002. Usage: 35,390 input tokens (16,128 cached), 1,791 output, 489 reasoning. See
-`IMPLEMENTATION_STATUS.md` for the full live `run` outcome and the blockers hit (workspace spend cap on the
-ChatGPT account intermittently rejected requests; the configured default model `gpt-6.1-sol` is not available
-to ChatGPT accounts).
+All five live runs below are real `@openai/codex-sdk` threads; metrics come from `metrics.json` / `verification.json`.
 
-No baseline-vs-IntentOS comparison has been measured. The runner supports `--mode baseline` (task-text-only
-prompt, identical verifier) and must be run several times per task before any claim is made.
+| run | result | repairs | verifier | tokens in (cached) / out |
+|---|---|---|---|---|
+| Task A `plan` only (`run-…212923-469f41`) | contract valid, 0 compiler errors, 3 narrowed allowed paths, `DiscountPolicy`/`PricingService` must_reuse | – | – | 35,390 (16,128) / 1,791 |
+| Task A full IntentOS (`run-…213112-d5363e`) | **REVIEW_READY** | 0 | project 18/18, hidden 4/4, invariants 11/11, probes 24/24, AST clean, scope clean | 264,214 (207,104) / 9,339 |
+| Task A baseline, task text only, same verifier (`run-…214229-f38688`) | REVIEW_READY | 1 | attempt 1 blocked: SCOPE-PROTECTED (edited `docs/business-policy.md`); attempt 2 all gates pass; code equivalent to guided run | 536,354 (446,208) / 10,157 |
+| Task B full (`run-…214228-7982b7`) | **REVIEW_READY** | 1 | attempt 1: 3 hidden task tests failed (entry point not discoverable by name); repair in the same thread added `upgrade_immediately`; INV-002 held in both attempts | 556,162 (455,680) / 15,959 |
+| Task C full (`run-…213638-144636`) | CLARIFICATION_REQUIRED | – | planner bound work to `InvoiceExportService`, flagged DEC-002 superseded, asked which format; no worktree | 34,334 (16,128) / 1,683 |
+| Task D full (`run-…213638-75c91c`) | ABSTAINED | – | cited policy section, `eligible_for_discounts` and the regression test; no code changed | 56,413 (35,328) / 1,389 |
+
+What this does and does not show: the gates worked on real model output (a protected-doc edit by the baseline was caught and repaired; a naming mismatch on Task B was repaired through machine-readable findings); the planner produced evidence-grounded contracts and chose clarify/abstain where appropriate. It does **not** show that IntentOS beats vanilla Codex: on Task A the baseline's business code was equivalent, and n=1 per variant. The baseline that succeeded is disclosed as-is.
+
+Blockers encountered: the ChatGPT workspace spend cap rejected all requests for ~10 minutes early in the session; the CLI default model `gpt-6.1-sol` is unsupported for ChatGPT accounts; one SDK stream emitted a transient `Reconnecting… 2/5` error event (adapter now treats only a missing `turn.completed` as fatal).
 
 ## Metrics definitions
 

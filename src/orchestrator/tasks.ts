@@ -8,6 +8,8 @@ export interface BenchmarkTask {
   title: string;
   request: string;
   expected_route: "implement" | "clarify" | "abstain";
+  /** Routes that also count as correct (e.g. clarify when the request is genuinely underspecified). */
+  accepted_routes?: Array<"implement" | "clarify" | "abstain">;
   hidden_tests: string | null;
   hazards: string[];
   offline_patches: Record<string, string>;
