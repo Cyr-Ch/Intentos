@@ -1,0 +1,33 @@
+{
+  "name": "intentos",
+  "version": "0.1.0",
+  "description": "IntentOS — engineering-intent intelligence and verification layer for Codex coding agents",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.5" },
+  "bin": { "intentos": "./bin/intentos.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "intentos": "node --disable-warning=ExperimentalWarning bin/intentos.js",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:python": ".intentos/venv/bin/python -m pytest python/tests -q",
+    "setup:python": "node --disable-warning=ExperimentalWarning bin/intentos.js setup python",
+    "fixture:build": "node --disable-warning=ExperimentalWarning bin/intentos.js fixture build",
+    "demo": "bash scripts/demo.sh"
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "^0.164.0",
+    "commander": "^14.0.0",
+    "yaml": "^2.8.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

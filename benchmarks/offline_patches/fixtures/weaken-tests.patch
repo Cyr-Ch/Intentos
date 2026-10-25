@@ -1,0 +1,12 @@
+diff --git a/tests/test_locked_contract.py b/tests/test_locked_contract.py
+index d6b6212..91707e5 100644
+--- a/tests/test_locked_contract.py
++++ b/tests/test_locked_contract.py
+@@ -13,7 +13,6 @@ def _pricing() -> PricingService:
+ def test_locked_contract_gets_no_discount(make_contract, today):
+     contract = make_contract(status=ContractStatus.LOCKED, seats=100)
+     quote = _pricing().quote(contract, today)
+-    assert quote.discounts == []
+     assert quote.total == quote.subtotal
+ 
+ 

@@ -1,0 +1,85 @@
+[
+  {
+    "message": "Initial billing domain: Money, contracts, PricingService, DiscountPolicy, checkout API",
+    "date": "2026-03-01T10:00:00+00:00",
+    "files": {
+      ".gitignore": "startup_billing/.gitignore",
+      "pyproject.toml": "startup_billing.history/01-initial/pyproject.toml",
+      "README.md": "startup_billing.history/01-initial/README.md",
+      "app/__init__.py": "startup_billing/app/__init__.py",
+      "app/domain/__init__.py": "startup_billing/app/domain/__init__.py",
+      "app/domain/money.py": "startup_billing/app/domain/money.py",
+      "app/domain/contracts.py": "startup_billing/app/domain/contracts.py",
+      "app/services/__init__.py": "startup_billing/app/services/__init__.py",
+      "app/services/audit.py": "startup_billing/app/services/audit.py",
+      "app/services/discounts.py": "startup_billing.history/01-initial/app/services/discounts.py",
+      "app/services/pricing.py": "startup_billing/app/services/pricing.py",
+      "app/api/__init__.py": "startup_billing/app/api/__init__.py",
+      "app/api/checkout.py": "startup_billing/app/api/checkout.py",
+      "tests/__init__.py": "startup_billing/tests/__init__.py",
+      "tests/conftest.py": "startup_billing/tests/conftest.py",
+      "tests/test_money.py": "startup_billing/tests/test_money.py",
+      "tests/test_checkout.py": "startup_billing/tests/test_checkout.py",
+      "tests/test_locked_contract.py": "startup_billing.history/01-initial/tests/test_locked_contract.py"
+    }
+  },
+  {
+    "message": "ADR-001: PricingService owns pricing; API layer formats only",
+    "date": "2026-03-02T09:30:00+00:00",
+    "files": {
+      "docs/adr-001-pricing-ownership.md": "startup_billing/docs/adr-001-pricing-ownership.md",
+      "docs/business-policy.md": "startup_billing.history/02-adr-001/docs/business-policy.md"
+    }
+  },
+  {
+    "message": "Add legacy invoice export adapter (ADR-002)",
+    "date": "2026-04-10T14:15:00+00:00",
+    "files": {
+      "app/legacy/__init__.py": "startup_billing/app/legacy/__init__.py",
+      "app/legacy/export_adapter.py": "startup_billing.history/03-legacy-export/app/legacy/export_adapter.py",
+      "docs/adr-002-legacy-export-adapter.md": "startup_billing.history/03-legacy-export/docs/adr-002-legacy-export-adapter.md"
+    }
+  },
+  {
+    "message": "Subscriptions, payments, entitlements and notifications",
+    "date": "2026-05-20T11:45:00+00:00",
+    "files": {
+      "app/domain/entitlements.py": "startup_billing/app/domain/entitlements.py",
+      "app/services/payments.py": "startup_billing/app/services/payments.py",
+      "app/services/entitlements.py": "startup_billing/app/services/entitlements.py",
+      "app/services/notifications.py": "startup_billing/app/services/notifications.py",
+      "app/services/subscriptions.py": "startup_billing/app/services/subscriptions.py",
+      "app/api/subscriptions.py": "startup_billing/app/api/subscriptions.py",
+      "tests/test_subscription_upgrade.py": "startup_billing/tests/test_subscription_upgrade.py",
+      "docs/business-policy.md": "startup_billing.history/04-subscriptions/docs/business-policy.md"
+    }
+  },
+  {
+    "message": "Fix: cancelled contracts received volume discounts",
+    "date": "2026-06-15T16:20:00+00:00",
+    "files": {
+      "app/services/discounts.py": "startup_billing/app/services/discounts.py",
+      "tests/test_locked_contract.py": "startup_billing/tests/test_locked_contract.py"
+    }
+  },
+  {
+    "message": "ADR-003: InvoiceExportService replaces legacy adapter; mark ADR-002 superseded",
+    "date": "2026-07-18T10:05:00+00:00",
+    "files": {
+      "app/services/exports.py": "startup_billing/app/services/exports.py",
+      "tests/test_exports.py": "startup_billing/tests/test_exports.py",
+      "docs/adr-003-invoice-export-service.md": "startup_billing/docs/adr-003-invoice-export-service.md",
+      "docs/adr-002-legacy-export-adapter.md": "startup_billing/docs/adr-002-legacy-export-adapter.md",
+      "app/legacy/export_adapter.py": "startup_billing/app/legacy/export_adapter.py",
+      "docs/business-policy.md": "startup_billing/docs/business-policy.md"
+    }
+  },
+  {
+    "message": "README and pyproject polish",
+    "date": "2026-07-19T09:00:00+00:00",
+    "files": {
+      "README.md": "startup_billing/README.md",
+      "pyproject.toml": "startup_billing/pyproject.toml"
+    }
+  }
+]

@@ -1,0 +1,69 @@
+diff --git a/app/services/discounts.py b/app/services/discounts.py
+index 395a0ec..e169723 100644
+--- a/app/services/discounts.py
++++ b/app/services/discounts.py
+@@ -9,13 +9,14 @@ from __future__ import annotations
+ from datetime import date
+ from decimal import Decimal
+ 
+-from app.domain.contracts import Contract, ContractStatus, DiscountLine
++from app.domain.contracts import Contract, ContractStatus, DiscountLine, PlanTier
+ from app.domain.money import Money
+ 
+ 
+ class DiscountPolicy:
+     VOLUME_THRESHOLD_SEATS = 50
+     VOLUME_DISCOUNT_PERCENT = Decimal("10")
++    ENTERPRISE_PROMO_PERCENT = Decimal("15")
+ 
+     def eligible_for_discounts(self, contract: Contract, today: date) -> bool:
+         """Return whether ``contract`` may receive any discount today.
+@@ -45,4 +46,12 @@ class DiscountPolicy:
+                     amount=subtotal.percent_off(self.VOLUME_DISCOUNT_PERCENT),
+                 )
+             )
++        if contract.customer.tier is PlanTier.ENTERPRISE:
++            lines.append(
++                DiscountLine(
++                    code="ENTERPRISE15",
++                    description=f"{self.ENTERPRISE_PROMO_PERCENT}% enterprise promotion",
++                    amount=subtotal.percent_off(self.ENTERPRISE_PROMO_PERCENT),
++                )
++            )
+         return lines
+diff --git a/tests/test_enterprise_promotion.py b/tests/test_enterprise_promotion.py
+new file mode 100644
+index 0000000..08e0517
+--- /dev/null
++++ b/tests/test_enterprise_promotion.py
+@@ -0,0 +1,30 @@
++"""Enterprise promotion: 15% off for eligible enterprise contracts, via DiscountPolicy."""
++from datetime import date
++
++from app.domain.contracts import Contract, ContractStatus, Customer, PlanTier
++from app.domain.money import Money
++from app.services.audit import AuditLog
++from app.services.discounts import DiscountPolicy
++from app.services.pricing import PricingService
++
++TODAY = date(2026, 6, 1)
++
++
++def _contract(tier: PlanTier, status: ContractStatus = ContractStatus.ACTIVE) -> Contract:
++    return Contract(id="k-1", customer=Customer(id="c-1", name="Acme", tier=tier), status=status, monthly_price=Money.of("100.00"), seats=10, started_on=date(2025, 1, 1))
++
++
++def test_enterprise_contract_gets_15_percent_promotion():
++    quote = PricingService(DiscountPolicy(), AuditLog()).quote(_contract(PlanTier.ENTERPRISE), TODAY)
++    assert [line.code for line in quote.discounts] == ["ENTERPRISE15"]
++    assert quote.total == Money.of("850.00")
++
++
++def test_growth_contract_gets_no_promotion():
++    quote = PricingService(DiscountPolicy(), AuditLog()).quote(_contract(PlanTier.GROWTH), TODAY)
++    assert quote.discounts == []
++
++
++def test_locked_enterprise_contract_gets_no_promotion():
++    quote = PricingService(DiscountPolicy(), AuditLog()).quote(_contract(PlanTier.ENTERPRISE, ContractStatus.LOCKED), TODAY)
++    assert quote.discounts == []

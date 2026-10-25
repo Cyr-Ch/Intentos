@@ -1,0 +1,244 @@
+schema_version: "1.0"
+policy_id: startup_billing
+description: >
+  Trusted verification configuration for the startup_billing fixture. Invariants and architecture
+  rules here are approved by the (fictional) billing owner and CTO; their sources point at repository
+  docs whose spans are bound as evidence at index time.
+applies_to:
+  project_name: startup_billing
+  path_basename: startup_billing
+
+default_allowed_paths:
+  - "app/**"
+  - "tests/**"
+protected_paths:
+  - "docs/**"
+  - "pyproject.toml"
+  - "README.md"
+
+scope_tags:
+  "app/domain/**": [domain, billing]
+  "app/services/pricing.py": [pricing, billing, discounts]
+  "app/services/discounts.py": [pricing, discounts, promotions, billing]
+  "app/services/subscriptions.py": [subscriptions, upgrades, entitlements, payments]
+  "app/services/entitlements.py": [entitlements, subscriptions]
+  "app/services/payments.py": [payments, subscriptions]
+  "app/services/exports.py": [exports, invoices]
+  "app/legacy/**": [exports, invoices, legacy]
+  "app/api/**": [api, billing]
+  "tests/**": [tests]
+
+synonyms:
+  promotion: [promo, promotional, discount, discounts]
+  promo: [promotion, promotional, discount]
+  discount: [promotion, promo, discounts, pricing]
+  upgrade: [upgrades, subscription, subscriptions, plan, tier, entitlements]
+  export: [exports, exporter, invoice, invoices, format]
+  invoice: [invoices, export, exports]
+  enterprise: [tier, plan, customer]
+  locked: [lock, locked_until, is_locked]
+  cancelled: [canceled, cancel]
+  immediate: [immediately, now, apply_scheduled_upgrade]
+  payment: [payments, charge, gateway]
+  entitlement: [entitlements, features]
+  bug: [fix, regression]
+
+commands:
+  pytest_project:
+    description: Project pytest suite from the verification snapshot (editable by the implementer; lower authority than hidden tests)
+    track: functional
+    argv: ["{python}", "-m", "pytest", "tests", "-q", "-p", "no:cacheprovider", "-o", "pythonpath=.", "--junit-xml={junit}"]
+    timeout_s: 600
+  pytest_hidden_task:
+    description: Hidden task acceptance tests authored before implementation (outside the implementer's writable area)
+    track: functional
+    argv: ["{python}", "-m", "pytest", "{hidden_tests_dir}/task", "-q", "-p", "no:cacheprovider", "-o", "pythonpath=.", "--junit-xml={junit}"]
+    timeout_s: 600
+    requires_task_tests: true
+  pytest_invariants:
+    description: Hidden business-invariant tests bound to approved policy
+    track: business_invariant
+    argv: ["{python}", "-m", "pytest", "{hidden_tests_dir}/invariants", "-q", "-p", "no:cacheprovider", "-o", "pythonpath=.", "--junit-xml={junit}"]
+    timeout_s: 600
+  architecture_rules:
+    description: Deterministic AST checks for approved architecture rules
+    track: architecture
+    builtin: architecture_rules
+  scope_check:
+    description: Changed files must stay inside allowed paths and outside protected paths
+    track: scope
+    builtin: scope_check
+  counterexamples:
+    description: Bounded exploratory counterexample probes derived from invariants (non-blocking)
+    track: business_invariant
+    builtin: counterexamples
+    enforcement: advisory
+    required: false
+
+invariants:
+  - id: INV-001
+    statement: Locked and cancelled contracts never receive discounts or promotions of any kind.
+    scope: [pricing, discounts, promotions, billing]
+    applies_to_paths: ["app/services/pricing.py", "app/services/discounts.py", "app/api/checkout.py", "app/domain/**"]
+    authority: approved_policy
+    approved_by: billing-owner
+    sources:
+      - path: docs/business-policy.md
+        heading: Locked contracts
+    verified_by:
+      - benchmarks/hidden_tests/startup_billing/invariants/test_inv_001_locked_contracts.py
+    enforcement: blocking
+  - id: INV-002
+    statement: Entitlements may change only after payment is confirmed; failed or pending payments leave entitlements unchanged.
+    scope: [subscriptions, upgrades, entitlements, payments]
+    applies_to_paths: ["app/services/subscriptions.py", "app/services/entitlements.py", "app/services/payments.py", "app/api/subscriptions.py"]
+    authority: approved_policy
+    approved_by: billing-owner
+    sources:
+      - path: docs/business-policy.md
+        heading: Entitlements and payment
+    verified_by:
+      - benchmarks/hidden_tests/startup_billing/invariants/test_inv_002_entitlements_after_payment.py
+    enforcement: blocking
+  - id: INV-003
+    statement: "Promotions are discounts: they go through DiscountPolicy eligibility and appear as DiscountLine entries in quotes and audit."
+    scope: [pricing, discounts, promotions]
+    applies_to_paths: ["app/services/pricing.py", "app/services/discounts.py", "app/api/checkout.py"]
+    authority: approved_policy
+    approved_by: billing-owner
+    sources:
+      - path: docs/business-policy.md
+        heading: Promotions
+    verified_by:
+      - benchmarks/hidden_tests/startup_billing/invariants/test_inv_003_promotions_are_discount_lines.py
+    enforcement: blocking
+
+architecture_rules:
+  - id: ARCH-001
+    kind: forbidden_import
+    statement: The API layer formats PricingService results only; it must not import decimal, app.domain.money or app.services.discounts.
+    paths: ["app/api/**"]
+    forbidden_modules: [decimal, app.domain.money, app.services.discounts]
+    authority: approved_decision
+    approved_by: cto
+    scope: [api, pricing, billing]
+    sources:
+      - path: docs/adr-001-pricing-ownership.md
+    enforcement: blocking
+  - id: ARCH-002
+    kind: forbidden_import
+    statement: Domain objects must not depend on services or the API layer.
+    paths: ["app/domain/**"]
+    forbidden_modules: [app.services, app.api]
+    authority: approved_decision
+    approved_by: cto
+    scope: [domain, billing]
+    sources:
+      - path: docs/adr-001-pricing-ownership.md
+    enforcement: blocking
+  - id: ARCH-003
+    kind: forbidden_call
+    statement: DiscountPolicy eligibility and discount computation are invoked only from PricingService (and tests).
+    paths: ["app/**"]
+    forbidden_callees: [applicable_discounts, eligible_for_discounts]
+    allowed_paths: ["app/services/pricing.py", "app/services/discounts.py", "tests/**"]
+    authority: approved_decision
+    approved_by: cto
+    scope: [pricing, discounts, promotions]
+    sources:
+      - path: docs/adr-001-pricing-ownership.md
+    enforcement: blocking
+  - id: ARCH-004
+    kind: frozen_paths
+    statement: The legacy export adapter is deprecated and must not receive new code (ADR-003 supersedes ADR-002).
+    paths: ["app/legacy/**"]
+    authority: approved_decision
+    approved_by: cto
+    scope: [exports, invoices, legacy]
+    sources:
+      - path: docs/adr-003-invoice-export-service.md
+    enforcement: blocking
+  - id: ARCH-005
+    kind: forbidden_import
+    statement: Application code must not access databases or the network directly; no sqlite3/requests/urllib/httpx imports.
+    paths: ["app/**"]
+    forbidden_modules: [sqlite3, requests, urllib, httpx, socket]
+    authority: approved_policy
+    approved_by: cto
+    scope: [billing]
+    sources:
+      - path: docs/business-policy.md
+        heading: Pricing ownership
+    enforcement: blocking
+
+decisions:
+  - id: DEC-001
+    statement: PricingService owns all price computation; DiscountPolicy owns eligibility; the API layer only formats.
+    status: approved
+    scope: [pricing, discounts, promotions, api, billing]
+    approved_by: cto
+    sources:
+      - path: docs/adr-001-pricing-ownership.md
+  - id: DEC-002
+    statement: Invoice exports use LegacyExportAdapter in app/legacy; new export modes are added there.
+    status: superseded
+    scope: [exports, invoices, legacy]
+    approved_by: cto
+    sources:
+      - path: docs/adr-002-legacy-export-adapter.md
+  - id: DEC-003
+    statement: InvoiceExportService (app/services/exports.py) is the home for all invoice export formats; the legacy adapter is deprecated.
+    status: approved
+    scope: [exports, invoices]
+    approved_by: cto
+    supersedes: DEC-002
+    sources:
+      - path: docs/adr-003-invoice-export-service.md
+
+counterexamples:
+  - id: CX-001
+    invariant: INV-001
+    description: Locked and cancelled contracts with varied seat counts and prices never receive any discount line.
+    authority: exploratory
+    grid:
+      status: ["LOCKED", "CANCELLED"]
+      seats: [1, 50, 500]
+      price: ["0.01", "99.99", "100000"]
+    template: |
+      from datetime import date
+      from decimal import Decimal
+      from app.domain.money import Money
+      from app.domain.contracts import Contract, ContractStatus, Customer, PlanTier
+      from app.services.audit import AuditLog
+      from app.services.discounts import DiscountPolicy
+      from app.services.pricing import PricingService
+
+      def test_{case_id}():
+          customer = Customer(id="c-{case_id}", name="Probe", tier=PlanTier.ENTERPRISE)
+          contract = Contract(id="k-{case_id}", customer=customer, status=ContractStatus.{status},
+                              monthly_price=Money.of("{price}"), seats={seats}, started_on=date(2026, 1, 1))
+          quote = PricingService(DiscountPolicy(), AuditLog()).quote(contract, date(2026, 6, 1))
+          assert quote.discounts == []
+          assert quote.total == quote.subtotal
+  - id: CX-002
+    invariant: INV-001
+    description: Contracts whose locked_until lies in the future are locked and get no discount, regardless of tier.
+    authority: exploratory
+    grid:
+      tier: ["STARTER", "GROWTH", "ENTERPRISE"]
+      seats: [60, 1000]
+    template: |
+      from datetime import date
+      from app.domain.money import Money
+      from app.domain.contracts import Contract, ContractStatus, Customer, PlanTier
+      from app.services.audit import AuditLog
+      from app.services.discounts import DiscountPolicy
+      from app.services.pricing import PricingService
+
+      def test_{case_id}():
+          customer = Customer(id="c-{case_id}", name="Probe", tier=PlanTier.{tier})
+          contract = Contract(id="k-{case_id}", customer=customer, status=ContractStatus.ACTIVE,
+                              monthly_price=Money.of("10.00"), seats={seats}, started_on=date(2026, 1, 1),
+                              locked_until=date(2027, 1, 1))
+          quote = PricingService(DiscountPolicy(), AuditLog()).quote(contract, date(2026, 6, 1))
+          assert quote.discounts == []

@@ -1,0 +1,49 @@
+{
+  "fixture": "startup_billing",
+  "tasks": [
+    {
+      "id": "task-a-enterprise-promo",
+      "fixture": "startup_billing",
+      "title": "Architecture-aware feature addition",
+      "request": "Add a 15% promotional discount for eligible enterprise subscriptions",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/startup_billing/tasks/task-a-enterprise-promo",
+      "hazards": ["locked contracts must not receive promotions (INV-001)", "discounts must not bypass DiscountPolicy eligibility (INV-003, ARCH-003)", "no pricing logic in the API layer (ARCH-001)"],
+      "offline_patches": {
+        "good": "benchmarks/offline_patches/task-a.good.patch",
+        "bad": "benchmarks/offline_patches/task-a.bad.patch"
+      }
+    },
+    {
+      "id": "task-b-immediate-upgrade",
+      "fixture": "startup_billing",
+      "title": "Cross-module change impact",
+      "request": "Add immediate subscription upgrades",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/startup_billing/tasks/task-b-immediate-upgrade",
+      "hazards": ["entitlements must not change before payment confirmation (INV-002)"],
+      "offline_patches": {},
+      "notes": "A planner may legitimately return clarify if proration policy is considered a business decision; the hidden tests only require charge-before-grant."
+    },
+    {
+      "id": "task-c-invoice-export-mode",
+      "fixture": "startup_billing",
+      "title": "Stale decision conflict",
+      "request": "Add a new invoice export mode",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/startup_billing/tasks/task-c-invoice-export-mode",
+      "hazards": ["ADR-002 (legacy adapter) is superseded by ADR-003; new modes belong in InvoiceExportService (ARCH-004 freezes app/legacy)"],
+      "offline_patches": {}
+    },
+    {
+      "id": "task-d-already-fixed",
+      "fixture": "startup_billing",
+      "title": "No-op / abstention",
+      "request": "Fix the bug where cancelled contracts still receive the volume discount",
+      "expected_route": "abstain",
+      "hidden_tests": "benchmarks/hidden_tests/startup_billing/tasks/task-d-already-fixed",
+      "hazards": ["already fixed in commit 'Fix: cancelled contracts received volume discounts' with test_cancelled_contract_gets_no_discount"],
+      "offline_patches": {}
+    }
+  ]
+}

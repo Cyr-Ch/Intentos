@@ -1,0 +1,103 @@
+# IntentOS
+
+*The code works. But does it belong?*
+
+IntentOS is an engineering-intent intelligence and verification layer for Codex coding agents. It indexes a
+repository into a versioned Engineering World Model (symbols, imports, tests, docs, trusted policy), turns a
+task into an evidence-grounded **Engineering Change Contract**, runs Codex inside an isolated Git worktree
+under that contract, and then verifies the result **independently** (hidden acceptance tests, business
+invariant tests, deterministic architecture rules, scope checks) before producing a semantic review report.
+
+Status: working M1–M5 prototype on a Python fixture. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
+for what is functional vs. limited, and [docs/](docs/) for architecture, security and evaluation notes.
+
+## Requirements
+
+- Node.js ≥ 22.6 (uses built-in `node:sqlite` and native TypeScript type stripping; developed on Node 26)
+- Python ≥ 3.11 with `venv` (pytest is installed into `.intentos/venv`)
+- Git ≥ 2.30
+- For live runs: the Codex CLI/SDK credentials (`codex login` ChatGPT session, or `CODEX_API_KEY`), and a
+  model your account can use (set `INTENTOS_CODEX_MODEL`, e.g. `gpt-5.6-terra`).
+
+## Quick start
+
+```bash
+npm install
+npm run setup:python          # creates .intentos/venv with pytest
+npm run fixture:build         # materializes the demo repo with Git history at .intentos/fixtures/startup_billing
+
+FIX=.intentos/fixtures/startup_billing
+npm run intentos -- index $FIX
+npm run intentos -- explain $FIX "Add a 15% promotional discount for eligible enterprise subscriptions"
+
+# Without Codex credentials: replay a known-good / known-bad patch through the full pipeline (simulated orchestration)
+npm run intentos -- run $FIX "Add a 15% promotional discount for eligible enterprise subscriptions" --offline --offline-patch benchmarks/offline_patches/task-a.good.patch
+npm run intentos -- run $FIX "Add a 15% promotional discount for eligible enterprise subscriptions" --offline --offline-patch benchmarks/offline_patches/task-a.bad.patch --offline-claim-success
+
+# With Codex:
+INTENTOS_CODEX_MODEL=gpt-5.6-terra npm run intentos -- plan $FIX "Add a 15% promotional discount for eligible enterprise subscriptions"
+INTENTOS_CODEX_MODEL=gpt-5.6-terra npm run intentos -- run  $FIX "Add a 15% promotional discount for eligible enterprise subscriptions"
+
+npm run intentos -- verify <run-id>     # re-run independent checks on the run's worktree
+npm run intentos -- report <run-id>     # report.md / report.json
+npm run intentos -- resume <run-id>     # integrity-checked recovery
+npm run intentos -- runs                # list runs
+```
+
+`bash scripts/demo.sh` runs the offline demonstration end to end. Add `--json` after `intentos` for
+machine-readable output; every command exits non-zero on critical failure.
+
+## Commands and what they write
+
+| Command | Writes |
+|---|---|
+| `index <repo>` | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA |
+| `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
+| `plan <repo> "<task>"` | a run dir with `task.json`, `evidence.json`, `planner_prompt.txt`, `planner_output.json`, `contract.json`, `contract_validation.json`; run row in state `CONTRACT_VALIDATED` / `CLARIFICATION_REQUIRED` / `ABSTAINED` |
+| `run <repo> "<task>"` | the above plus a worktree in `.intentos/worktrees/<run-id>`, `implementation_prompt.txt`, `codex_events.jsonl`, `implementer_result.json`, `diff.patch`, `verification/attempt-N/*` (snapshot, logs, JUnit), `verification.json`, `metrics.json`, `report.md`, `report.json` |
+| `verify <run-id>` | a new `verification/attempt-N/` and refreshed `verification.json` + report |
+| `report <run-id>` | `report.md`, `report.json` |
+| `resume <run-id>` | integrity checks (`run_events`), then continues from the persisted state |
+| `approve <run-id> --by <who>` | `APPROVED` transition with approver recorded (use `run --require-approval`) |
+| `decision propose/approve/supersede/list`, `feedback <run-id> "<text>"` | `decisions` rows; feedback is always *proposed* until approved |
+
+Runtime data lives in `.intentos/` (gitignored). Trusted configuration lives in `policies/*.yaml` and
+`benchmarks/hidden_tests/` inside this checkout — never inside the target repository.
+
+## Layout
+
+```
+src/cli.ts, src/cli_run.ts, src/cli_decisions.ts   CLI
+src/knowledge/     storage (SQLite migrations), indexer (graph + policy binding), retrieval, conflicts, decisions, policy
+src/contracts/     Zod contract schema, deterministic compiler, prompts
+src/codex/         adapter (the only module importing @openai/codex-sdk), offline simulated engine
+src/orchestrator/  workflow state machine, run store/artifacts, runner (pipeline), limits, recovery, task binding
+src/verification/  runner (snapshot + trusted commands), policy checks (scope/architecture), counterexamples, JUnit parser
+src/reports/       report.md / report.json generation, explain rendering
+python/            index_repo.py (AST + git), architecture_rules.py, build_fixture.py, tests/
+fixtures/          startup_billing source tree + history steps used to build the demo Git repo
+policies/          trusted policy for the fixture (commands allowlist, invariants, architecture rules, decisions, probes)
+benchmarks/        tasks.json, hidden tests (protected), offline patches, evaluate.ts
+tests/             vitest unit + integration tests
+docs/              architecture, security, evaluation
+```
+
+## Tests
+
+```bash
+npm test                 # vitest: unit + integration (builds the fixture in a temp INTENTOS_HOME per file)
+npm run test:python      # pytest for the indexer and architecture checker
+npm run typecheck
+```
+
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `INTENTOS_HOME` | runtime data dir (default `.intentos/`) |
+| `INTENTOS_PYTHON` | interpreter for indexer/verifier (default: `.intentos/venv/bin/python`, else `python3`) |
+| `INTENTOS_CODEX_MODEL` | Codex model (default: the CLI's configured default; may be unsupported for ChatGPT accounts) |
+| `INTENTOS_CODEX_REASONING` | reasoning effort passed to Codex |
+| `INTENTOS_CODEX_PATH` | override the Codex binary used by the SDK |
+| `INTENTOS_CODEX_TIMEOUT_MS` | per-turn timeout (default 20 min) |
+| `INTENTOS_RUN_TIMEOUT_MS` | whole-run wall budget (default 60 min) |

@@ -1,0 +1,62 @@
+diff --git a/app/api/checkout.py b/app/api/checkout.py
+index fe2854a..3f989a9 100644
+--- a/app/api/checkout.py
++++ b/app/api/checkout.py
+@@ -3,21 +3,28 @@
+ from __future__ import annotations
+ 
+ from datetime import date
++from decimal import Decimal
+ 
+-from app.domain.contracts import Contract
++from app.domain.contracts import Contract, PlanTier
+ from app.services.pricing import PricingService
+ 
+ 
+ def checkout(contract: Contract, today: date, pricing: PricingService) -> dict:
+     """Quote the contract and return a JSON-able response (strings, no Decimal)."""
+     quote = pricing.quote(contract, today)
++    discounts = [
++        {"code": line.code, "description": line.description, "amount": str(line.amount.amount)}
++        for line in quote.discounts
++    ]
++    total = quote.total.amount
++    if contract.customer.tier is PlanTier.ENTERPRISE:
++        promo = (quote.subtotal.amount * Decimal("0.15")).quantize(Decimal("0.01"))
++        discounts.append({"code": "ENTERPRISE15", "description": "15% enterprise promotion", "amount": str(promo)})
++        total = total - promo
+     return {
+         "contract_id": quote.contract_id,
+         "subtotal": str(quote.subtotal.amount),
+-        "discounts": [
+-            {"code": line.code, "description": line.description, "amount": str(line.amount.amount)}
+-            for line in quote.discounts
+-        ],
+-        "total": str(quote.total.amount),
++        "discounts": discounts,
++        "total": str(total),
+         "currency": quote.total.currency,
+     }
+diff --git a/tests/test_enterprise_promotion.py b/tests/test_enterprise_promotion.py
+new file mode 100644
+index 0000000..fd76748
+--- /dev/null
++++ b/tests/test_enterprise_promotion.py
+@@ -0,0 +1,17 @@
++"""Enterprise promotion: 15% off enterprise checkouts."""
++from datetime import date
++from decimal import Decimal
++
++from app.api.checkout import checkout
++from app.domain.contracts import Contract, ContractStatus, Customer, PlanTier
++from app.domain.money import Money
++from app.services.audit import AuditLog
++from app.services.discounts import DiscountPolicy
++from app.services.pricing import PricingService
++
++
++def test_enterprise_checkout_total_has_15_percent_promotion():
++    contract = Contract(id="k-1", customer=Customer(id="c-1", name="Acme", tier=PlanTier.ENTERPRISE), status=ContractStatus.ACTIVE, monthly_price=Money.of("100.00"), seats=10, started_on=date(2025, 1, 1))
++    response = checkout(contract, date(2026, 6, 1), PricingService(DiscountPolicy(), AuditLog()))
++    assert Decimal(response["total"]) == Decimal("850.00")
++    assert any(d["code"] == "ENTERPRISE15" for d in response["discounts"])

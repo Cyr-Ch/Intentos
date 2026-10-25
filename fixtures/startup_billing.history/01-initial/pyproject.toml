@@ -1,0 +1,8 @@
+[project]
+name = "startup_billing"
+version = "0.1.0"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

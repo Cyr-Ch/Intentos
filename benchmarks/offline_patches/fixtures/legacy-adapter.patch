@@ -1,0 +1,11 @@
+diff --git a/app/legacy/export_adapter.py b/app/legacy/export_adapter.py
+index fa10ec3..2f8b014 100644
+--- a/app/legacy/export_adapter.py
++++ b/app/legacy/export_adapter.py
+@@ -18,3 +18,6 @@ class LegacyExportAdapter:
+         rows = [f"{invoice.invoice_id},{description},{amount}" for description, amount in invoice.lines]
+         rows.append(f"{invoice.invoice_id},TOTAL,{invoice.total}")
+         return "\n".join(rows) + "\n"
++
++# new export mode added to the deprecated adapter (violates ARCH-004)
++XML_MODE = "xml"

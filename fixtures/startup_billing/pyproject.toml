@@ -1,0 +1,10 @@
+[project]
+name = "startup_billing"
+version = "0.3.0"
+description = "Demonstration billing backend: domain -> services -> api"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

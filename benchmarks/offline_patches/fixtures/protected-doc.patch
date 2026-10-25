@@ -1,0 +1,10 @@
+diff --git a/docs/business-policy.md b/docs/business-policy.md
+index 5862024..3181ee3 100644
+--- a/docs/business-policy.md
++++ b/docs/business-policy.md
+@@ -35,3 +35,5 @@ not change entitlements; applying it does, and only once the charge succeeds.
+ New export modes are added to `InvoiceExportService`
+ (`app/services/exports.py`). The legacy adapter in `app/legacy` is deprecated
+ and must not receive new modes. See ADR-003, which supersedes ADR-002.
++
++<!-- edited by implementer: must be rejected as a protected path -->
