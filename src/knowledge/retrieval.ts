@@ -7,7 +7,7 @@ import type { IndexedRepo } from "./repo.ts";
 import { detectConflicts, type Conflict } from "./conflicts.ts";
 
 const STOPWORDS = new Set(
-  "a an the to for of in on and or with without add adds adding new make support supports allow allows enable enables implement implementation feature request please should must that this those these which when where our we it its is are be by as at from into via using use so can could".split(" "),
+  "a an the to for of in on and or with without add adds adding new make support supports allow allows enable enables implement implementation feature request please should must that this those these which when where our we it its is are be by as at from into via using use so can could per each all any some only also both over under after before during while occur occurs occurred happen happens".split(" "),
 );
 
 const BUILTIN_SYNONYMS: Record<string, string[]> = {
@@ -52,13 +52,37 @@ export function expandQuery(task: string, policy: Policy): QueryTerms {
   return { primary, expanded: [...expanded] };
 }
 
-function scoreText(text: string | null | undefined, terms: QueryTerms, weight: number): number {
+/** Inverse document frequency over the indexed corpus: generic terms ("error", "get") count less than rare ones. */
+export class TermWeights {
+  private readonly df = new Map<string, number>();
+  private docs = 0;
+  add(text: string | null | undefined): void {
+    if (!text) return;
+    this.docs++;
+    for (const t of new Set(tokenize(text))) this.df.set(t, (this.df.get(t) ?? 0) + 1);
+  }
+  /** log-scaled IDF in [0.25, 1]: a term in every document scores 0.25, a term in one document scores ~1. */
+  idf(term: string): number {
+    const n = this.df.get(term) ?? 0;
+    if (!this.docs || n === 0) return 1;
+    const raw = Math.log((this.docs + 1) / (n + 1)) / Math.log(this.docs + 1);
+    return 0.25 + 0.75 * Math.max(0, Math.min(1, raw));
+  }
+}
+
+function scoreText(text: string | null | undefined, terms: QueryTerms, weight: number, weights?: TermWeights): number {
   if (!text) return 0;
   const toks = new Set(tokenize(text));
   let s = 0;
-  for (const t of terms.primary) if (toks.has(t)) s += weight;
-  for (const t of terms.expanded) if (toks.has(t)) s += weight * 0.5;
+  for (const t of terms.primary) if (toks.has(t)) s += weight * (weights?.idf(t) ?? 1);
+  for (const t of terms.expanded) if (toks.has(t)) s += weight * 0.5 * (weights?.idf(t) ?? 1);
   return s;
+}
+
+function matchedTerms(text: string | null | undefined, terms: QueryTerms): string[] {
+  if (!text) return [];
+  const toks = new Set(tokenize(text));
+  return [...terms.primary, ...terms.expanded].filter((t) => toks.has(t));
 }
 
 export interface SymbolHit {
@@ -175,33 +199,69 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
     .map((n) => ({ n, a: parseAttrs<ConstraintAttributes>(n) }))
     .filter(({ a }) => a.decision_status === "approved");
 
-  const scoredSymbols: SymbolHit[] = [];
+  // Corpus term weights: one "document" per symbol (name + signature + first docstring line), doc section and test.
+  const weights = new TermWeights();
+  const symbolAttrs = new Map<string, SymbolAttributes>();
   for (const n of symbolNodes) {
     const a = parseAttrs<SymbolAttributes>(n);
+    symbolAttrs.set(n.id, a);
+    weights.add(`${a.name} ${a.signature ?? ""} ${a.docstring?.split("\n")[0] ?? ""} ${a.path}`);
+  }
+  for (const n of allNodes) {
+    if (n.kind === "doc_section") {
+      const a = parseAttrs<DocSectionAttributes>(n);
+      weights.add(`${a.heading} ${a.excerpt.slice(0, 300)}`);
+    } else if (n.kind === "test") weights.add(parseAttrs<TestAttributes>(n).name);
+  }
+
+  // A class is described by its constructor parameters too (e.g. HTTPTransport(retries=...)).
+  const initSignatures = new Map<string, string>();
+  for (const n of symbolNodes) {
+    const a = symbolAttrs.get(n.id)!;
+    if (a.name === "__init__" && a.parent && a.signature) initSignatures.set(a.parent, a.signature);
+  }
+
+  const scoredSymbols: SymbolHit[] = [];
+  for (const n of symbolNodes) {
+    const a = symbolAttrs.get(n.id)!;
     if (a.is_test || a.name.startsWith("__")) continue;
     const reasons: string[] = [];
     let s = 0;
-    const nameScore = scoreText(a.name, terms, 4);
+    const signatureText = a.kind === "class" ? `${a.signature ?? ""} ${initSignatures.get(n.qualified_name ?? "") ?? ""}` : a.signature;
+    const nameScore = scoreText(a.name, terms, 4, weights);
     if (nameScore) {
       s += nameScore;
       reasons.push("name matches task terms");
     }
-    const qnScore = scoreText(n.qualified_name, terms, 1.5);
+    const qnScore = scoreText(n.qualified_name, terms, 1.5, weights);
     if (qnScore) s += qnScore;
-    const docScore = Math.min(scoreText(a.docstring, terms, 1), 4);
+    const sigScore = Math.min(scoreText(signatureText, terms, 2.5, weights), 5);
+    if (sigScore) {
+      s += sigScore;
+      reasons.push("signature parameters match task terms");
+    }
+    const docScore = Math.min(scoreText(a.docstring, terms, 1, weights), 4);
     if (docScore) {
       s += docScore;
       reasons.push("docstring mentions task terms");
     }
-    const pathScore = Math.min(scoreText(a.path, terms, 1), 3);
+    const pathScore = Math.min(scoreText(a.path, terms, 1, weights), 3);
     if (pathScore) {
       s += pathScore;
       reasons.push("module path matches task terms");
     }
+    // Breadth bonus: hits on several distinct task terms beat many hits on one generic term.
+    const distinct = new Set(matchedTerms(`${a.name} ${signatureText ?? ""} ${a.docstring ?? ""} ${a.path}`, terms)).size;
+    if (distinct >= 2) s *= 1 + 0.25 * Math.min(distinct - 1, 3);
     if (a.kind === "class") s *= 1.25;
     if (a.kind === "method") s *= 0.8;
     if (s <= 0) continue;
     const mentionedBy = approvedDecisionText.filter(({ a: d }) => new RegExp(`\\b${escapeRe(a.name)}\\b`).test(d.statement));
+    // Symbols named by an approved decision are the sanctioned abstractions: keep them visible to the planner.
+    if (mentionedBy.length) {
+      s *= 1.5;
+      reasons.push("named in an approved decision");
+    }
     scoredSymbols.push({
       symbol_id: n.id,
       qualified_name: n.qualified_name ?? a.name,
@@ -222,7 +282,7 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
   scoredSymbols.sort((x, y) => y.relevance - x.relevance || x.qualified_name.localeCompare(y.qualified_name));
   const maxRel = scoredSymbols[0]?.relevance ?? 1;
   for (const h of scoredSymbols) h.relevance = Math.round((h.relevance / maxRel) * 100) / 100;
-  const symbols = scoredSymbols.slice(0, opts.maxSymbols ?? 12);
+  const symbols = scoredSymbols.slice(0, opts.maxSymbols ?? 15);
 
   // --- modules touched by top symbols, then 1-hop reverse import neighbours
   const topModuleIds = new Set<string>();
@@ -261,8 +321,11 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
   for (const id of topModuleIds) for (const e of edgesFrom.get(id) ?? []) if (e.relation === "VALIDATED_BY") addTest(e.to_node, nodeById.get(id)?.qualified_name ?? id, 0.7);
   for (const t of allNodes.filter((n) => n.kind === "test")) {
     const a = parseAttrs<TestAttributes>(t);
-    const s = scoreText(a.name, terms, 1);
-    if (s > 0) addTest(t.id, "test name matches task terms", Math.min(1, 0.5 + s / 8));
+    const matched = matchedTerms(a.name, terms);
+    const s = scoreText(a.name, terms, 1, weights);
+    // Require either two distinct task terms or one reasonably specific term (idf > 0.6) to avoid "error"-style noise.
+    const specific = matched.some((m) => weights.idf(m) > 0.6);
+    if (s > 0 && (matched.length >= 2 || specific)) addTest(t.id, `test name matches: ${matched.join(", ")}`, Math.min(1, 0.4 + s / 6));
   }
   const tests = [...testHits.values()].sort((x, y) => y.relevance - x.relevance).slice(0, opts.maxTests ?? 15);
 
@@ -270,7 +333,7 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
   const docs: DocHit[] = [];
   for (const n of allNodes.filter((x) => x.kind === "doc_section")) {
     const a = parseAttrs<DocSectionAttributes>(n);
-    const s = scoreText(a.heading, terms, 3) + Math.min(scoreText(a.excerpt, terms, 0.75), 4) + scoreText(a.path, terms, 1);
+    const s = scoreText(a.heading, terms, 3, weights) + Math.min(scoreText(a.excerpt, terms, 0.75, weights), 4) + scoreText(a.path, terms, 1, weights);
     if (s <= 0) continue;
     const ev = evidenceById.get(a.evidence_id);
     docs.push({

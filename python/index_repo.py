@@ -201,10 +201,19 @@ def index_python(path: str, source: str, internal_modules: set[str], result: Ind
                 if candidate in internal_modules:
                     result.imports.append(Import(module, candidate, path, node.lineno, [n], True))
 
+    seen_ids: dict[str, int] = {}
+
+    def unique_id(base: str) -> str:
+        n = seen_ids.get(base, 0)
+        seen_ids[base] = n + 1
+        return base if n == 0 else f"{base}#{n + 1}"
+
     def visit_function(fn: ast.FunctionDef | ast.AsyncFunctionDef, parent_qn: str | None, kind: str) -> None:
         qn = f"{parent_qn}.{fn.name}" if parent_qn else f"{module}.{fn.name}"
+        decorators = [_unparse(d) for d in fn.decorator_list]
+        accessor = next((d.rsplit(".", 1)[-1] for d in decorators if d.endswith((".setter", ".deleter"))), None)
         sym = Symbol(
-            id=f"SY:{qn}",
+            id=unique_id(f"SY:{qn}" + (f"#{accessor}" if accessor else "")),
             kind=kind,
             qualified_name=qn,
             name=fn.name,
@@ -213,14 +222,14 @@ def index_python(path: str, source: str, internal_modules: set[str], result: Ind
             line_end=fn.end_lineno or fn.lineno,
             docstring=ast.get_docstring(fn),
             parent=parent_qn,
-            decorators=[_unparse(d) for d in fn.decorator_list],
+            decorators=decorators,
             bases=[],
             is_test=is_test_file and fn.name.startswith("test"),
             signature=_signature(fn),
         )
         result.symbols.append(sym)
         if sym.is_test:
-            result.tests.append(TestCase(id=f"TEST:{path}::{fn.name}" if not parent_qn else f"TEST:{path}::{parent_qn.rsplit('.',1)[-1]}::{fn.name}", path=path, name=fn.name, line=fn.lineno, module=module))
+            result.tests.append(TestCase(id=unique_id(f"TEST:{path}::{fn.name}" if not parent_qn else f"TEST:{path}::{parent_qn.rsplit('.',1)[-1]}::{fn.name}"), path=path, name=fn.name, line=fn.lineno, module=module))
         for sub in ast.walk(fn):
             if isinstance(sub, ast.Call):
                 callee = _callee_name(sub)
@@ -234,7 +243,7 @@ def index_python(path: str, source: str, internal_modules: set[str], result: Ind
             qn = f"{module}.{node.name}"
             result.symbols.append(
                 Symbol(
-                    id=f"SY:{qn}",
+                    id=unique_id(f"SY:{qn}"),
                     kind="class",
                     qualified_name=qn,
                     name=node.name,
@@ -275,6 +284,7 @@ def index_markdown(path: str, source: str, result: IndexResult) -> None:
     sections: list[DocSection] = []
     current: tuple[str, int, int] | None = None  # heading, level, start line (1-based)
     adr: dict[str, Any] = {}
+    used_ids: set[str] = set()
 
     def close(end_line: int) -> None:
         nonlocal current
@@ -282,9 +292,12 @@ def index_markdown(path: str, source: str, result: IndexResult) -> None:
             return
         heading, level, start = current
         body = "\n".join(lines[start - 1 : end_line])
+        base_id = f"DOC:{path}#{slugify(heading)}"
+        section_id = base_id if base_id not in used_ids else f"{base_id}@L{start}"
+        used_ids.add(section_id)
         sections.append(
             DocSection(
-                id=f"DOC:{path}#{slugify(heading)}",
+                id=section_id,
                 path=path,
                 heading=heading,
                 level=level,
