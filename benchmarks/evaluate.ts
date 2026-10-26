@@ -19,6 +19,8 @@ import { createRun, executeRun, type RunOptions } from "../src/orchestrator/runn
 import { loadBenchmarkTasks } from "../src/orchestrator/tasks.ts";
 import type { VerificationResult } from "../src/verification/results.ts";
 import { LiveCodexEngine, type CodingEngine } from "../src/codex/adapter.ts";
+import { buildOfflineContract } from "../src/codex/offline.ts";
+import { buildEvidencePack, type EvidencePack } from "../src/knowledge/retrieval.ts";
 import { nowIso } from "../src/util/ids.ts";
 
 interface Args {
@@ -42,16 +44,22 @@ function parseArgs(argv: string[]): Args {
   return a;
 }
 
-/** Baseline: Codex receives only the task text. Verification is unchanged, so hazards are still measured. */
+/**
+ * Baseline ("vanilla Codex"): no planner, no evidence. A deterministic contract is derived from the policy
+ * (so the same verifier, allowed paths and repair budget apply) and Codex receives ONLY the task text.
+ * The baseline therefore always implements — it cannot clarify or abstain — which is the point of comparison.
+ */
 class BaselineEngine implements CodingEngine {
-  readonly name = "codex-sdk-baseline(task-only prompt)";
+  readonly name = "codex-sdk-baseline(task-only prompt, no planner)";
   readonly simulated = false;
   private readonly live = new LiveCodexEngine();
   private readonly task: string;
-  constructor(task: string) {
+  private readonly pack: EvidencePack;
+  constructor(task: string, pack: EvidencePack) {
     this.task = task;
+    this.pack = pack;
   }
-  plan: CodingEngine["plan"] = (req) => this.live.plan(req);
+  plan: CodingEngine["plan"] = async () => ({ text: JSON.stringify(buildOfflineContract(this.pack, { route: "implement", fabricateEvidence: false, taskId: "baseline" })), usage: null, threadId: null, simulated: false, engine: this.name, model: null, items: [] });
   implement: CodingEngine["implement"] = (req) => this.live.implement({ ...req, prompt: req.threadId ? req.prompt : `${this.task}\n\nRun the test suite with python -m pytest -q before finishing.` });
 }
 
@@ -93,7 +101,7 @@ async function main() {
       for (const [label, patch] of Object.entries(t.offline_patches)) variants.push({ name: `offline-${label}`, opts: { mode: "offline", taskId: t.id, offline: { route: "implement", patchFile: path.join(PROJECT_ROOT, patch) } } });
       if (!variants.length) variants.push({ name: "offline-nopatch", opts: { mode: "offline", taskId: t.id, offline: { route: "implement" } } });
     } else if (args.mode === "baseline") {
-      variants.push({ name: "live-baseline", opts: { mode: "live", taskId: t.id, engine: new BaselineEngine(t.request) } });
+      variants.push({ name: "live-baseline", opts: { mode: "live", taskId: t.id, engine: new BaselineEngine(t.request, buildEvidencePack(store, indexed, t.request)) } });
     } else {
       variants.push({ name: "live-full", opts: { mode: "live", taskId: t.id } });
     }
@@ -112,7 +120,7 @@ async function main() {
         run_id: rs.runId,
         final_state: outcome.state,
         expected_route: t.expected_route,
-        route_correct: route === t.expected_route || (t.accepted_routes ?? []).includes(route),
+        route_correct: v.name.includes("baseline") && t.expected_route !== "implement" ? false : route === t.expected_route || (t.accepted_routes ?? []).includes(route),
         task_tests_passed: cmd("pytest_hidden_task") ? cmd("pytest_hidden_task")!.status === "passed" && (cmd("pytest_hidden_task")!.tests_passed ?? 0) > 0 : null,
         invariants_preserved: trackOk("business_invariant"),
         architecture_compliant: trackOk("architecture"),
