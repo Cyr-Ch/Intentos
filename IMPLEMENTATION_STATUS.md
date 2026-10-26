@@ -1,6 +1,6 @@
 # IntentOS — Implementation Status
 
-Last updated: 2026-10-26 (container verifier landed). Everything below was observed in this checkout; nothing is projected.
+Last updated: 2026-10-26 (container verifier and architectural-surprise signals landed). Everything below was observed in this checkout; nothing is projected.
 
 ## Summary
 
@@ -8,12 +8,12 @@ Last updated: 2026-10-26 (container verifier landed). Everything below was obser
 |---|---|---|
 | M1 Index + evidence (`index`, `explain`) | **functional** | Python AST/git indexer, SQLite graph per revision, trusted-policy binding, lexical+graph retrieval with citations |
 | M2 Contract-guided Codex execution (`plan`, `run`) | **functional (live + offline)** | Zod contract + strict JSON schema, deterministic compiler, worktrees, SDK adapter (read-only planner / workspace-write implementer), durable states + events |
-| M3 Independent verification + repair + report (`verify`, `report`) | **functional** | hidden task/invariant tests outside the worktree, AST architecture rules (incl. anti-tampering `forbidden_names`), scope/frozen-path diff checks, hidden-test inventory cross-check, fail-closed invariants, counterexample probes, ≤2 repairs, revocable review state, report.md/json |
+| M3 Independent verification + repair + report (`verify`, `report`) | **functional** | hidden task/invariant tests outside the worktree, AST architecture rules (incl. anti-tampering `forbidden_names`), scope/frozen-path diff checks, hidden-test inventory cross-check, fail-closed invariants, counterexample probes, architectural-surprise review signals (§7.5), ≤2 repairs, revocable review state, report.md/json |
 | M4 Decisions, conflicts, feedback gate, `resume` | **functional (initial)** | policy decisions with SUPERSEDES edges, proposed→approved gate, feedback as proposed memory, integrity-checked resume; full re-index per HEAD (no diff-based invalidation yet) |
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 11 files, **69 passed** (4 of them need a Docker daemon plus the `intentos-verifier:0.1` image and skip otherwise); `npm run test:python` → **7 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 11 files, **71 passed** (4 of them need a Docker daemon plus the `intentos-verifier:0.1` image and skip otherwise); `npm run test:python` → **14 passed**; `npm run typecheck` clean.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -82,7 +82,7 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 - Retrieval is lexical + 1-hop import graph; `CALLS` edges are name-matched (confidence 0.4). No embeddings/reranking.
 - Counterexamples are policy-template grids, not generated hypotheses; exploratory unless marked authoritative.
 - `resume` after an interruption during IMPLEMENTING proceeds to verification of whatever is in the worktree (it does not re-prompt Codex to continue the thread).
-- Architectural-surprise triage (§7.5) is not implemented beyond frozen paths / forbidden imports & calls.
+- Architectural-surprise triage covers three detectors (new internal import, duplicate helper by name or normalised body, domain construction in the API layer) on Python files only; it is review-only by design and does not analyse test files for duplicates.
 - Baseline comparison: one live baseline run only; no statistical claim is made.
 - Container isolation is opt-in (`INTENTOS_VERIFIER=docker`); the default `host` mode still executes candidate code on the host. In docker mode the results mount lets candidate code write files into the attempt directory, so forged-report defences stay in place (see docs/security.md).
 
@@ -124,9 +124,25 @@ Observed on this laptop (Docker Desktop 29.5.2, image `sha256:c1e55dda…`):
 - Docker Desktop's VM kernel lists unused tunnel devices in `/sys/class/net` under `--network none`; the test checks
   link state and connectivity instead of the directory listing.
 
+## Architectural-surprise signals (2026-10-26)
+`architecture_surprise` builtin (advisory, `required: true` in `policies/startup_billing.yaml` and in the fallback
+policy) runs `python/architecture_surprise.py` over the changed Python files against base-revision sources read with
+one `git cat-file --batch`. Findings are `category: architecture`, `severity: review`, `authority: deterministic`,
+rule ids `SURPRISE-NEW-DEPENDENCY` / `SURPRISE-DUPLICATE-HELPER` / `SURPRISE-API-DOMAIN-CONSTRUCTION`, with
+`location`, `expected`, `observed` and a message stating they are risk triage, not proof of bad design. Observed:
+- `python/tests/test_architecture_surprise.py` (7): one finding per new internal module; new files not flagged;
+  duplicate by renamed-parameter body and by name; 2-statement bodies and test fixtures never matched; Enum access
+  and pre-existing calls not flagged; parse errors become `errors`, never findings; `ignore_names` honoured.
+- `tests/integration/pipeline.test.ts`: the known-good Task A patch produces `0 signal(s)` and stays `REVIEW_READY`;
+  `benchmarks/offline_patches/fixtures/surprise.patch` (good patch + `app.domain.money`/`app.services.exports`
+  imports and a `subtract_money` copy of `Money.__sub__` in `pricing.py`, a `Customer(...)` built in
+  `app/api/checkout.py`) yields exactly the three rule ids (4 findings), zero blocking findings, ends `HUMAN_REVIEW`,
+  and the report gains an "Architectural surprise (review signals)" section.
+- `benchmarks/evaluate.ts --offline`: the five recorded rows keep their outcomes (A good REVIEW_READY, A bad FAILED,
+  B/C nopatch FAILED, D ABSTAINED).
+
 ## Next steps
 1. Diff-based incremental re-index and assertion re-validation across revisions.
 2. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.
 3. Resume: re-enter the Codex implementer thread (`resumeThread`) with a "continue" prompt instead of verifying partial work.
 4. Symlink-escape checks on snapshot copy; stronger-than-Docker isolation (gVisor/VM) for the container verifier.
-5. Architectural-surprise signals (new cross-module imports, duplicate helpers) as review findings.

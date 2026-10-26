@@ -26,7 +26,7 @@ export const CommandSchema = z.object({
   /** argv with placeholders: {python}, {snapshot}, {hidden_tests_dir}, {junit}. */
   argv: z.array(z.string()).optional(),
   /** Built-in verifier implemented in TypeScript/Python instead of a shell command. */
-  builtin: z.enum(["architecture_rules", "counterexamples", "scope_check"]).optional(),
+  builtin: z.enum(["architecture_rules", "counterexamples", "scope_check", "architecture_surprise"]).optional(),
   timeout_s: z.number().int().positive().default(300),
   /** Blocking commands gate review_ready; advisory ones only produce findings. */
   enforcement: z.enum(["blocking", "advisory"]).default("blocking"),
@@ -94,6 +94,18 @@ export const CounterexampleSchema = z.object({
   max_cases: z.number().int().positive().default(50),
 });
 
+/** Defaults for the architectural-surprise detectors (used when the policy omits the block or a field). */
+export const SURPRISE_DEFAULTS = { api_paths: ["app/api/**"], domain_paths: ["app/domain/**"], ignore_names: [] as string[] };
+
+export const ArchitectureSurpriseSchema = z.object({
+  /** Files that form the API layer (domain objects should not be constructed there). */
+  api_paths: z.array(z.string()).default(SURPRISE_DEFAULTS.api_paths),
+  /** Files that define domain objects. */
+  domain_paths: z.array(z.string()).default(SURPRISE_DEFAULTS.domain_paths),
+  /** Function names never reported as duplicate helpers. */
+  ignore_names: z.array(z.string()).default(SURPRISE_DEFAULTS.ignore_names),
+});
+
 export const PolicySchema = z.object({
   schema_version: z.literal("1.0"),
   policy_id: z.string(),
@@ -115,6 +127,8 @@ export const PolicySchema = z.object({
   counterexamples: z.array(CounterexampleSchema).default([]),
   /** Task-term synonyms to improve lexical retrieval. */
   synonyms: z.record(z.string(), z.array(z.string())).default({}),
+  /** Architectural-surprise review signals (spec §7.5): optional block, defaults apply when absent. */
+  architecture_surprise: ArchitectureSurpriseSchema.default(SURPRISE_DEFAULTS),
 });
 
 export type Policy = z.infer<typeof PolicySchema>;
@@ -180,6 +194,7 @@ export function fallbackPolicy(repoPath: string): Policy {
         timeout_s: 600,
       },
       scope_check: { description: "Changed files must stay inside allowed paths", track: "scope", builtin: "scope_check" },
+      architecture_surprise: { description: "Architectural-surprise review signals: new cross-module dependencies, duplicate helpers, domain construction in the API layer (advisory)", track: "architecture", builtin: "architecture_surprise", enforcement: "advisory" },
     },
   });
 }

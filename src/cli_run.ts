@@ -185,7 +185,7 @@ export function registerRunCommands(program: Command, ctx: CliContext): void {
         if (!pack) ctx.fail("evidence pack missing");
         const hidden = resolveHiddenTests(policy.policy_id, task.task, task.benchmark_task_id);
         const attempt = fs.existsSync(path.join(rs.runDir, "verification")) ? fs.readdirSync(path.join(rs.runDir, "verification")).filter((d) => d.startsWith("attempt-")).length + 1 : 1;
-        const result = verifyWorktree({ runId, attempt, worktree: row.worktree_path!, baseSha: row.base_sha, contract: JSON.parse(row.contract_json!) as ChangeContract, contractHash: row.contract_hash!, policy, pack: pack!, outDir: path.join(rs.runDir, "verification"), hiddenTaskTestsDir: hidden.taskDir, hiddenInvariantTestsDir: hidden.invariantsDir, eventsFile: rs.path("codexEvents"), simulated: task.mode === "offline" });
+        const result = verifyWorktree({ runId, attempt, worktree: row.worktree_path!, baseSha: row.base_sha, contract: JSON.parse(row.contract_json!) as ChangeContract, contractHash: row.contract_hash!, policy, pack: pack!, outDir: path.join(rs.runDir, "verification"), hiddenTaskTestsDir: hidden.taskDir, hiddenInvariantTestsDir: hidden.invariantsDir, eventsFile: rs.path("codexEvents"), repoPath: repo.path, simulated: task.mode === "offline" });
         rs.writeJson("verification", result);
         rs.writeJson(`verification/attempt-${attempt}/verification.json`, result);
         rs.event("verification.rerun", { attempt, status: result.status, findings: result.findings.length });

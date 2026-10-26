@@ -9,6 +9,7 @@ import { ensureDir } from "../util/paths.ts";
 import { resolvePaths, resolvePython } from "../config.ts";
 import { parseJunit } from "./junit.ts";
 import { runArchitectureRules, runScopeCheck } from "./policy.ts";
+import { runArchitecturalSurprise } from "./surprise.ts";
 import { generateCounterexamples } from "./counterexamples.ts";
 import { summarizeStatus, type CommandRecord, type Finding, type VerificationResult } from "./results.ts";
 import { nowIso } from "../util/ids.ts";
@@ -30,6 +31,8 @@ export interface VerifyInput {
   hiddenInvariantTestsDir: string | null;
   /** codex_events.jsonl of the run (scanned for reads of protected artifacts), or null. */
   eventsFile?: string | null;
+  /** Repository used to read base-revision sources (defaults to the worktree, which shares the object store). */
+  repoPath?: string;
   simulated: boolean;
 }
 
@@ -188,6 +191,16 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
         const authoritative = probe?.authority === "authoritative";
         findings.push({ id: nextId("F-CX"), category: "counterexample", severity: authoritative ? "blocking" : "review", rule_id: probe?.invariant_id ?? null, source_evidence_ids: probe ? evidenceFor(probe.invariant_id) : [], test: c.name, expected: probe ? `invariant ${probe.invariant_id} holds for generated edge case` : null, observed: c.message, message: `counterexample probe ${probe?.counterexample_id ?? ""} failed: ${c.name}${c.message ? ` — ${c.message}` : ""} [${authoritative ? "authoritative" : "exploratory, non-blocking"}]`, location: c.file, log_path: rec.stdout_path, authority: authoritative ? "trusted_policy" : "exploratory" });
       }
+      continue;
+    }
+    if (cmd.builtin === "architecture_surprise") {
+      // Review-only triage computed from the diff; it never blocks and runs on the host (no candidate code executes).
+      const t0 = Date.now();
+      const out = runArchitecturalSurprise({ snapshot, repoPath: input.repoPath ?? input.worktree, baseSha: input.baseSha, changed, policy: input.policy });
+      findings.push(...out.findings);
+      limitations.push(...out.limitations);
+      const errs = out.errors.length ? `; ${out.errors.length} file(s) not analysed (${out.errors.map((e) => e.path || e.error).slice(0, 3).join(", ")})` : "";
+      commands.push({ command_id: v.command_id, track: cmd.track, enforcement: "advisory", argv: null, builtin: cmd.builtin, exit_code: null, duration_ms: Date.now() - t0, status: "passed", stdout_path: null, stderr_path: null, summary: `${out.findings.length} signal(s) in ${out.checked_files} changed Python file(s)${errs}`, tests_passed: null, tests_failed: null });
       continue;
     }
     if (!cmd.argv) continue;

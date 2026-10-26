@@ -80,6 +80,20 @@ into a blocking finding even when no test case was parsed, and "passed with zero
 The result records `verifier: {mode, image, image_digest}`; in docker mode an unavailable daemon or image produces
 `VERIFIER-UNAVAILABLE` blocking findings instead of a silent fallback to the host (`src/verification/sandbox.ts`).
 
+## Architectural surprise (review signals)
+
+`architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists
+it) that compares the changed Python files against the base revision with `python/architecture_surprise.py` and
+emits **review-only** findings (`category: architecture`, `authority: deterministic`, rule ids `SURPRISE-*`):
+a changed file importing an internal module it did not import at base (`SURPRISE-NEW-DEPENDENCY`), an added
+function whose name or normalised body (docstring dropped, parameters renamed positionally, ≥ 3 statements) matches
+an existing one (`SURPRISE-DUPLICATE-HELPER`), and a new construction of a domain class inside the API layer
+(`SURPRISE-API-DOMAIN-CONSTRUCTION`; Enum access is not a construction). Paths come from the optional policy block
+`architecture_surprise: {api_paths, domain_paths, ignore_names}` (defaults `app/api/**`, `app/domain/**`). Base
+sources are read with one `git cat-file --batch`; test files are not analysed for duplicates. These signals are risk
+triage, not proof of bad design: a run with only these findings ends in `HUMAN_REVIEW`, and the report lists them
+under "Architectural surprise (review signals)".
+
 ## Incremental indexing
 
 Currently the repository is re-indexed in full at each new HEAD (fast for fixture-sized repos). Diff-based

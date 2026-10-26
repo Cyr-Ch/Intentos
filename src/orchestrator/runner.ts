@@ -284,6 +284,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
         hiddenTaskTestsDir: hidden.taskDir,
         hiddenInvariantTestsDir: hidden.invariantsDir,
         eventsFile: rs.path("codexEvents"),
+        repoPath: indexed.repoPath,
         simulated: engine.simulated,
       });
       rs.writeJson("verification", verification);

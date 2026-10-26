@@ -268,3 +268,35 @@ describe("approval gate, resume and integrity", () => {
     expect(report.checks.find((c) => c.check === "worktree_at_base")!.ok).toBe(false);
   });
 });
+
+describe("architectural-surprise review signals (spec §7.5)", () => {
+  it("the known-good patch raises no surprise signal and still reaches REVIEW_READY", async () => {
+    const { outcome, verification } = await run(offline({ patchFile: PATCHES.good }));
+    expect(outcome.state).toBe("REVIEW_READY");
+    const cmd = verification!.commands.find((c) => c.command_id === "architecture_surprise")!;
+    expect(cmd.enforcement).toBe("advisory");
+    expect(cmd.status).toBe("passed");
+    expect(cmd.summary).toMatch(/^0 signal\(s\)/);
+    expect(verification!.findings.filter((f) => f.rule_id?.startsWith("SURPRISE-"))).toEqual([]);
+  });
+
+  it("a new cross-module dependency, a duplicated helper and domain construction in the API layer yield exactly the three signals and HUMAN_REVIEW", async () => {
+    const { rs, outcome, verification, report } = await run(offline({ patchFile: PATCHES.surprise }));
+    expect(outcome.state).toBe("HUMAN_REVIEW");
+    expect(verification!.findings.some((f) => f.severity === "blocking")).toBe(false);
+    const surprise = verification!.findings.filter((f) => f.rule_id?.startsWith("SURPRISE-"));
+    expect(new Set(surprise.map((f) => f.rule_id))).toEqual(new Set(["SURPRISE-NEW-DEPENDENCY", "SURPRISE-DUPLICATE-HELPER", "SURPRISE-API-DOMAIN-CONSTRUCTION"]));
+    expect(surprise.every((f) => f.severity === "review" && f.authority === "deterministic" && f.category === "architecture")).toBe(true);
+    expect(surprise.every((f) => /risk triage, not proof of bad design/.test(f.message))).toBe(true);
+    const byRule = (id: string) => surprise.filter((f) => f.rule_id === id);
+    expect(byRule("SURPRISE-NEW-DEPENDENCY").map((f) => f.observed).sort()).toEqual(["adds import of app.domain.money", "adds import of app.services.exports"]);
+    expect(byRule("SURPRISE-DUPLICATE-HELPER")[0]!.message).toMatch(/subtract_money\(\) whose body is equivalent to app\/domain\/money\.py:\d+ Money\.__sub__\(\)/);
+    expect(byRule("SURPRISE-API-DOMAIN-CONSTRUCTION")[0]!.location).toMatch(/^app\/api\/checkout\.py:\d+$/);
+    expect(verification!.tracks.architecture!.review_findings).toBe(surprise.length);
+    expect(verification!.tracks.architecture!.blocking_findings).toBe(0);
+    expect(report!.architectural_surprise.map((s) => s.rule_id)).toEqual(surprise.map((f) => f.rule_id));
+    const md = fs.readFileSync(path.join(rs.runDir, "report.md"), "utf8");
+    expect(md).toContain("## Architectural surprise (review signals)");
+    expect(md).toContain("SURPRISE-DUPLICATE-HELPER");
+  });
+});

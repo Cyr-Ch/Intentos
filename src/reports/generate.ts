@@ -34,6 +34,8 @@ export interface ReportJson {
     limitations: string[];
   } | null;
   changed_files: VerificationResult["changed_files"];
+  /** Review-only architectural-surprise signals (rule ids SURPRISE-*): risk triage, never blocking. */
+  architectural_surprise: Array<{ id: string; rule_id: string; location: string | null; message: string }>;
   evidence: Array<{ id: string; path: string | null; lines: string | null; authority: string; status: string; summary: string | null }>;
   injected_by_compiler: CompiledContract["injected"] | null;
   compiler_warnings: string[];
@@ -103,6 +105,7 @@ export function generateReport(store: KnowledgeStore, runId: string): { json: Re
       ? { status: verification.status, attempt: verification.attempt, commands: verification.commands, findings: verification.findings, tracks: verification.tracks, unverified_areas: verification.unverified_areas, limitations: verification.limitations }
       : null,
     changed_files: verification?.changed_files ?? [],
+    architectural_surprise: (verification?.findings ?? []).filter((f) => f.rule_id?.startsWith("SURPRISE-")).map((f) => ({ id: f.id, rule_id: f.rule_id!, location: f.location, message: f.message })),
     evidence: [...citedEvidence].sort().map((id) => {
       const e = evidenceIndex[id];
       return { id, path: e?.path ?? null, lines: e?.line_start ? `${e.line_start}-${e.line_end}` : null, authority: e?.authority ?? "unknown", status: e?.status ?? "unknown", summary: e?.summary ?? null };
@@ -210,6 +213,11 @@ function renderMarkdown(r: ReportJson, contract: ChangeContract | null, pack: Ev
       for (const u of v.unverified_areas) L.push(`- ${u}`);
     }
   }
+  L.push("");
+  L.push("## Architectural surprise (review signals)");
+  if (!r.verification) L.push("- not evaluated (no verification)");
+  else if (!r.architectural_surprise.length) L.push("- none detected — risk triage only; absence is not a design approval");
+  for (const s of r.architectural_surprise) L.push(`- ${s.id} ${s.rule_id}${s.location ? ` (${s.location})` : ""}: ${s.message}`);
   L.push("");
   L.push("## Evidence");
   L.push(`- Base revision: \`${r.base_sha}\``);

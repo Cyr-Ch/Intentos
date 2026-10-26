@@ -108,6 +108,39 @@ export function applyPatch(dir: string, patchFile: string): { ok: boolean; stder
   return { ok: res.status === 0, stderr: res.stderr };
 }
 
+/** Tracked `.py` files at a revision (paths relative to the repository root). */
+export function trackedPythonFiles(dir: string, rev: string): string[] {
+  return git(dir, ["ls-tree", "-r", "-z", "--name-only", rev]).stdout.split("\0").filter((p) => p.endsWith(".py"));
+}
+
+/**
+ * Contents of `paths` at `rev` through a single `git cat-file --batch` process. Missing paths are omitted.
+ * Sizes in the batch protocol are bytes, so the stream is parsed as a Buffer and decoded per object.
+ */
+export function readFilesAtRevision(dir: string, rev: string, paths: string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!paths.length) return out;
+  const unique = [...new Set(paths)];
+  const res = spawnSync("git", ["cat-file", "--batch"], { cwd: dir, input: unique.map((p) => `${rev}:${p}\n`).join(""), maxBuffer: 256 * 1024 * 1024 });
+  if (res.error) throw new GitError(`git cat-file --batch failed to start: ${res.error.message}`, ["cat-file", "--batch"], "");
+  if (res.status !== 0) throw new GitError(`git cat-file --batch exited ${res.status}: ${res.stderr.toString("utf8").trim()}`, ["cat-file", "--batch"], res.stderr.toString("utf8"));
+  const buf: Buffer = res.stdout;
+  let pos = 0;
+  for (const p of unique) {
+    const nl = buf.indexOf(0x0a, pos);
+    if (nl < 0) break;
+    const header = buf.subarray(pos, nl).toString("utf8");
+    pos = nl + 1;
+    if (header.endsWith(" missing") || header.endsWith(" ambiguous")) continue;
+    const parts = header.split(" ");
+    const size = Number(parts[2]);
+    if (!Number.isFinite(size)) throw new GitError(`unexpected cat-file header: ${header}`, ["cat-file", "--batch"], "");
+    out.set(p, buf.subarray(pos, pos + size).toString("utf8"));
+    pos += size + 1; // trailing newline after each object
+  }
+  return out;
+}
+
 export interface CommitInfo {
   sha: string;
   date: string;

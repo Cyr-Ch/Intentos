@@ -55,6 +55,8 @@ export const PATCHES = {
   legacyAdapter: path.join(PROJECT_ROOT, "benchmarks", "offline_patches", "fixtures", "legacy-adapter.patch"),
   weakenTests: path.join(PROJECT_ROOT, "benchmarks", "offline_patches", "fixtures", "weaken-tests.patch"),
   forgeJunit: path.join(PROJECT_ROOT, "benchmarks", "offline_patches", "fixtures", "forge-junit.patch"),
+  /** Good Task A patch plus a new cross-module import, a copied helper and a domain object built in the API layer. */
+  surprise: path.join(PROJECT_ROOT, "benchmarks", "offline_patches", "fixtures", "surprise.patch"),
 };
 
 export const TASK_A = "Add a 15% promotional discount for eligible enterprise subscriptions";

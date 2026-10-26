@@ -74,6 +74,18 @@ commands:
     builtin: counterexamples
     enforcement: advisory
     required: false
+  architecture_surprise:
+    description: Architectural-surprise review signals (new cross-module dependencies, duplicate helpers, domain construction in the API layer); advisory triage, never blocking
+    track: architecture
+    builtin: architecture_surprise
+    enforcement: advisory
+    required: true
+
+# Architectural-surprise detectors (spec §7.5). These mirror the defaults; listed explicitly so reviewers see them.
+architecture_surprise:
+  api_paths: ["app/api/**"]
+  domain_paths: ["app/domain/**"]
+  ignore_names: []
 
 invariants:
   - id: INV-001

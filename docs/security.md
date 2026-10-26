@@ -26,6 +26,9 @@ and relies on Git worktrees plus the Codex sandbox for isolation. Use it on trus
   exclusively from executed checks (tested: a fake "all tests pass" message does not change the outcome).
 - **Proposed memory cannot bind.** Reviewer feedback and model proposals carry `model_inference` authority and are
   excluded from blocking enforcement until a human approves them.
+- **Architectural-surprise signals are advisory.** The `architecture_surprise` builtin only reads sources (snapshot
+  and base revision via `git cat-file`); it never executes candidate code and its findings are review-only, so they
+  can route a run to `HUMAN_REVIEW` but never pass or fail it on their own.
 
 - **Tamper detection in the verifier.** JUnit reports for hidden tests must match the statically discovered
   hidden test inventory; application/test code may not reference `sys.argv`, `os._exit` or verifier artifact names
