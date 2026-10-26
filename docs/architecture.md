@@ -114,6 +114,19 @@ offered is dropped. `--record` compares the last `suggestions.json` with the pol
 cited source heading, matching rule or statement) and writes accept/reject term weights the miner applies next time.
 Nothing the command writes is read back as authority.
 
+## Review UI (`intentos review`)
+
+`src/review.ts` serves a single page from a Node `http` server bound to 127.0.0.1 with a random token in the URL
+(every API call must carry it; nothing is reachable from other hosts or without the printed link). The page lists the
+candidates of the last `suggest` run and shows one card at a time: rule statement (prefilled with the classifier's
+rewrite when there is one, editable), evidence, where it applies, the source it will cite, and the hidden test that
+will be written. Approving calls `acceptCandidate`: the next free `INV-`/`ARCH-`/`DEC-` id is allocated from the policy
+document, the block is appended with `yaml`'s document API so comments survive, the file is validated against
+`PolicySchema` and restored on failure, the hidden-test draft is written under `benchmarks/hidden_tests/<id>/invariants/`
+with a header stating its origin and any TODOs, and a candidate without a Markdown source gets a section in
+`docs/intentos-policy.md` of the repository (created on first use) so the policy can bind it by heading. Rejections
+and skips are persisted in `review-decisions.json`; Finish records feedback, re-indexes and stops the server.
+
 ## Architectural surprise (review signals)
 
 `architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists

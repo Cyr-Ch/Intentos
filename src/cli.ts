@@ -11,6 +11,7 @@ import { renderEvidencePack } from "./reports/explain.ts";
 import { registerRunCommands } from "./cli_run.ts";
 import { onboardRepository } from "./onboard.ts";
 import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./suggest.ts";
+import { defaultReviewer, loadReviewState, startReviewServer } from "./review.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 
 function printSuggestions(result: SuggestResult): void {
@@ -202,6 +203,40 @@ program
       else printSuggestions(result);
     } catch (err) {
       fail((err as Error).message);
+    }
+  });
+
+program
+  .command("review")
+  .description("Open a local one-page UI to approve or reject the mined policy candidates; approvals land in the policy file, the hidden tests and the repository's policy notes")
+  .argument("<repo>", "path to the repository root (a Git checkout)")
+  .option("--policy-id <id>", "policy id (default: from the last suggest run)")
+  .option("--out <dir>", "directory of the last suggest run (default .intentos/onboard/<repo-id>)")
+  .option("--policy-file <file>", "policy file to append to (default policies/<policy-id>.yaml)")
+  .option("--by <name>", "reviewer name written into approved_by (default: git user.name)")
+  .option("--doc-file <path>", "repository-relative Markdown file that receives sections for candidates without a source", "docs/intentos-policy.md")
+  .option("--port <n>", "port for the local server (default: random)")
+  .option("--no-open", "print the URL instead of opening the browser")
+  .option("--include-filtered", "also show candidates the classifier set aside", false)
+  .action(async (repo: string, opts: { policyId?: string; out?: string; policyFile?: string; by?: string; docFile: string; port?: string; open: boolean; includeFiltered: boolean }) => {
+    const store = openStore();
+    try {
+      const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, policyFile: opts.policyFile, by: opts.by ?? defaultReviewer(), docFile: opts.docFile, includeFiltered: opts.includeFiltered, store, log: (line) => console.error(`[review] ${line}`) });
+      const pending = state.candidates.filter((c) => !state.decisions.some((d) => d.id === c.id)).length;
+      console.log(`Review ${state.policy_id}: ${state.candidates.length} candidate(s), ${pending} pending; approvals go to ${state.policy_file}`);
+      const server = await startReviewServer(state, { port: opts.port ? Number(opts.port) : 0, open: opts.open, log: (line) => console.log(`  ${line}`) });
+      console.log("  press Ctrl-C to stop without finishing (decisions so far are kept)");
+      const result = await server.done;
+      console.log(`Review finished: approved ${result.accepted}${result.assigned.length ? ` (${result.assigned.join("; ")})` : ""}, rejected ${result.rejected}, skipped ${result.skipped}, pending ${result.pending}`);
+      if (result.hidden_tests_needing_attention.length) console.log(`  hidden tests to finish by hand: ${result.hidden_tests_needing_attention.join(", ")}`);
+      if (result.feedback) console.log(`  feedback recorded: ${result.feedback.accept_tokens.length} accept / ${result.feedback.reject_tokens.length} reject terms`);
+      if (result.index) console.log(`  re-indexed (${result.index.mode}, policy ${result.index.policy_id})${result.index.unresolved_sources.length ? `; unresolved policy sources: ${result.index.unresolved_sources.map((u) => `${u.owner} ${u.path}${u.heading ? `#${u.heading}` : ""}`).join("; ")}` : ""}`);
+      if (result.index_error) console.log(`  index failed: ${result.index_error}`);
+      console.log("  commit the policy, the hidden tests and any new section in the repository");
+    } catch (err) {
+      fail((err as Error).message);
+    } finally {
+      store.close();
     }
   });
 

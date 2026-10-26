@@ -13,7 +13,7 @@ Last updated: 2026-10-26 (`intentos onboard` and `intentos suggest` landed after
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 16 files, **96 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean. Suggestion-ranking benchmark on the fixture (`tests/integration/suggest_rank.test.ts`): precision@10 = 0.90, no unit-test/preamble noise in the top 10, mean score of policy material 0.64 vs 0.46 for noise.
+Tests: `npm test` → 17 files, **102 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean. Suggestion-ranking benchmark on the fixture (`tests/integration/suggest_rank.test.ts`): precision@10 = 0.90, no unit-test/preamble noise in the top 10, mean score of policy material 0.64 vs 0.46 for noise.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -227,6 +227,22 @@ statement overlap) and writes `feedback.json` with accept/reject terms the next 
   evidence guard in each run. The 26 → 2 that a person did by hand is now 26 → 11 by machine, with the 11 readable.
 - Tests: `tests/integration/suggest_rank.test.ts` (6: benchmark, --min-score, classification with an injected engine,
   rewrite guard, CLI, feedback loop); python tests updated for score/rank/cluster fields.
+
+## Review UI (2026-10-26)
+`intentos review <repo>` replaces the copy-paste review: a Node `http` server bound to 127.0.0.1 with a random token in
+the URL serves one page that walks the candidates of the last `suggest` run one by one (rule statement prefilled with
+the classifier's rewrite and editable, evidence, where it applies, the source it will cite, the hidden test that will
+be written; keys A/R/S). Approving allocates the next `INV-`/`ARCH-`/`DEC-` id from the policy document, appends the
+block with the reviewer's name using the YAML document API (comments preserved; the file is validated and restored on
+failure), writes the hidden-test draft under `benchmarks/hidden_tests/<id>/invariants/` with an origin header and any
+TODOs, and adds a section to `docs/intentos-policy.md` in the repository when the candidate has no Markdown source so
+the policy can bind it by heading. Rejections carry a reason; Finish records feedback, re-indexes and stops the server.
+Observed on the fixture (`tests/integration/review.test.ts`, 6): approving the cancelled-contract candidate yields
+INV-001 with the hidden test file and a new notes section; a doc-sourced candidate cites `business-policy.md#Locked
+contracts`; a layering rule becomes ARCH-001 with its paths and forbidden modules; an ADR becomes DEC-001 (the
+file-based `supersedes` is dropped with a warning); duplicate approvals, unknown ids and bad actions are refused;
+Finish reports 4/1/1, writes feedback with the accepted terms, re-indexes with zero unresolved sources, and the
+server stops. The page is a single file with no external resources (works offline, light and dark).
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

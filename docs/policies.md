@@ -190,9 +190,12 @@ API layer); with empty path lists the third detector is simply inactive.
    business rule, robustness rule, implementation detail, environment, tooling or duplicate, keeps or sets aside,
    rewrites the statement as one testable sentence, and names its cluster. The model cannot add candidates, its
    rewrite is discarded if it uses an identifier the evidence does not contain, and set-aside candidates stay in
-   the review document under a rescue heading. After you have pasted what you keep, `--record` derives accept and
-   reject terms from your decisions and the next run ranks with them.
-   Nothing in these files has authority: you delete what is wrong, edit the rest, and approve by pasting.
+   the review document under a rescue heading. `intentos review <repo>` then opens a local page that walks the
+   candidates one by one: approving writes the block into the policy with a real id and your name, writes the hidden
+   test file, and adds a section to `docs/intentos-policy.md` in the repository when nothing else can be cited;
+   rejecting records why. Finishing derives accept and reject terms from your decisions and the next run ranks with
+   them. Nothing in the suggestion files has authority: the review page is where a person turns a candidate into
+   policy, and the policy file is still the only thing that binds.
 3. Decide what must never change and write it down as Markdown in the repository, one heading per rule (ADRs,
    `docs/business-policy.md`). The indexer needs headings to bind. Accepted ADR drafts count: change their status.
 4. Turn each rule into an invariant or an architecture rule with `sources` pointing at those headings and
