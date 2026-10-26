@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { resolvePaths, resolvePython, type IntentosPaths } from "../config.ts";
 import { evidenceId, nowIso, sha256, shortHash } from "../util/ids.ts";
-import { headSha, isDirty, isGitRepo, repoToplevel } from "../util/git.ts";
+import { git, headSha, isDirty, isGitRepo, repoToplevel } from "../util/git.ts";
 import { matchesAny } from "../util/paths.ts";
 import type { Authority, EdgeRow, EpistemicStatus, EvidenceRow, KnowledgeStore, NodeRow } from "./storage.ts";
 import { fallbackPolicy, policyForRepo, type Policy, type SourceRef } from "./policy.ts";
@@ -76,20 +77,144 @@ export interface RawIndex {
   tests: RawTest[];
   skipped: Array<{ path: string; reason: string }>;
   limitations: string[];
+  /** Set by `--only-files` runs: only `only_files` were parsed; `files`/`modules` still describe the whole tree. */
+  partial?: boolean;
+  only_files?: string[];
 }
 
 export function repoIdFor(repoPath: string): string {
   return `repo-${shortHash(fs.realpathSync(repoPath), 12)}`;
 }
 
-export function runPythonIndexer(repoPath: string, paths: IntentosPaths = resolvePaths()): RawIndex {
+export interface PythonIndexerOptions {
+  /** Parse only these repository-relative paths (partial extraction used by incremental indexing). */
+  onlyFiles?: string[];
+}
+
+export function runPythonIndexer(repoPath: string, paths: IntentosPaths = resolvePaths(), opts: PythonIndexerOptions = {}): RawIndex {
   const script = path.join(paths.python, "index_repo.py");
-  const res = spawnSync(resolvePython(paths), ["-I", script, repoPath], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-  if (res.error) throw new Error(`Failed to start Python indexer: ${res.error.message}`);
-  if (res.status !== 0) throw new Error(`Python indexer exited ${res.status}: ${res.stderr.trim() || res.stdout.trim()}`);
-  const parsed = JSON.parse(res.stdout) as RawIndex | { error: string };
-  if ("error" in parsed) throw new Error(`Python indexer error: ${parsed.error}`);
-  return parsed;
+  const args = ["-I", script, repoPath];
+  let tmpDir: string | null = null;
+  if (opts.onlyFiles) {
+    // The file list travels through a JSON file, never through the command line.
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "intentos-only-files-"));
+    const listFile = path.join(tmpDir, "only_files.json");
+    fs.writeFileSync(listFile, JSON.stringify(opts.onlyFiles));
+    args.push("--only-files", listFile);
+  }
+  try {
+    const res = spawnSync(resolvePython(paths), args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+    if (res.error) throw new Error(`Failed to start Python indexer: ${res.error.message}`);
+    if (res.status !== 0) throw new Error(`Python indexer exited ${res.status}: ${res.stderr.trim() || res.stdout.trim()}`);
+    const parsed = JSON.parse(res.stdout) as RawIndex | { error: string };
+    if ("error" in parsed) throw new Error(`Python indexer error: ${parsed.error}`);
+    if (opts.onlyFiles && parsed.partial !== true) throw new Error("Python indexer ignored --only-files (no partial marker in its output)");
+    return parsed;
+  } finally {
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+// ---- incremental indexing: raw extraction cache + blob diff -----------------
+
+/** Mirrors the extractor: only these files are parsed, and these basenames are never read. */
+const IGNORED_BASENAMES = new Set([".env", ".env.local", ".env.production", "id_rsa", "credentials.json"]);
+const isIndexedFile = (p: string): boolean => (p.endsWith(".py") || p.toLowerCase().endsWith(".md")) && !IGNORED_BASENAMES.has(path.posix.basename(p));
+
+const INDEX_CACHE_VERSION = 1;
+/** Fraction of indexed files above which an incremental run is not worth it. */
+const INCREMENTAL_MAX_CHANGED_RATIO = 0.6;
+
+export interface IndexCacheFile {
+  version: number;
+  repo_id: string;
+  revision: string;
+  written_at: string;
+  /** git blob id per indexed file at `revision` (from `git ls-tree -r`). */
+  blobs: Record<string, string>;
+  /** Complete (never partial) raw extraction for `revision`. */
+  raw: RawIndex;
+}
+
+export interface IncrementalPlan {
+  previous: string;
+  changed: string[];
+  deleted: string[];
+  carried: string[];
+}
+
+/** Blob ids of the indexable files (`.py`, `.md`) at a revision. */
+export function listIndexedBlobs(repoPath: string, revision: string): Record<string, string> {
+  const blobs: Record<string, string> = {};
+  for (const entry of git(repoPath, ["ls-tree", "-r", "-z", revision]).stdout.split("\0")) {
+    const tab = entry.indexOf("\t");
+    if (tab < 0) continue;
+    const [mode, type, sha] = entry.slice(0, tab).split(" ");
+    const file = entry.slice(tab + 1);
+    if (!mode || type !== "blob" || !sha || !isIndexedFile(file)) continue;
+    blobs[file] = sha;
+  }
+  return blobs;
+}
+
+export function indexCacheFile(paths: IntentosPaths, repoId: string, revision: string): string {
+  return path.join(paths.indexCache, repoId, `${revision}.json`);
+}
+
+export function readIndexCache(file: string, repoId: string, revision: string): IndexCacheFile | null {
+  if (!fs.existsSync(file)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as Partial<IndexCacheFile>;
+    if (parsed.version !== INDEX_CACHE_VERSION || parsed.repo_id !== repoId || parsed.revision !== revision) return null;
+    if (!parsed.blobs || typeof parsed.blobs !== "object" || !parsed.raw || parsed.raw.partial) return null;
+    return parsed as IndexCacheFile;
+  } catch {
+    return null;
+  }
+}
+
+/** Compare the blobs of `previous` (from its cache) with HEAD's; null when the change is too large to be worth it. */
+export function planIncremental(prevBlobs: Record<string, string>, headBlobs: Record<string, string>, previous: string): IncrementalPlan | { tooLarge: { changed: number; total: number } } {
+  const changed: string[] = [];
+  const carried: string[] = [];
+  const deleted: string[] = [];
+  for (const [file, sha] of Object.entries(headBlobs)) (prevBlobs[file] === sha ? carried : changed).push(file);
+  for (const file of Object.keys(prevBlobs)) if (!(file in headBlobs)) deleted.push(file);
+  const total = Object.keys(headBlobs).length;
+  if (total > 0 && changed.length > INCREMENTAL_MAX_CHANGED_RATIO * total) return { tooLarge: { changed: changed.length, total } };
+  return { previous, changed: changed.sort(), deleted: deleted.sort(), carried: carried.sort() };
+}
+
+/**
+ * Merge the cached raw extraction of the previous revision with a partial extraction of the changed files.
+ * Carried entries are taken from the cache only for files whose blob id is unchanged; everything from a changed
+ * or deleted file comes from the partial run (or is dropped). The result is ordered like a full extraction
+ * (all `.py` files, then all `.md` files, in `git ls-files` order), so the graph builder sees identical input.
+ */
+export function mergeRawIndex(prevRaw: RawIndex, partialRaw: RawIndex, plan: IncrementalPlan): RawIndex {
+  const carried = new Set(plan.carried);
+  const deleted = new Set(plan.deleted);
+  const keep = <T extends { path: string }>(rows: T[]): T[] => rows.filter((r) => carried.has(r.path) && !deleted.has(r.path));
+  const order = new Map<string, number>();
+  [...partialRaw.files.filter((f) => f.endsWith(".py")), ...partialRaw.files.filter((f) => f.toLowerCase().endsWith(".md"))].forEach((f, i) => order.set(f, i));
+  const rank = (file: string): number => order.get(file) ?? Number.MAX_SAFE_INTEGER;
+  const inExtractionOrder = <T extends { path: string }>(rows: T[]): T[] =>
+    rows.map((r, i) => ({ r, i })).sort((a, b) => rank(a.r.path) - rank(b.r.path) || a.i - b.i).map((x) => x.r);
+  return {
+    repo: partialRaw.repo,
+    files: partialRaw.files,
+    modules: partialRaw.modules,
+    symbols: inExtractionOrder([...keep(prevRaw.symbols), ...partialRaw.symbols]),
+    imports: inExtractionOrder([...keep(prevRaw.imports), ...partialRaw.imports]),
+    calls: inExtractionOrder([...keep(prevRaw.calls), ...partialRaw.calls]),
+    docs: inExtractionOrder([...keep(prevRaw.docs), ...partialRaw.docs]),
+    tests: inExtractionOrder([...keep(prevRaw.tests), ...partialRaw.tests]),
+    skipped: inExtractionOrder([...keep(prevRaw.skipped), ...partialRaw.skipped]),
+    limitations: [
+      ...partialRaw.limitations,
+      `incremental: ${plan.carried.length} file(s) carried from ${plan.previous.slice(0, 7)} after blob-id checks; ${plan.changed.length} re-extracted, ${plan.deleted.length} deleted`,
+    ],
+  };
 }
 
 // ---- node attribute shapes ------------------------------------------------
@@ -135,7 +260,17 @@ export interface ConstraintAttributes {
   enforcement: "blocking" | "advisory";
   scope: string[];
   evidence_ids: string[];
-  sources: Array<SourceRef & { evidence_id: string | null; resolved: boolean; status: EpistemicStatus }>;
+  sources: Array<
+    SourceRef & {
+      evidence_id: string | null;
+      resolved: boolean;
+      status: EpistemicStatus;
+      /** Hash of the section text at this revision (null when the section was not found). */
+      content_hash: string | null;
+      /** Hash the section had when it was last approved (policy pin, or the hash first bound); the source is `conflicted` while it differs. */
+      approved_content_hash: string | null;
+    }
+  >;
   verified_by: string[];
   approved_by: string | null;
   kind?: string;
@@ -157,6 +292,22 @@ export interface IndexSummary {
   skipped: Array<{ path: string; reason: string }>;
   limitations: string[];
   unresolved_sources: Array<{ owner: string; path: string; heading?: string; reason: string }>;
+  /** `incremental` when only changed files were re-extracted and the rest carried from the previous revision's cache. */
+  mode: "full" | "incremental";
+  previous_revision: string | null;
+  /** Files (re-)extracted this run; in full mode every indexed file. */
+  changed_files: string[];
+  deleted_files: string[];
+  carried_files: string[];
+  /** Raw extraction cache written for this revision (null when the working tree was dirty). */
+  cache_file: string | null;
+}
+
+export interface IndexOptions {
+  paths?: IntentosPaths;
+  policy?: Policy | null;
+  /** Force a full re-extraction even when an incremental run is possible. */
+  full?: boolean;
 }
 
 function sectionExcerpt(text: string, max = 600): string {
@@ -170,8 +321,16 @@ function scopeTagsFor(policy: Policy, relPath: string): string[] {
   return [...tags].sort();
 }
 
-/** Index a repository at HEAD and persist the graph bound to the trusted policy. */
-export function indexRepository(store: KnowledgeStore, repoPathInput: string, opts: { paths?: IntentosPaths; policy?: Policy | null } = {}): IndexSummary {
+/**
+ * Index a repository at HEAD and persist the graph bound to the trusted policy.
+ *
+ * When the repository was indexed before, its raw extraction is cached and the working tree is clean, only files
+ * whose git blob id changed are re-extracted; unchanged files are carried from the cache (explicitly, after the
+ * blob-id check) and the graph is rebuilt for HEAD from the merged extraction. Policy-bound sections are
+ * re-validated against the hash bound at the previous revision: a changed section becomes `conflicted` until a
+ * human re-approves it (spec §6.4 — never transfer an assertion as current without checking its source).
+ */
+export function indexRepository(store: KnowledgeStore, repoPathInput: string, opts: IndexOptions = {}): IndexSummary {
   const paths = opts.paths ?? resolvePaths();
   const repoPath = path.resolve(repoPathInput);
   if (!fs.existsSync(repoPath)) throw new Error(`Repository path does not exist: ${repoPath}`);
@@ -182,12 +341,43 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
   if (fs.realpathSync(top) !== fs.realpathSync(repoPath)) throw new Error(`Please pass the repository root (${top}), not a subdirectory.`);
   const revision = headSha(repoPath);
   const policy = opts.policy === undefined ? (policyForRepo(repoPath) ?? fallbackPolicy(repoPath)) : (opts.policy ?? fallbackPolicy(repoPath));
-  const raw = runPythonIndexer(repoPath, paths);
-  if (raw.repo.head_sha !== revision) throw new Error(`HEAD moved during indexing (${revision} -> ${raw.repo.head_sha}); retry.`);
-
   const repoId = repoIdFor(repoPath);
-  // Register the repository row first (decisions reference it); head_sha is finalized after the graph is stored.
   const existing = store.getRepository(repoId);
+  // The previous revision is only usable when its graph is still stored.
+  const previous = existing && store.indexedRevisions(repoId).includes(existing.head_sha) ? existing.head_sha : null;
+  const dirtyNow = isDirty(repoPath);
+  const headBlobs = listIndexedBlobs(repoPath, revision);
+
+  // --- decide between incremental and full extraction
+  const fallbackNotes: string[] = [];
+  let plan: IncrementalPlan | null = null;
+  let prevCache: IndexCacheFile | null = null;
+  if (opts.full) fallbackNotes.push("full re-index: requested with --full");
+  else if (!previous) fallbackNotes.push("full index: no previous revision indexed for this repository (incremental mode needs one)");
+  else if (dirtyNow) fallbackNotes.push("full re-index: working tree has uncommitted changes (incremental mode needs a clean tree)");
+  else {
+    prevCache = readIndexCache(indexCacheFile(paths, repoId, previous), repoId, previous);
+    if (!prevCache) fallbackNotes.push(`full re-index: no extraction cache for previous revision ${previous.slice(0, 7)}`);
+    else {
+      const planned = planIncremental(prevCache.blobs, headBlobs, previous);
+      if ("tooLarge" in planned) {
+        fallbackNotes.push(`full re-index: ${planned.tooLarge.changed} of ${planned.tooLarge.total} indexed files changed since ${previous.slice(0, 7)} (over ${Math.round(INCREMENTAL_MAX_CHANGED_RATIO * 100)}%)`);
+      } else plan = planned;
+    }
+  }
+
+  let raw: RawIndex;
+  if (plan && prevCache) {
+    const partial = runPythonIndexer(repoPath, paths, { onlyFiles: plan.changed });
+    if (partial.repo.head_sha !== revision) throw new Error(`HEAD moved during indexing (${revision} -> ${partial.repo.head_sha}); retry.`);
+    raw = mergeRawIndex(prevCache.raw, partial, plan);
+  } else {
+    raw = runPythonIndexer(repoPath, paths);
+    if (raw.repo.head_sha !== revision) throw new Error(`HEAD moved during indexing (${revision} -> ${raw.repo.head_sha}); retry.`);
+    raw.limitations.push(...fallbackNotes);
+  }
+
+  // Register the repository row first (decisions reference it); head_sha is finalized after the graph is stored.
   store.upsertRepository({ id: repoId, path: repoPath, head_sha: existing?.head_sha ?? revision, indexed_at: existing?.indexed_at ?? nowIso() });
   const nodes: NodeRow[] = [];
   const edges: EdgeRow[] = [];
@@ -370,13 +560,31 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
 
   // --- policy binding (invariants, architecture rules, decisions)
   const policyFile = `policies/${policy.policy_id}.yaml`;
+  /** Sources of the same constraint as bound at the previous revision (for change detection across revisions). */
+  const previousSources = (ownerId: string): ConstraintAttributes["sources"] | null => {
+    if (!previous) return null;
+    const row = store.node(repoId, previous, ownerId);
+    if (!row) return null;
+    try {
+      const attrs = JSON.parse(row.attributes_json) as Partial<ConstraintAttributes>;
+      return Array.isArray(attrs.sources) ? attrs.sources : null;
+    } catch {
+      return null;
+    }
+  };
+  const sameSource = (a: SourceRef, b: SourceRef): boolean =>
+    a.path === b.path && (a.heading ?? null) === (b.heading ?? null) && (a.line_start ?? null) === (b.line_start ?? null);
   const resolveSources = (owner: string, sources: SourceRef[], authority: Authority) => {
     const out: ConstraintAttributes["sources"] = [];
+    const prevSources = previousSources(owner);
     for (const src of sources) {
+      const prevSrc = prevSources?.find((p) => sameSource(p, src)) ?? null;
+      // Carry the approved hash through a "not found" period so a section that reappears is still checked.
+      const carriedApproval = { approved_content_hash: prevSrc?.approved_content_hash ?? null };
       const sections = sectionsByPath.get(src.path);
       if (!sections) {
         unresolved.push({ owner, path: src.path, heading: src.heading, reason: "document not found in repository at this revision" });
-        out.push({ ...src, evidence_id: null, resolved: false, status: "conflicted" });
+        out.push({ ...src, evidence_id: null, resolved: false, status: "conflicted", content_hash: null, ...carriedApproval });
         continue;
       }
       let sec: RawDocSection | undefined;
@@ -385,14 +593,29 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
       else sec = sections[0];
       if (!sec) {
         unresolved.push({ owner, path: src.path, heading: src.heading, reason: "heading not found at this revision" });
-        out.push({ ...src, evidence_id: null, resolved: false, status: "conflicted" });
+        out.push({ ...src, evidence_id: null, resolved: false, status: "conflicted", content_hash: null, ...carriedApproval });
         continue;
       }
       const evId = sectionEvidence.get(sec.id)!;
       let status: EpistemicStatus = "confirmed";
-      if (src.content_sha256 && src.content_sha256 !== sec.content_hash) {
-        status = "conflicted";
-        unresolved.push({ owner, path: src.path, heading: src.heading, reason: "section content changed since the policy pinned it" });
+      let changedSinceApproval = false;
+      let approvedHash: string | null = sec.content_hash;
+      if (src.content_sha256) {
+        // A policy pin is the human's approval; it wins over anything recorded at earlier revisions.
+        approvedHash = src.content_sha256;
+        if (src.content_sha256 !== sec.content_hash) {
+          status = "conflicted";
+          unresolved.push({ owner, path: src.path, heading: src.heading, reason: "section content changed since the policy pinned it" });
+        }
+      } else if (carriedApproval.approved_content_hash) {
+        approvedHash = carriedApproval.approved_content_hash;
+        if (approvedHash !== sec.content_hash) {
+          // Never transfer an assertion as current when its source changed: conflicted until re-approved
+          // (pin the new content_sha256 in the policy, or edit the section back).
+          status = "conflicted";
+          changedSinceApproval = true;
+          unresolved.push({ owner, path: src.path, heading: src.heading, reason: `section content changed since ${(previous ?? revision).slice(0, 7)}; re-approve or pin content_sha256` });
+        }
       }
       // Upgrade the bound section's evidence authority: it is now backed by trusted policy.
       const row = evidence.find((e) => e.id === evId);
@@ -401,8 +624,9 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
         row.status = row.status === "superseded" ? "superseded" : "confirmed";
       } else if (row && status === "conflicted") {
         row.status = "conflicted";
+        if (changedSinceApproval) row.authority = authority;
       }
-      out.push({ ...src, evidence_id: evId, resolved: true, status });
+      out.push({ ...src, evidence_id: evId, resolved: true, status, content_hash: sec.content_hash, approved_content_hash: approvedHash });
     }
     return out;
   };
@@ -541,17 +765,34 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
   store.replaceRevision(repoId, revision, nodes, edges, evidence);
   store.upsertRepository({ id: repoId, path: repoPath, head_sha: revision, indexed_at: nowIso() });
 
+  // Cache the complete raw extraction for the next incremental run. Only a clean tree is cached: the extractor
+  // reads the working copy, and a cache must describe exactly the blobs recorded for `revision`.
+  const dirty = raw.repo.dirty || dirtyNow;
+  let cacheFile: string | null = null;
+  if (!dirty) {
+    cacheFile = indexCacheFile(paths, repoId, revision);
+    fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+    const cache: IndexCacheFile = { version: INDEX_CACHE_VERSION, repo_id: repoId, revision, written_at: nowIso(), blobs: headBlobs, raw: { ...raw, partial: false, only_files: [] } };
+    fs.writeFileSync(cacheFile, JSON.stringify(cache));
+  }
+
   return {
     repo_id: repoId,
     repo_path: repoPath,
     head_sha: revision,
     branch: raw.repo.branch,
-    dirty: raw.repo.dirty || isDirty(repoPath),
+    dirty,
     policy_id: policy.policy_id,
     counts,
     skipped: raw.skipped,
     limitations: raw.limitations,
     unresolved_sources: unresolved,
+    mode: plan ? "incremental" : "full",
+    previous_revision: previous,
+    changed_files: plan ? plan.changed : Object.keys(headBlobs).sort(),
+    deleted_files: plan ? plan.deleted : [],
+    carried_files: plan ? plan.carried : [],
+    cache_file: cacheFile,
   };
 }
 

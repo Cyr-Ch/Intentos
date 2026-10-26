@@ -6,7 +6,12 @@ tracked files of a Git repository at HEAD, and prints a JSON document to
 stdout. Everything here is static analysis: call extraction is name-based
 and labelled with its extraction method and confidence.
 
-Usage: index_repo.py <repo_path> [--max-file-bytes N]
+Usage: index_repo.py <repo_path> [--max-file-bytes N] [--only-files <json file>]
+
+With ``--only-files`` (a JSON array of repository-relative paths) only the listed
+files are parsed; ``files`` and ``modules`` still describe the whole tracked tree so
+imports from the parsed files resolve against modules that were not parsed. The
+output is then marked ``"partial": true`` and lists ``only_files``.
 """
 from __future__ import annotations
 
@@ -121,6 +126,8 @@ class IndexResult:
     tests: list[TestCase] = field(default_factory=list)
     skipped: list[dict[str, str]] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
+    partial: bool = False
+    only_files: list[str] = field(default_factory=list)
 
 
 def _unparse(node: ast.AST) -> str:
@@ -354,7 +361,7 @@ def _extract_superseded_by(status: str) -> str | None:
     return m.group(1) if m else None
 
 
-def index_repo(repo: str, max_file_bytes: int) -> IndexResult:
+def index_repo(repo: str, max_file_bytes: int, only_files: list[str] | None = None) -> IndexResult:
     repo = os.path.abspath(repo)
     head = run_git(repo, "rev-parse", "HEAD").strip()
     branch_out = subprocess.run(["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=repo, capture_output=True, text=True)
@@ -382,7 +389,14 @@ def index_repo(repo: str, max_file_bytes: int) -> IndexResult:
     if dirty:
         result.limitations.append("Repository had uncommitted changes at index time; the index reflects HEAD, not the working tree.")
 
-    for rel in py_files + md_files:
+    to_parse = py_files + md_files
+    if only_files is not None:
+        wanted = set(only_files)
+        to_parse = [f for f in to_parse if f in wanted]
+        result.partial = True
+        result.only_files = sorted(to_parse)
+
+    for rel in to_parse:
         full = os.path.join(repo, rel)
         try:
             size = os.path.getsize(full)
@@ -409,9 +423,18 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repo")
     parser.add_argument("--max-file-bytes", type=int, default=MAX_FILE_BYTES_DEFAULT)
+    parser.add_argument("--only-files", help="JSON file holding an array of repository-relative paths to parse (partial extraction)")
     args = parser.parse_args(argv)
+    only_files: list[str] | None = None
+    if args.only_files:
+        with open(args.only_files, "r", encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        if not isinstance(loaded, list) or not all(isinstance(x, str) for x in loaded):
+            print(json.dumps({"error": "--only-files must point to a JSON array of strings"}), file=sys.stdout)
+            return 2
+        only_files = loaded
     try:
-        result = index_repo(args.repo, args.max_file_bytes)
+        result = index_repo(args.repo, args.max_file_bytes, only_files)
     except subprocess.CalledProcessError as exc:
         print(json.dumps({"error": f"git failed: {exc.stderr.strip() if exc.stderr else exc}"}), file=sys.stdout)
         return 2

@@ -108,5 +108,22 @@ Nothing the re-entered turn claims is trusted: verification decides, exactly as 
 
 ## Incremental indexing
 
-Currently the repository is re-indexed in full at each new HEAD (fast for fixture-sized repos). Diff-based
-invalidation is the next step; assertions are never carried across revisions implicitly.
+Every index of a clean working tree caches its raw extraction under
+`<INTENTOS_HOME>/index-cache/<repo-id>/<revision>.json`, together with the git blob id of each indexed file
+(`git ls-tree -r`). The next `intentos index` of a clean tree lists the blobs at HEAD, re-extracts only the files
+whose blob id changed (`python/index_repo.py --only-files`, which still computes the module list from the whole tree
+so imports resolve against files that were not parsed), carries the cached extraction of unchanged files
+explicitly after the blob-id check, drops deleted files, and rebuilds the entire graph for HEAD from the merged
+extraction with the unchanged graph builder. Equivalence with a full index therefore holds by construction, and
+`tests/integration/incremental_index.test.ts` asserts set equality of nodes, edges and evidence against a full
+index of the same HEAD. Evidence ids are revision-scoped, so carried files get fresh ids. `--full`, a dirty tree, a
+missing or mismatching cache, or more than 60 % changed files fall back to a full extraction with a note in
+`limitations`; the summary reports `mode`, `changed_files`, `deleted_files`, `carried_files` and `cache_file`.
+
+Assertions are never transferred implicitly (spec §6.4). Each policy-bound section records its `content_hash` and
+an `approved_content_hash` (the policy's `content_sha256` pin, or the hash bound when the section was first
+confirmed). When the current hash differs from the approved one the source and its constraint become
+`conflicted`, the section is listed in `unresolved_sources` as "section content changed since <rev>", the evidence
+pack shows the constraint as non-binding and the compiler rejects any contract that makes it blocking, routing the
+planner to clarify. The conflict persists across later revisions until a human re-approves it by pinning the new
+`content_sha256` in the policy or by restoring the section text.

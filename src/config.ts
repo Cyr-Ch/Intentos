@@ -17,6 +17,8 @@ export interface IntentosPaths {
   hiddenTests: string;
   python: string;
   benchmarks: string;
+  /** Raw extraction cache per repository and revision (enables diff-based incremental re-indexing). */
+  indexCache: string;
 }
 
 export function resolvePaths(home = process.env.INTENTOS_HOME ?? path.join(PROJECT_ROOT, ".intentos")): IntentosPaths {
@@ -31,6 +33,7 @@ export function resolvePaths(home = process.env.INTENTOS_HOME ?? path.join(PROJE
     hiddenTests: path.join(PROJECT_ROOT, "benchmarks", "hidden_tests"),
     python: path.join(PROJECT_ROOT, "python"),
     benchmarks: path.join(home, "benchmarks"),
+    indexCache: path.join(home, "index-cache"),
   };
 }
 
@@ -63,6 +66,6 @@ export function codexSettings(): CodexSettings {
 }
 
 export function ensureHome(paths: IntentosPaths = resolvePaths()): IntentosPaths {
-  for (const dir of [paths.home, paths.runs, paths.worktrees, paths.fixtures]) fs.mkdirSync(dir, { recursive: true });
+  for (const dir of [paths.home, paths.runs, paths.worktrees, paths.fixtures, paths.indexCache]) fs.mkdirSync(dir, { recursive: true });
   return paths;
 }

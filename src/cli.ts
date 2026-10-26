@@ -37,16 +37,22 @@ program
   .command("index")
   .description("Index a Git repository at HEAD: symbols, imports, tests, docs, trusted policy bindings -> .intentos/intentos.db")
   .argument("<repo>", "path to the repository root")
-  .action((repo: string) => {
+  .option("--full", "re-extract every file instead of the diff-based incremental path", false)
+  .action((repo: string, opts: { full: boolean }) => {
     const store = openStore();
     try {
-      const summary = indexRepository(store, repo);
+      const summary = indexRepository(store, repo, { full: opts.full });
       if (program.opts().json) {
         console.log(JSON.stringify(summary, null, 2));
       } else {
+        const mode =
+          summary.mode === "incremental"
+            ? `incremental (${summary.changed_files.length} changed, ${summary.deleted_files.length} deleted, ${summary.carried_files.length} carried from ${summary.previous_revision?.slice(0, 7)})`
+            : `full (${summary.changed_files.length} files extracted)`;
         console.log(`Indexed ${summary.repo_path}`);
         console.log(`  repo_id:   ${summary.repo_id}`);
         console.log(`  revision:  ${summary.head_sha}${summary.branch ? ` (${summary.branch})` : ""}${summary.dirty ? "  [working tree dirty: index reflects HEAD]" : ""}`);
+        console.log(`  mode:      ${mode}`);
         console.log(`  policy:    ${summary.policy_id}`);
         console.log(`  counts:    ${Object.entries(summary.counts).map(([k, v]) => `${k}=${v}`).join(", ")}`);
         if (summary.skipped.length) console.log(`  skipped:   ${summary.skipped.map((s) => `${s.path} (${s.reason})`).join("; ")}`);

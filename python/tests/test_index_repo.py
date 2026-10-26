@@ -79,3 +79,39 @@ def test_cli_outputs_json(tiny_repo: pathlib.Path):
     data = json.loads(out)
     assert data["repo"]["head_sha"]
     assert "limitations" in data and data["limitations"]
+
+
+def test_only_files_parses_listed_paths_but_resolves_imports_against_all_modules(tiny_repo: pathlib.Path, tmp_path: pathlib.Path):
+    full = index_repo.index_repo(str(tiny_repo), 1_000_000)
+    partial = index_repo.index_repo(str(tiny_repo), 1_000_000, only_files=["app/services/pricing.py", "docs/missing.md"])
+    assert partial.partial is True
+    assert partial.only_files == ["app/services/pricing.py"]  # untracked paths are ignored
+    assert full.partial is False and full.only_files == []
+    # Only the listed file is parsed ...
+    assert {s.path for s in partial.symbols} == {"app/services/pricing.py"}
+    assert partial.tests == [] and partial.docs == []
+    # ... but the tracked tree and module list are complete, so imports resolve to modules that were not parsed.
+    assert partial.files == full.files
+    assert partial.modules == full.modules
+    assert "app.services.discounts" in partial.modules and "tests.test_pricing" in partial.modules
+    discounts = [i for i in partial.imports if i.from_module == "app.services.pricing" and i.to_module == "app.services.discounts"]
+    assert discounts and discounts[0].resolved_internal is True
+    assert [i for i in partial.imports if i.to_module == "decimal"][0].resolved_internal is False
+    # The parsed entries are identical to the full run's entries for that file.
+    assert [index_repo.asdict(s) for s in partial.symbols] == [index_repo.asdict(s) for s in full.symbols if s.path == "app/services/pricing.py"]
+    assert [index_repo.asdict(c) for c in partial.calls] == [index_repo.asdict(c) for c in full.calls if c.path == "app/services/pricing.py"]
+    # An empty list still reports the tree.
+    empty = index_repo.index_repo(str(tiny_repo), 1_000_000, only_files=[])
+    assert empty.partial is True and empty.symbols == [] and empty.modules == full.modules
+    # CLI form: the list travels through a JSON file.
+    listing = tmp_path / "only.json"
+    listing.write_text(json.dumps(["tests/test_pricing.py"]))
+    out = subprocess.run([sys.executable, "-I", str(PY / "index_repo.py"), str(tiny_repo), "--only-files", str(listing)], capture_output=True, text=True, check=True).stdout
+    data = json.loads(out)
+    assert data["partial"] is True and data["only_files"] == ["tests/test_pricing.py"]
+    assert {s["path"] for s in data["symbols"]} == {"tests/test_pricing.py"}
+    assert [t["name"] for t in data["tests"]] == ["test_quote"]
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps({"not": "a list"}))
+    res = subprocess.run([sys.executable, "-I", str(PY / "index_repo.py"), str(tiny_repo), "--only-files", str(bad)], capture_output=True, text=True)
+    assert res.returncode == 2 and "error" in json.loads(res.stdout)
