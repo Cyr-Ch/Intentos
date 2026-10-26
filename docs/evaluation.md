@@ -41,6 +41,20 @@ What this does and does not show: the gates worked on real model output (a prote
 
 Blockers encountered: the ChatGPT workspace spend cap rejected all requests for ~10 minutes early in the session; the CLI default model `gpt-6.1-sol` is unsupported for ChatGPT accounts; one SDK stream emitted a transient `Reconnecting… 2/5` error event (adapter now treats only a missing `turn.completed` as fatal).
 
+### Validation on a real external repository (2026-10-26)
+
+`encode/httpx` (clone at `b5addb6`, 125 tracked files, 60 Python modules, 1,204 symbols, 539 tests, 458 doc
+sections) was indexed with the auto-generated fallback policy in 0.9 s. Problems found and fixed on the spot:
+property getter/setter pairs and repeated CHANGELOG headings produced duplicate node ids (now suffixed); the
+offline planner proposed the catch-all universe `**` as allowed paths (now derives `httpx/**`, `tests/**` from the
+probable impact, and the compiler rejects catch-alls explicitly); retrieval ranked a dozen exception classes above
+`HTTPTransport(retries=...)` for "Add support for a per-request retry limit when a connection error occurs" because
+generic terms such as "error" were not down-weighted and constructor signatures were not scored. After adding
+inverse-document-frequency weighting, constructor-signature scoring and a breadth bonus, the top hits are
+`Limits`, `AsyncHTTPTransport`, `HTTPTransport`, `ConnectError`, `Client`/`AsyncClient`. Without a trusted policy
+the pack contains no invariants or architecture rules and says so; verification was not run on the external code
+(it would execute untrusted tests on the host).
+
 ## Metrics definitions
 
 - **Task pass rate** — hidden task tests (`pytest_hidden_task`) passed with ≥1 test collected.
