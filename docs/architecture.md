@@ -145,6 +145,18 @@ classifier's rewrite, optional reason, fold-related toggle) and obtains the revi
 confirms finishing the same way. Client capabilities, negotiated protocol version and tool calls are logged to
 `.intentos/mcp.log`.
 
+Onboarding from the host: `status` reports whether the repository has a policy file (and how many approved rules), an
+index, mined and classified candidates and how many are undecided, plus the state of a running job and the next tool
+to call. `onboard` validates the request (Git checkout, no existing policy unless `force`), then runs `intentos
+onboard` and `intentos suggest [--classify]` as child processes of the server with `--json` (their stderr progress
+lines become the job log) and returns immediately with a job id, because hosts time out tool calls long before a
+venv, a test run and an index finish; the model polls `status`. The server declares MCP `instructions` with the
+working order (status → onboard → status… → review_start → review_next… → review_close; explain and policy before
+planning) so the host needs no prompt engineering, and `review_start` answers a not-onboarded repository with the
+same instruction. The stdio entry point widens `PATH` with the node binary's directory, Homebrew, `/usr/local/bin`
+and `~/.local/bin` because GUI hosts start servers with a bare environment, and the printed Codex registration uses
+the absolute node path for the same reason.
+
 ## Architectural surprise (review signals)
 
 `architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists

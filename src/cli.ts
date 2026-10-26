@@ -128,10 +128,9 @@ program
     const store = openStore();
     const json = program.opts().json as boolean;
     try {
-      const result = onboardRepository(store, repo, { policyId: opts.policyId, out: opts.out, python: opts.python, install: opts.install, test: opts.test, index: opts.index, force: opts.force }, (line) => {
-        if (!json) console.error(`[onboard] ${line}`);
-      });
-      const suggestions = opts.suggest ? await suggestPolicy(repo, { policyId: result.policy_id, writeAdrs: false, withCodex: false }, (line) => { if (!json) console.error(`[suggest] ${line}`); }) : null;
+      // Progress goes to stderr in every mode: with --json a caller (the MCP server's onboard job) streams it while stdout stays the result.
+      const result = onboardRepository(store, repo, { policyId: opts.policyId, out: opts.out, python: opts.python, install: opts.install, test: opts.test, index: opts.index, force: opts.force }, (line) => console.error(`[onboard] ${line}`));
+      const suggestions = opts.suggest ? await suggestPolicy(repo, { policyId: result.policy_id, writeAdrs: false, withCodex: false }, (line) => console.error(`[suggest] ${line}`)) : null;
       if (json) {
         console.log(JSON.stringify({ ...result, suggestions }, null, 2));
         return;
@@ -197,9 +196,7 @@ program
       if (!["high", "medium", "low"].includes(level)) fail(`--min-confidence must be high, medium or low (got ${opts.minConfidence})`);
       const minScore = Number(opts.minScore);
       if (!(minScore >= 0 && minScore <= 1)) fail(`--min-score must be between 0 and 1 (got ${opts.minScore})`);
-      const result = await suggestPolicy(repo, { policyId: opts.policyId, outDir: opts.out, writeAdrs: opts.writeAdrs, adrDir: opts.adrDir, withCodex: opts.withCodex, maxCommits: Number(opts.maxCommits), minConfidence: level, minScore, classify: opts.classify, classifyTop: Number(opts.classifyTop), feedbackFile: opts.feedback }, (line) => {
-        if (!json) console.error(`[suggest] ${line}`);
-      });
+      const result = await suggestPolicy(repo, { policyId: opts.policyId, outDir: opts.out, writeAdrs: opts.writeAdrs, adrDir: opts.adrDir, withCodex: opts.withCodex, maxCommits: Number(opts.maxCommits), minConfidence: level, minScore, classify: opts.classify, classifyTop: Number(opts.classifyTop), feedbackFile: opts.feedback }, (line) => console.error(`[suggest] ${line}`));
       if (json) console.log(JSON.stringify(result, null, 2));
       else printSuggestions(result);
     } catch (err) {
@@ -243,7 +240,7 @@ program
 
 program
   .command("mcp")
-  .description("Run IntentOS as an MCP server on stdio (tools: explain, policy, review_start; the review renders as an MCP Apps widget in hosts that support it)")
+  .description("Run IntentOS as an MCP server on stdio (tools: status, onboard, explain, policy, review_start, review_next, review_close; the host onboards and reviews on one sentence from the user)")
   .option("--log <file>", "log file for client info and tool calls (default .intentos/mcp.log)")
   .option("--print-codex-config", "print the command that registers this server with Codex and exit", false)
   .action(async (opts: { log?: string; printCodexConfig: boolean }) => {

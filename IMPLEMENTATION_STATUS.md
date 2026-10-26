@@ -287,6 +287,22 @@ stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
   answered `cancel`; the server reported "CAND-001 left undecided (reviewer cancel)" and recorded nothing. The round
   trip server → Codex → reviewer → server is proven; in the interactive Codex app or CLI the same request is shown to
   the reviewer as a form.
+- Onboarding from the host (2026-10-26): `status` (where a repository stands, job progress, the next tool to call) and
+  `onboard` (runs `intentos onboard` then `intentos suggest --classify` as child processes, returns a job id at once,
+  refuses to overwrite a policy without `force`), so the user says one sentence; MCP `instructions` carry the working
+  order and `review_start` points a not-onboarded repository at `onboard`. Found on the way: the Codex app starts MCP
+  servers with an empty PATH (`MCP startup failed: No such file or directory`), so the registration now uses the
+  absolute node path and the stdio server widens PATH for its children; the CLI now prints progress to stderr in
+  `--json` mode too. Tests: instructions and `status` on the fixture, `review_start` on a missing policy, refused
+  re-onboard, `status` on a non-repository, a full background onboard of the fixture (install=false, classify=false)
+  polled through `status` (second `onboard` and early `review_start` refused while it runs) and then reviewed.
+- Headless Codex (0.154.0) on a throwaway copy of the fixture, prompt "Bring this repository under IntentOS with the
+  intentos MCP server and walk me through the policy candidates", no tool names given: Codex called `status`
+  ("not onboarded: call onboard"), `onboard` (defaults: venv, suite, index, mining, classification), polled `status`
+  every 20–40 s through the classifying phase (about 4 minutes), then `status` again ("11 candidate(s) await the
+  reviewer"), `review_start` and `review_next`; the headless session cancelled the form, and Codex reported the
+  outcome (17 tests passed at the base revision, 28 candidates, 11 kept, 0 approved) with the review link as the
+  fallback. The CLI was never typed by anyone.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

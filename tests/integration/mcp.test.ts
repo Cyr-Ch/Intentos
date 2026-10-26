@@ -56,7 +56,7 @@ describe("intentos mcp", () => {
     try {
       const tools = (await client.listTools()).tools;
       const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-      expect(Object.keys(byName).sort()).toEqual(["explain", "policy", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state"]);
+      expect(Object.keys(byName).sort()).toEqual(["explain", "onboard", "policy", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "status"]);
       expect((byName.review_start!._meta as any).ui.resourceUri).toBe(REVIEW_RESOURCE_URI);
       for (const name of ["review_session", "review_state", "review_decide", "review_finish"]) expect((byName[name]!._meta as any).ui.visibility, name).toEqual(["app"]);
       for (const name of ["explain", "policy", "review_start", "review_next", "review_close"]) expect((byName[name]!._meta as any)?.ui?.visibility, name).toBeUndefined();
@@ -150,7 +150,7 @@ describe("intentos mcp", () => {
   it("is wired into the CLI and prints the Codex registration command", () => {
     const res = spawnSync("node", ["--disable-warning=ExperimentalWarning", path.join(PROJECT_ROOT, "bin", "intentos.js"), "mcp", "--print-codex-config"], { encoding: "utf8", env: { ...process.env, INTENTOS_HOME: env.home } });
     expect(res.status, res.stderr).toBe(0);
-    expect(res.stdout.trim()).toBe(`codex mcp add intentos -- node --disable-warning=ExperimentalWarning ${path.join(PROJECT_ROOT, "bin", "intentos.js")} mcp`);
+    expect(res.stdout.trim()).toBe(`codex mcp add intentos -- ${process.execPath} --disable-warning=ExperimentalWarning ${path.join(PROJECT_ROOT, "bin", "intentos.js")} mcp`);
   });
 });
 
@@ -240,4 +240,68 @@ describe("intentos mcp — elicitation (the host asks the reviewer, not the mode
       await built.close();
     }
   });
+});
+
+describe("intentos mcp — onboarding from the host (status → onboard → status… → review_start)", () => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it("carries the working order in the server instructions; status says what to call next; review_start and onboard refuse politely", async () => {
+    const { client, built } = await connect();
+    try {
+      expect(client.getInstructions()).toMatch(/status.*onboard.*review_start.*review_next.*review_close/s);
+      fs.writeFileSync(policyFile, MINIMAL_POLICY);
+      const s = structured((await client.callTool({ name: "status", arguments: { repo: env.repo, policy_file: policyFile } })) as never);
+      expect(s.policy.exists).toBe(true);
+      expect(s.suggestions).toBeNull(); // the earlier runs in this file wrote to suggest-out, not the default directory
+      expect(s.next).toMatch(/onboard/);
+      const missing = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: path.join(env.home, "policies", "nope.yaml") } });
+      expect(missing.isError).toBe(true);
+      expect(textOf(missing as never)).toMatch(/not onboarded.*Call onboard/);
+      const refused = await client.callTool({ name: "onboard", arguments: { repo: env.repo, policy_file: policyFile } });
+      expect(refused.isError).toBe(true);
+      expect(textOf(refused as never)).toMatch(/already exists.*force=true/);
+      const notRepo = await client.callTool({ name: "status", arguments: { repo: env.home } });
+      expect(notRepo.isError).toBe(true);
+    } finally {
+      await client.close();
+      await built.close();
+    }
+  });
+
+  it("onboard runs the CLI in the background, status reports progress, and the review starts from its output", async () => {
+    const { client, built } = await connect();
+    try {
+      const started = await client.callTool({ name: "onboard", arguments: { repo: env.repo, policy_file: policyFile, install: false, classify: false, force: true } });
+      expect(started.isError, textOf(started as never)).toBeFalsy();
+      expect(textOf(started as never)).toMatch(/Onboarding started.*Call status/s);
+      const again = await client.callTool({ name: "onboard", arguments: { repo: env.repo, policy_file: policyFile, install: false, classify: false, force: true } });
+      expect(textOf(again as never)).toMatch(/already running/);
+      const early = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile } });
+      expect(early.isError).toBe(true);
+      expect(textOf(early as never)).toMatch(/still running/);
+      let s: Record<string, any> = {};
+      for (let i = 0; i < 200; i++) {
+        s = structured((await client.callTool({ name: "status", arguments: { repo: env.repo, policy_file: policyFile } })) as never);
+        if (s.job?.phase === "done" || s.job?.phase === "failed") break;
+        await sleep(1000);
+      }
+      expect(s.job?.phase, JSON.stringify(s.job, null, 2)).toBe("done");
+      expect(s.job.result.suite).toMatch(/^passed/);
+      expect(s.job.log_tail.length).toBeGreaterThan(0);
+      expect(fs.readFileSync(policyFile, "utf8")).toMatch(/DRAFT generated by `intentos onboard`/);
+      expect(s.indexed).toBe(true);
+      expect(s.suggestions.total).toBeGreaterThan(0);
+      expect(s.suggestions.classified).toBe(0);
+      expect(s.pending).toBe(s.suggestions.total);
+      expect(s.next).toMatch(/review_start/);
+      const review = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile, hidden_tests_root: path.join(env.home, "hidden-onboard"), by: "tester" } });
+      expect(review.isError, textOf(review as never)).toBeFalsy();
+      expect(structured(review as never).candidates.length).toBe(Math.min(40, s.suggestions.total));
+      expect(textOf(review as never)).toMatch(/not classified/);
+    } finally {
+      fs.writeFileSync(policyFile, MINIMAL_POLICY);
+      await client.close();
+      await built.close();
+    }
+  }, 240_000);
 });

@@ -1,14 +1,19 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { McpServer, acceptedContent, inputRequired, inputResponse, type CallToolResult, type ElicitRequestFormParams, type InputRequiredResult, type PrimitiveSchemaDefinition, type ServerContext } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
-import { ensureHome, resolvePaths } from "./config.ts";
+import { PROJECT_ROOT, ensureHome, resolvePaths } from "./config.ts";
 import type { KnowledgeStore } from "./knowledge/storage.ts";
 import { loadIndexedRepo } from "./knowledge/repo.ts";
+import { repoIdFor } from "./knowledge/indexer.ts";
 import { buildEvidencePack } from "./knowledge/retrieval.ts";
-import { fallbackPolicy, policyForRepo } from "./knowledge/policy.ts";
+import { fallbackPolicy, loadPolicyFile, policyForRepo } from "./knowledge/policy.ts";
+import { policyIdFor, runProbe } from "./onboard.ts";
+import { isGitRepo } from "./util/git.ts";
 import { renderEvidencePack } from "./reports/explain.ts";
 import { decide, defaultReviewer, finishReview, loadReviewState, publicState, reviewPage, startReviewServer, type Decision, type ReviewServer, type ReviewState } from "./review.ts";
 import type { Candidate } from "./suggest.ts";
@@ -28,7 +33,19 @@ import crypto from "node:crypto";
  * Hosts that support elicitation (Codex does) get a third path: `review_next` asks the host to show the reviewer a
  * form for one candidate (approve / reject / skip, editable statement, fold related tests). The answer travels
  * host → server; the model only sees the outcome. `review_close` confirms finishing the same way.
+ *
+ * Onboarding from the host: `status` says where a repository stands and which tool to call next; `onboard` runs the
+ * CLI (`intentos onboard`, then `intentos suggest --classify`) in a child process and returns at once with a job id,
+ * because hosts time out tool calls long before a venv, a test run and an index are done; the model polls `status`.
+ * The server's MCP `instructions` carry the working order (status → onboard → status… → review_start → review_next…
+ * → review_close), so a host needs one sentence from the user and no knowledge of the CLI.
  */
+
+const SERVER_INSTRUCTIONS = [
+  "IntentOS keeps a repository's business rules as an approved policy (invariants, architecture rules, decisions) backed by hidden tests, and gives you an evidence pack before you plan a change. Always pass absolute repository paths.",
+  'Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) review_start, then review_next repeatedly: each call shows the reviewer one mined candidate through this host\'s own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never invent candidates of your own. (4) review_close when no candidates remain.',
+  "Before planning or implementing a change: explain for the evidence pack, policy for the approved rules.",
+].join("\n");
 
 export const REVIEW_RESOURCE_URI = "ui://intentos/review.html";
 
@@ -50,7 +67,7 @@ const text = (t: string, structured?: Record<string, unknown>): CallToolResult =
 const fail = (t: string): CallToolResult => ({ content: [{ type: "text", text: t }], isError: true });
 
 export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; current: () => Session | null; close: () => Promise<void> } {
-  const server = new McpServer({ name: "intentos", version: "0.1.0" });
+  const server = new McpServer({ name: "intentos", version: "0.1.0" }, { instructions: SERVER_INSTRUCTIONS });
   let session: Session | null = null;
   const log = (line: string) => {
     opts.log?.(line);
@@ -124,6 +141,150 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     },
   );
 
+  // ---- Onboarding from the host: the model asks, the server runs the CLI in a child process, the model polls.
+  interface OnboardJob {
+    id: string;
+    repo: string;
+    phase: "onboarding" | "mining" | "classifying" | "done" | "failed";
+    started_at: string;
+    finished_at: string | null;
+    log: string[];
+    result: { policy_id: string | null; policy_file: string | null; suite: string | null; index: string | null; candidates: number | null; kept: number | null; filtered: number | null; note: string | null };
+    error: string | null;
+  }
+  const jobs = new Map<string, OnboardJob>();
+  const running = (j: OnboardJob | undefined): j is OnboardJob => !!j && j.phase !== "done" && j.phase !== "failed";
+  const push = (job: OnboardJob, line: string) => {
+    job.log.push(line);
+    if (job.log.length > 400) job.log.splice(0, job.log.length - 400);
+  };
+  const runJob = async (job: OnboardJob, a: { policy_id?: string; policy_file?: string; classify: boolean; install: boolean; run_tests: boolean; force: boolean }): Promise<void> => {
+    try {
+      job.phase = "onboarding";
+      const r1 = await runCli(["onboard", job.repo, ...(a.policy_id ? ["--policy-id", a.policy_id] : []), ...(a.policy_file ? ["--out", a.policy_file] : []), ...(a.install ? [] : ["--no-install"]), ...(a.run_tests ? [] : ["--no-test"]), ...(a.force ? ["--force"] : [])], (l) => push(job, l));
+      if (r1.status !== 0) throw new Error(`intentos onboard failed: ${lastLine(r1.stderr) ?? `exit ${r1.status}`}`);
+      const onboard = JSON.parse(r1.stdout) as { policy_id: string; policy_file: string; smoke: { status: string; summary: string }; index: { mode: string } | null };
+      job.result.policy_id = onboard.policy_id;
+      job.result.policy_file = onboard.policy_file;
+      job.result.suite = `${onboard.smoke.status}: ${onboard.smoke.summary}`;
+      job.result.index = onboard.index?.mode ?? null;
+      job.phase = a.classify ? "classifying" : "mining";
+      const r2 = await runCli(["suggest", job.repo, "--policy-id", onboard.policy_id, ...(a.classify ? ["--classify"] : [])], (l) => push(job, l));
+      if (r2.status !== 0) throw new Error(`intentos suggest failed: ${lastLine(r2.stderr) ?? `exit ${r2.status}`}`);
+      const s = JSON.parse(r2.stdout) as { candidates: Candidate[]; classification: { used: boolean; kept: number; filtered: number; note: string | null } };
+      job.result.candidates = s.candidates.length;
+      job.result.kept = s.classification.used ? s.classification.kept : s.candidates.length;
+      job.result.filtered = s.classification.used ? s.classification.filtered : 0;
+      job.result.note = s.classification.note;
+      job.phase = "done";
+      log(`onboard ${job.repo}: job ${job.id} done (${job.result.candidates} candidates, ${job.result.kept} kept; suite ${onboard.smoke.status})`);
+    } catch (e) {
+      job.phase = "failed";
+      job.error = (e as Error).message;
+      log(`onboard ${job.repo}: job ${job.id} failed: ${job.error}`);
+    } finally {
+      job.finished_at = nowIso();
+    }
+  };
+  const inspect = (repoInput: string, policyIdOverride?: string, policyFileOverride?: string) => {
+    const repo = path.resolve(repoInput);
+    if (!fs.existsSync(repo) || !isGitRepo(repo)) throw new Error(`${repo} is not a Git repository`);
+    const paths = resolvePaths();
+    const job = jobs.get(repo);
+    const policyId = policyIdFor(runProbe(repo), repo, policyIdOverride);
+    const policyFile = policyFileOverride ? path.resolve(policyFileOverride) : path.join(paths.policies, `${policyId}.yaml`);
+    const policyExists = fs.existsSync(policyFile);
+    let approved = 0;
+    if (policyExists) {
+      try {
+        const p = loadPolicyFile(policyFile);
+        approved = p.invariants.length + p.architecture_rules.length + p.decisions.length;
+      } catch {
+        /* a draft being written, or a hand-edited file: counted as zero */
+      }
+    }
+    const outDir = path.join(paths.home, "onboard", repoIdFor(repo));
+    const suggestionsFile = path.join(outDir, "suggestions.json");
+    let suggestions: { total: number; classified: number; kept: number; file: string } | null = null;
+    if (fs.existsSync(suggestionsFile)) {
+      const cs = (JSON.parse(fs.readFileSync(suggestionsFile, "utf8")) as { candidates: Candidate[] }).candidates;
+      suggestions = { total: cs.length, classified: cs.filter((c) => c.classification).length, kept: cs.filter((c) => !c.classification || c.classification.keep).length, file: suggestionsFile };
+    }
+    const decisionsFile = path.join(outDir, "review-decisions.json");
+    const decided = fs.existsSync(decisionsFile) ? (JSON.parse(fs.readFileSync(decisionsFile, "utf8")) as Decision[]).filter((d) => d.action !== "skip").length : 0;
+    const pending = suggestions ? Math.max(0, suggestions.kept - decided) : null;
+    const indexed = !!opts.store.getRepository(repoIdFor(repo));
+    const failed = job && job.phase === "failed" ? job : null;
+    const next = running(job)
+      ? `onboarding in progress (${job.phase}); call status again in about 20 seconds`
+      : failed
+        ? `onboarding failed: ${failed.error}; fix the cause and call onboard again (force=true if the draft policy was already written)`
+        : !policyExists
+          ? `not onboarded: call onboard with repo=${repo}`
+          : !suggestions
+            ? "onboarded but no candidates mined yet: call onboard with force=true (runs everything again) or review_start (mines without classification)"
+            : pending
+              ? `${pending} candidate(s) await the reviewer: call review_start, then review_next until none remain, then review_close`
+              : `review complete (${approved} approved rule(s)): call explain before planning a change and policy to read the rules`;
+    return { repo, policy_id: policyId, policy_file: policyFile, policy: { exists: policyExists, approved_rules: approved }, indexed, suggestions, decided, pending, job: job ? { id: job.id, phase: job.phase, started_at: job.started_at, finished_at: job.finished_at, result: job.result, error: job.error, log_tail: job.log.slice(-12) } : null, next };
+  };
+
+  server.registerTool(
+    "status",
+    {
+      description: "Where a repository stands with IntentOS: policy file present, index present, candidates mined / classified / awaiting the reviewer, the progress of a running onboard job, and the next tool to call. Call this first, and poll it while onboard runs.",
+      inputSchema: z.object({ repo: z.string().describe("absolute path of the repository root"), policy_id: z.string().optional(), policy_file: z.string().optional().describe("policy file (default policies/<policy-id>.yaml)") }),
+    },
+    async ({ repo, policy_id, policy_file }) => {
+      try {
+        const s = inspect(repo, policy_id, policy_file);
+        log(`status ${s.repo}: ${s.next}`);
+        const tail = s.job?.log_tail.slice(-5) ?? [];
+        return text(
+          `${s.repo}: policy ${s.policy.exists ? `${s.policy_file} (${s.policy.approved_rules} approved rule(s))` : "none"}; index ${s.indexed ? "yes" : "no"}; candidates ${s.suggestions ? `${s.suggestions.total} mined, ${s.suggestions.classified} classified, ${s.suggestions.kept} kept, ${s.pending} undecided` : "none"}${s.job ? `; job ${s.job.id} ${s.job.phase}${tail.length ? `\n  ${tail.join("\n  ")}` : ""}` : ""}\nNext: ${s.next}`,
+          s,
+        );
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
+  server.registerTool(
+    "onboard",
+    {
+      description: 'Bring a repository under IntentOS, in the background: probe it, create a per-repo venv with its dependencies, write the DRAFT policy, run its test suite once, index it, mine policy candidates from its history, tests and docs, and (classify=true) have Codex sort them into business rules and noise. Returns at once with a job id; poll status until phase is "done" (minutes), then call review_start. Refuses to overwrite an existing policy unless force=true.',
+      inputSchema: z.object({
+        repo: z.string().describe("absolute path of the repository root (a Git checkout)"),
+        policy_id: z.string().optional().describe("policy id (default: sanitised project name)"),
+        policy_file: z.string().optional().describe("where to write the draft policy (default policies/<policy-id>.yaml)"),
+        classify: z.boolean().optional().describe("sort the candidates with Codex (default true)"),
+        install: z.boolean().optional().describe("create the venv and install dependencies (default true)"),
+        run_tests: z.boolean().optional().describe("run the suite once at the base revision (default true)"),
+        force: z.boolean().optional().describe("overwrite an existing policy file; approved rules in it are lost (default false)"),
+      }),
+    },
+    async (a) => {
+      try {
+        const repo = path.resolve(a.repo);
+        if (!fs.existsSync(repo) || !isGitRepo(repo)) return fail(`${repo} is not a Git repository`);
+        const current = jobs.get(repo);
+        if (running(current)) return text(`onboarding of ${repo} is already running (job ${current.id}, phase ${current.phase}); call status until it is done`, { job_id: current.id, phase: current.phase, repo });
+        const policyId = policyIdFor(runProbe(repo), repo, a.policy_id);
+        const policyFile = a.policy_file ? path.resolve(a.policy_file) : path.join(resolvePaths().policies, `${policyId}.yaml`);
+        if (fs.existsSync(policyFile) && !a.force) return fail(`${policyFile} already exists: this repository is onboarded. Call status or review_start to continue, or onboard with force=true to start over (the draft is rewritten; approved rules in that file are lost).`);
+        const classify = a.classify ?? true;
+        const job: OnboardJob = { id: crypto.randomBytes(4).toString("hex"), repo, phase: "onboarding", started_at: nowIso(), finished_at: null, log: [], result: { policy_id: null, policy_file: null, suite: null, index: null, candidates: null, kept: null, filtered: null, note: null }, error: null };
+        jobs.set(repo, job);
+        log(`onboard ${repo}: job ${job.id} started (classify=${classify}, install=${a.install ?? true}, run_tests=${a.run_tests ?? true}, force=${a.force ?? false})`);
+        void runJob(job, { policy_id: a.policy_id, policy_file: a.policy_file, classify, install: a.install ?? true, run_tests: a.run_tests ?? true, force: a.force ?? false });
+        return text(`Onboarding started for ${repo} (job ${job.id}): venv and dependencies, draft policy ${policyFile}, one run of the suite, index, candidate mining${classify ? ", classification by Codex" : ""}. This takes a few minutes. Call status with repo=${repo} about every 20 seconds until phase is "done", then call review_start.`, { job_id: job.id, phase: job.phase, repo, policy_id: policyId, policy_file: policyFile });
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
   registerAppTool(
     server,
     "review_start",
@@ -142,6 +303,8 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     },
     async (args) => {
       try {
+        const job = jobs.get(path.resolve(args.repo));
+        if (running(job)) return fail(`onboarding of ${args.repo} is still running (job ${job.id}, phase ${job.phase}); call status until it is done, then review_start`);
         if (session?.http) await session.http.close();
         const state = await loadReviewState(args.repo, { policyId: args.policy_id, outDir: args.out_dir, policyFile: args.policy_file, hiddenTestsRoot: args.hidden_tests_root, by: args.by ?? defaultReviewer(), includeFiltered: args.include_filtered, store: opts.store, log });
         const widget = uiSupported();
@@ -150,11 +313,14 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         log(`review_start ${args.repo}: ${state.candidates.length} candidates, ui=${widget ? "widget" : "link"}; ${describeClient()}`);
         const pending = state.candidates.filter((c) => !state.decisions.some((d) => d.id === c.id)).length;
         const summary = state.candidates.slice(0, 40).map((c) => ({ id: c.id, kind: c.kind, title: c.title, score: c.score, relevance: c.relevance, decided: state.decisions.find((d) => d.id === c.id)?.action ?? null }));
-        const head = `Policy review for ${state.policy_id}: ${state.candidates.length} candidate(s), ${pending} pending. Approvals go to ${state.policy_file}.`;
+        const unclassified = state.candidates.length > 0 && state.candidates.every((c) => !c.classification);
+        const head = `Policy review for ${state.policy_id}: ${state.candidates.length} candidate(s), ${pending} pending. Approvals go to ${state.policy_file}.${unclassified ? " These candidates are ranked but not classified (noise included); onboard with classify=true first for a filtered list." : ""}`;
         const body = widget ? "The review is rendered inline; the reviewer approves or rejects each candidate there. Do not try to approve on their behalf." : `This host does not render MCP Apps. Ask the reviewer to open this link in a browser to approve or reject candidates: ${http!.url}`;
         return text(`${head}\n${body}`, { policy_id: state.policy_id, policy_file: state.policy_file, candidates: summary, pending, ui: widget ? "widget" : "link", ...(http ? { url: http.url } : {}) });
       } catch (e) {
-        return fail((e as Error).message);
+        const msg = (e as Error).message;
+        if (/run intentos onboard/.test(msg)) return fail(`${args.repo} is not onboarded (no policy file). Call onboard with repo=${args.repo}, poll status until phase is "done", then call review_start again.`);
+        return fail(msg);
       }
     },
   );
@@ -332,7 +498,45 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
 }
 
 /** Run the server on stdio (what `codex mcp add intentos -- node bin/intentos.js mcp` launches). */
+/** GUI hosts start MCP servers with a bare PATH (the Codex app: none at all); the CLI children need node, git, python, codex. */
+export function augmentedPath(env: NodeJS.ProcessEnv = process.env): string {
+  const current = (env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  for (const dir of [path.dirname(process.execPath), "/opt/homebrew/bin", "/usr/local/bin", path.join(os.homedir(), ".local", "bin"), "/usr/bin", "/bin"]) {
+    if (!current.includes(dir) && fs.existsSync(dir)) current.push(dir);
+  }
+  return current.join(path.delimiter);
+}
+
+/** Run one `intentos` CLI command with `--json`: stdout is the result, stderr progress lines go to `onLine`. */
+function runCli(args: string[], onLine: (line: string) => void): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", path.join(PROJECT_ROOT, "bin", "intentos.js"), "--json", ...args], { env: { ...process.env, PATH: augmentedPath() }, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let buf = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (d: string) => {
+      stdout += d;
+    });
+    child.stderr.on("data", (d: string) => {
+      stderr += d;
+      buf += d;
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const l of lines) if (l.trim()) onLine(l.replace(/^\[(onboard|suggest)\] /, ""));
+    });
+    child.on("error", (e) => resolve({ status: null, stdout, stderr: `${stderr}\n${e.message}` }));
+    child.on("close", (status) => {
+      if (buf.trim()) onLine(buf.trim());
+      resolve({ status, stdout, stderr });
+    });
+  });
+}
+const lastLine = (s: string): string | null => s.split("\n").map((l) => l.trim()).filter(Boolean).pop() ?? null;
+
 export async function serveStdio(opts: McpOptions): Promise<void> {
+  process.env.PATH = augmentedPath();
   const { server } = createIntentosMcpServer(opts);
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -340,7 +544,8 @@ export async function serveStdio(opts: McpOptions): Promise<void> {
 }
 
 export function codexRegistrationCommand(projectRoot: string): string {
-  return `codex mcp add intentos -- node --disable-warning=ExperimentalWarning ${path.join(projectRoot, "bin", "intentos.js")} mcp`;
+  // The absolute node path: the Codex app launches servers without a PATH, so a bare `node` fails to spawn.
+  return `codex mcp add intentos -- ${process.execPath} --disable-warning=ExperimentalWarning ${path.join(projectRoot, "bin", "intentos.js")} mcp`;
 }
 
 export function defaultMcpLogFile(): string {

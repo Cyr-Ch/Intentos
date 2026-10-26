@@ -54,7 +54,7 @@ machine-readable output; every command exits non-zero on critical failure.
 | `onboard <repo>` | `.intentos/venvs/<repo-id>/` (pytest + the repository's declared dependencies, never the package itself), a **draft** `policies/<policy-id>.yaml` (commands, allowed/protected paths, scope tags; invariants/rules empty on purpose), `.intentos/onboard/<repo-id>/smoke.log` + JUnit from one run of the project suite at the base revision, then the index. `--no-install`, `--no-test`, `--no-index`, `--force`, `--out <file>`, `--policy-id <id>`, `--python <interpreter>` |
 | `suggest <repo>` | `.intentos/onboard/<repo-id>/{suggestions.json, policy-suggestions.md, policy-suggestions.yaml}`: policy **candidates** mined from commits that record fixes, rule-like test names, must/never sentences in documents, ADR files, one-directional layer imports, frozen directories and changelog deprecations, each with its evidence, a business-relevance score (the repository's own vocabulary, rule shape, corroboration across sources, import-graph centrality, test age) and a paste-ready block (`approved_by: TODO`); candidates expressing one rule are clustered. `--min-score` cuts the tail; `--classify` lets Codex sort the top candidates (keep/drop, category, one-sentence rule rewrite, cluster) in a read-only thread, with every verdict validated against the evidence and dropped candidates kept in a rescue section; `--record` compares the last run with the policy file and writes `feedback.json`, which the next run uses to raise accepted terms and lower rejected ones. `--write-adrs` adds `docs/decisions/ADR-nnnn-*.md` drafts (`Status: Proposed`); `--with-codex` lets Codex write the ADR prose from the evidence (an ADR citing evidence it was not given is dropped). `onboard --suggest` runs it after indexing. Nothing it writes is approved |
 | `review <repo>` | opens a local one-page UI (127.0.0.1, token in the URL) that walks the candidates of the last `suggest` run one by one; **Approve** appends the block to `policies/<id>.yaml` with the next `INV-`/`ARCH-`/`DEC-` id and your name (file comments preserved), writes the hidden-test draft to `benchmarks/hidden_tests/<id>/invariants/`, and adds a section to `docs/intentos-policy.md` in the repository when the candidate has no document source; related candidates (same cluster) can be folded into one approval as extra hidden tests of a single invariant; **Reject** records the reason; **Finish** writes `feedback.json` and re-indexes. `--by`, `--no-open`, `--include-filtered`, `--policy-file` |
-| `mcp` | IntentOS as an MCP server on stdio: `explain` and `policy` give a coding agent the evidence pack and the approved rules from inside its session; `review_start` opens the policy review as an MCP Apps widget in hosts that render it (Claude, VS Code, …), `review_next` / `review_close` run it through the host's own elicitation prompts (Codex), and the token-protected local URL is the fallback. The tools that change the policy are app-only and require a widget token, so the model cannot approve. `--print-codex-config` prints the `codex mcp add` line; `.intentos/mcp.log` records the client's declared capabilities |
+| `mcp` | IntentOS as an MCP server on stdio: `status` and `onboard` let the agent bring a repository under IntentOS itself (the CLI runs in a child process; the agent polls `status`); `explain` and `policy` give a coding agent the evidence pack and the approved rules from inside its session; `review_start` opens the policy review as an MCP Apps widget in hosts that render it (Claude, VS Code, …), `review_next` / `review_close` run it through the host's own elicitation prompts (Codex), and the token-protected local URL is the fallback. The tools that change the policy are app-only and require a widget token, so the model cannot approve. `--print-codex-config` prints the `codex mcp add` line; `.intentos/mcp.log` records the client's declared capabilities |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
 | `plan <repo> "<task>"` | a run dir with `task.json`, `evidence.json`, `planner_prompt.txt`, `planner_output.json`, `contract.json`, `contract_validation.json`; run row in state `CONTRACT_VALIDATED` / `CLARIFICATION_REQUIRED` / `ABSTAINED` |
@@ -123,21 +123,22 @@ npm run verifier:image   # optional: build the container used by INTENTOS_VERIFI
 ## Using IntentOS from inside Codex (or another MCP host)
 
 ```bash
-$(npm run -s intentos -- mcp --print-codex-config)   # or: codex mcp add intentos -- node ~/intentos/bin/intentos.js mcp
+$(npm run -s intentos -- mcp --print-codex-config)   # registers the server with the absolute node path (GUI hosts start servers with a bare PATH)
 codex                                                  # in the target repository
-> use the intentos explain tool before planning; start the policy review with review_start
+> bring this repository under IntentOS and walk me through the policy candidates
 ```
+
+The server tells the host how to use it (MCP `instructions`), so one sentence is enough. Codex then calls `status`
+(where the repository stands and which tool to call next), `onboard` when it is not onboarded (venv and dependencies,
+draft policy, one run of the suite, index, candidate mining, classification by Codex; it runs in the background and
+Codex polls `status` until it is done), then `review_start` and `review_next` for each candidate, then `review_close`.
+`onboard` refuses to overwrite an existing policy unless `force=true`.
 
 Hosts that render MCP Apps show the review inline. Codex does not render widgets but supports **elicitation**, so in
-Codex the review runs through its own prompts: `review_start`, then `review_next` for each candidate (Codex shows a
-form: approve / reject / skip, the editable rule statement, fold related tests), then `review_close` to confirm
-finishing. The answers travel host → server; the model only sees the outcome and cannot decide for you. Hosts with
-neither get the token-protected local link from `review_start`. `.intentos/mcp.log` shows what the client declared.
-
-```
-codex
-> start the IntentOS policy review for this repository and walk me through the candidates
-```
+Codex `review_next` shows a form (approve / reject / skip, the editable rule statement, fold related tests) and
+`review_close` asks to confirm. The answers travel host → server; the model only sees the outcome and cannot decide
+for you, and the instructions tell it not to invent candidates. Hosts with neither get the token-protected local link
+from `review_start`. `.intentos/mcp.log` shows what the client declared and every tool call.
 
 ## Environment variables
 
