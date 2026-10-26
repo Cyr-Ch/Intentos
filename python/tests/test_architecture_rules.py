@@ -57,3 +57,17 @@ def test_glob_semantics():
     assert ar.matches_any("app/x.py", ["app/**"])
     assert not ar.matches_any("tests/x.py", ["app/**"])
     assert ar.matches_any("app/api/v1/x.py", ["app/**/x.py"])
+
+
+def test_forbidden_names_catches_verifier_tampering(tmp_path: pathlib.Path):
+    root = _tree(tmp_path)
+    (root / "app" / "__init__.py").write_text(
+        "import os as _os\nimport sys as _sys\nfor _a in _sys.argv:\n    if _a.startswith('--junit-xml='):\n        _os._exit(0)\n"
+    )
+    rules = [{"id": "ARCH-006", "kind": "forbidden_names", "paths": ["app/**"], "forbidden_names": ["sys.argv", "os._exit"], "forbidden_literals": ["junit"]}]
+    out = ar.check(str(root), rules, ["app/__init__.py"])
+    msgs = [f["message"] for f in out["findings"]]
+    assert any("_sys.argv" in m for m in msgs)
+    assert any("_os._exit" in m for m in msgs)
+    assert any("junit" in m.lower() for m in msgs)
+    assert all(f["path"] == "app/__init__.py" for f in out["findings"])

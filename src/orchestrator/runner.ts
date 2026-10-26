@@ -280,6 +280,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
         outDir: path.join(rs.runDir, "verification"),
         hiddenTaskTestsDir: hidden.taskDir,
         hiddenInvariantTestsDir: hidden.invariantsDir,
+        eventsFile: rs.path("codexEvents"),
         simulated: engine.simulated,
       });
       rs.writeJson("verification", verification);
@@ -399,6 +400,24 @@ function writeMetrics(store: KnowledgeStore, rs: RunStore, v: VerificationResult
     changed_files: changed,
     state_transitions: transitions.length,
   });
+}
+
+/**
+ * Apply an independent re-verification result to a finished run: a failing or review-worthy re-run
+ * revokes REVIEW_READY (and a failing one revokes HUMAN_REVIEW). Results never upgrade a state.
+ */
+export function applyReverification(rs: RunStore, result: VerificationResult): { previous: RunState; current: RunState; changed: boolean } {
+  const previous = rs.state;
+  let target: RunState | null = null;
+  if (previous === "REVIEW_READY" && result.status === "failed") target = "FAILED";
+  else if (previous === "REVIEW_READY" && result.status === "needs_review") target = "HUMAN_REVIEW";
+  else if (previous === "HUMAN_REVIEW" && result.status === "failed") target = "FAILED";
+  if (target) {
+    rs.transition(target, { reason: `independent re-verification ${result.status} (attempt ${result.attempt})`, findings: result.findings.filter((f) => f.severity !== "info").map((f) => f.id) });
+    const existing = rs.row.result_json ? (JSON.parse(rs.row.result_json) as Record<string, unknown>) : {};
+    rs.update({ result_json: JSON.stringify({ ...existing, final_state: target, verification_status: result.status, revoked_from: previous, reason: `independent re-verification ${result.status}` }) });
+  }
+  return { previous, current: rs.state, changed: !!target };
 }
 
 /** Human approval gate: CONTRACT_VALIDATED -> APPROVED, then continue. */

@@ -8,12 +8,21 @@ Last updated: 2026-10-25 (end of build session). Everything below was observed i
 |---|---|---|
 | M1 Index + evidence (`index`, `explain`) | **functional** | Python AST/git indexer, SQLite graph per revision, trusted-policy binding, lexical+graph retrieval with citations |
 | M2 Contract-guided Codex execution (`plan`, `run`) | **functional (live + offline)** | Zod contract + strict JSON schema, deterministic compiler, worktrees, SDK adapter (read-only planner / workspace-write implementer), durable states + events |
-| M3 Independent verification + repair + report (`verify`, `report`) | **functional** | hidden task/invariant tests outside the worktree, AST architecture rules, scope/frozen-path diff checks, counterexample probes, ≤2 repairs, report.md/json |
+| M3 Independent verification + repair + report (`verify`, `report`) | **functional** | hidden task/invariant tests outside the worktree, AST architecture rules (incl. anti-tampering `forbidden_names`), scope/frozen-path diff checks, hidden-test inventory cross-check, fail-closed invariants, counterexample probes, ≤2 repairs, revocable review state, report.md/json |
 | M4 Decisions, conflicts, feedback gate, `resume` | **functional (initial)** | policy decisions with SUPERSEDES edges, proposed→approved gate, feedback as proposed memory, integrity-checked resume; full re-index per HEAD (no diff-based invalidation yet) |
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **not started** | documented in docs/security.md |
 
-Tests: `npm test` → 8 files, **49 passed**; `npm run test:python` → **6 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 9 files, **58 passed**; `npm run test:python` → **7 passed**; `npm run typecheck` clean.
+
+## Independent audit (2026-10-26) and fixes
+A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
+1. **Forged test reports.** Candidate code runs inside the pytest process and could rewrite the JUnit file named on the command line and `os._exit(0)`; the verifier would have accepted it. Now: the names in a hidden-test JUnit report must equal the test functions discovered statically in the trusted hidden-test files (`TEST-INVENTORY-MISMATCH`, blocking), and the new `forbidden_names` rule kind (ARCH-006) statically rejects `sys.argv`, `os._exit`, and `junit`/`.intentos_hidden` literals in application and test code, with import aliases resolved. This raises the bar; only process isolation removes the risk (docs/security.md).
+2. **Skipped blocking commands counted as passed.** If hidden invariant tests were unavailable, bound blocking invariants silently passed. Now each bound blocking invariant's `verified_by` file must be present or the run fails closed; a task without hidden acceptance tests gets a `NO-ACCEPTANCE-TESTS` review finding (→ HUMAN_REVIEW, never REVIEW_READY).
+3. **`verify` could not revoke a result.** A failing re-verification left REVIEW_READY untouched. Now REVIEW_READY → HUMAN_REVIEW/FAILED and HUMAN_REVIEW → FAILED are allowed only for independent re-verification (`applyReverification`), never upgrades.
+4. **Hidden tests readable by the live implementer.** Codex's read-only sandbox can read any file on disk, including `benchmarks/hidden_tests`. Prevention needs isolation; detection added: recorded implementer commands/file changes referencing protected artifacts become `PROTECTED-ARTIFACT-ACCESS` review findings.
+5. Uncovered routes now tested: conflicted constraint → clarify; stale-document and conflicted-source conflicts; empty task text rejected with exit 1.
+The auditor also noted that hidden task tests bind only via `--task <id>` or an exact request-text match — by design (trusted config), documented in README.
 
 ## Environment inspected
 - Scaffolded at `/Users/QTG2659/intentos` (new git repo, `main`). Node v26.7.0 (native TS stripping, `node:sqlite` with FTS5), npm 11.19, Python 3.13.12, git 2.53.

@@ -50,7 +50,7 @@ export const InvariantSchema = z.object({
 
 export const ArchitectureRuleSchema = z.object({
   id: z.string().regex(/^ARCH-\d{3,}$/),
-  kind: z.enum(["forbidden_import", "forbidden_call", "frozen_paths", "required_import"]),
+  kind: z.enum(["forbidden_import", "forbidden_call", "frozen_paths", "required_import", "forbidden_names"]),
   statement: z.string(),
   paths: z.array(z.string()).default([]),
   forbidden_modules: z.array(z.string()).default([]),
@@ -60,6 +60,10 @@ export const ArchitectureRuleSchema = z.object({
   allowed_paths: z.array(z.string()).default([]),
   /** For required_import: files matching `paths` that define functions must import one of these. */
   required_modules: z.array(z.string()).default([]),
+  /** For forbidden_names: dotted names (suffix match) that must not appear, e.g. sys.argv, os._exit. */
+  forbidden_names: z.array(z.string()).default([]),
+  /** For forbidden_names: case-insensitive substrings forbidden in string literals, e.g. "junit". */
+  forbidden_literals: z.array(z.string()).default([]),
   authority: z.enum(["approved_policy", "approved_decision", "executable_contract"]),
   approved_by: z.string(),
   sources: z.array(SourceRefSchema).default([]),

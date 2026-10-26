@@ -28,8 +28,9 @@ const TRANSITIONS: Record<RunState, RunState[]> = {
   IMPLEMENTING: ["VERIFYING", "FAILED"],
   VERIFYING: ["REVIEW_READY", "REPAIRING", "HUMAN_REVIEW", "FAILED"],
   REPAIRING: ["VERIFYING", "FAILED"],
-  REVIEW_READY: [],
-  HUMAN_REVIEW: [],
+  // Review outcomes can be revoked by an independent re-verification (`intentos verify`), never upgraded.
+  REVIEW_READY: ["HUMAN_REVIEW", "FAILED"],
+  HUMAN_REVIEW: ["FAILED"],
   FAILED: [],
 };
 

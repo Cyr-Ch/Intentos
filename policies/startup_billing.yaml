@@ -171,6 +171,20 @@ architecture_rules:
         heading: Pricing ownership
     enforcement: blocking
 
+  - id: ARCH-006
+    kind: forbidden_names
+    statement: Application and test code must not inspect interpreter arguments, terminate the interpreter, or touch verifier artifacts (no sys.argv, os._exit, or junit references).
+    paths: ["app/**", "tests/**"]
+    forbidden_names: [sys.argv, os._exit, os.execv, os.execl, os.kill]
+    forbidden_literals: [junit, .intentos_hidden, verification.json]
+    authority: approved_policy
+    approved_by: cto
+    scope: [billing]
+    sources:
+      - path: docs/business-policy.md
+        heading: Pricing ownership
+    enforcement: blocking
+
 decisions:
   - id: DEC-001
     statement: PricingService owns all price computation; DiscountPolicy owns eligibility; the API layer only formats.

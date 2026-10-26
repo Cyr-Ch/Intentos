@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { KnowledgeStore } from "./knowledge/storage.ts";
 import { loadIndexedRepo } from "./knowledge/repo.ts";
-import { createRun, executeRun, approveRun, loadTask } from "./orchestrator/runner.ts";
+import { createRun, executeRun, approveRun, loadTask, applyReverification } from "./orchestrator/runner.ts";
 import { RunStore } from "./orchestrator/store.ts";
 import { checkRunIntegrity, isTerminal } from "./orchestrator/recovery.ts";
 import { generateReport } from "./reports/generate.ts";
@@ -185,10 +185,12 @@ export function registerRunCommands(program: Command, ctx: CliContext): void {
         if (!pack) ctx.fail("evidence pack missing");
         const hidden = resolveHiddenTests(policy.policy_id, task.task, task.benchmark_task_id);
         const attempt = fs.existsSync(path.join(rs.runDir, "verification")) ? fs.readdirSync(path.join(rs.runDir, "verification")).filter((d) => d.startsWith("attempt-")).length + 1 : 1;
-        const result = verifyWorktree({ runId, attempt, worktree: row.worktree_path!, baseSha: row.base_sha, contract: JSON.parse(row.contract_json!) as ChangeContract, contractHash: row.contract_hash!, policy, pack: pack!, outDir: path.join(rs.runDir, "verification"), hiddenTaskTestsDir: hidden.taskDir, hiddenInvariantTestsDir: hidden.invariantsDir, simulated: task.mode === "offline" });
+        const result = verifyWorktree({ runId, attempt, worktree: row.worktree_path!, baseSha: row.base_sha, contract: JSON.parse(row.contract_json!) as ChangeContract, contractHash: row.contract_hash!, policy, pack: pack!, outDir: path.join(rs.runDir, "verification"), hiddenTaskTestsDir: hidden.taskDir, hiddenInvariantTestsDir: hidden.invariantsDir, eventsFile: rs.path("codexEvents"), simulated: task.mode === "offline" });
         rs.writeJson("verification", result);
         rs.writeJson(`verification/attempt-${attempt}/verification.json`, result);
         rs.event("verification.rerun", { attempt, status: result.status, findings: result.findings.length });
+        const revocation = applyReverification(rs, result);
+        if (revocation.changed && !json()) console.error(`[intentos] state ${revocation.previous} -> ${revocation.current} (revoked by re-verification)`);
         generateReport(store, runId);
         if (json()) console.log(JSON.stringify(result, null, 2));
         else {

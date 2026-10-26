@@ -27,7 +27,57 @@ export interface VerifyInput {
   hiddenTaskTestsDir: string | null;
   /** Directory with hidden invariant tests (outside the worktree), or null. */
   hiddenInvariantTestsDir: string | null;
+  /** codex_events.jsonl of the run (scanned for reads of protected artifacts), or null. */
+  eventsFile?: string | null;
   simulated: boolean;
+}
+
+/** Test function names discovered statically in a directory of pytest files (trusted hidden tests). */
+export function discoverTestNames(dir: string): Set<string> {
+  const names = new Set<string>();
+  if (!fs.existsSync(dir)) return names;
+  const walk = (d: string) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/^test_.*\.py$/.test(e.name)) {
+        for (const m of fs.readFileSync(p, "utf8").matchAll(/^\s*(?:async\s+)?def\s+(test_\w+)\s*\(/gm)) names.add(m[1]!);
+      }
+    }
+  };
+  walk(dir);
+  return names;
+}
+
+const PROTECTED_ARTIFACT_PATTERNS = [/hidden_tests/i, /\bpolicies\//, /\.intentos\/runs/, /\.intentos_hidden/, /benchmarks\//, /intentos\.db/];
+
+/** Scan recorded Codex commands/file changes for attempts to read or write protected artifacts (detection, not prevention). */
+export function scanProtectedAccess(eventsFile: string | null | undefined): Finding[] {
+  if (!eventsFile || !fs.existsSync(eventsFile)) return [];
+  const findings: Finding[] = [];
+  let n = 0;
+  for (const line of fs.readFileSync(eventsFile, "utf8").split("\n")) {
+    if (!line.trim()) continue;
+    let ev: { phase?: string; payload?: { type?: string; item?: { type?: string; command?: string; changes?: Array<{ path: string }> } } };
+    try {
+      ev = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (!ev.phase || ev.phase === "plan") continue;
+    const item = ev.payload?.item;
+    if (ev.payload?.type !== "item.completed" || !item) continue;
+    const texts: string[] = [];
+    if (item.type === "command_execution" && item.command) texts.push(item.command);
+    if (item.type === "file_change") for (const c of item.changes ?? []) texts.push(c.path);
+    for (const t of texts) {
+      if (PROTECTED_ARTIFACT_PATTERNS.some((re) => re.test(t))) {
+        findings.push({ id: `F-ACCESS-${String(++n).padStart(3, "0")}`, category: "process", severity: "review", rule_id: "PROTECTED-ARTIFACT-ACCESS", source_evidence_ids: [], test: null, expected: "implementer confined to the worktree", observed: t.slice(0, 300), message: `implementer ${item.type === "file_change" ? "wrote" : "ran a command referencing"} a protected artifact: ${t.slice(0, 160)}`, location: null, log_path: eventsFile, authority: "deterministic" });
+        if (n >= 20) return findings;
+      }
+    }
+  }
+  return findings;
 }
 
 /**
@@ -62,6 +112,10 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
   if (wantsScope) {
     findings.push(...scope.findings);
     commands.push({ command_id: "scope_check", track: "scope", enforcement: "blocking", argv: null, builtin: "scope_check", exit_code: null, duration_ms: 0, status: scope.findings.some((f) => f.severity === "blocking") ? "failed" : "passed", stdout_path: null, stderr_path: null, summary: `${changed.length} changed file(s); ${scope.findings.length} finding(s)`, tests_passed: null, tests_failed: null });
+  }
+  findings.push(...scanProtectedAccess(input.eventsFile));
+  if (!input.hiddenTaskTestsDir) {
+    findings.push({ id: "F-ACCEPT-NONE", category: "process", severity: "review", rule_id: "NO-ACCEPTANCE-TESTS", source_evidence_ids: [], test: null, expected: "an independent task acceptance test outside the implementer's writable area", observed: "none bound to this task", message: "no independent task acceptance tests are bound (use --task <benchmark id> or add hidden tests); functional correctness rests on the project suite, which the implementer may edit", location: null, log_path: null, authority: "deterministic" });
   }
   if (changed.length === 0) {
     findings.push({ id: "F-SCOPE-NOCHANGE", category: "process", severity: "review", rule_id: "NO-CHANGES", source_evidence_ids: [], test: null, expected: "an implementation diff", observed: "working tree identical to base", message: "the implementer produced no changes", location: null, log_path: null, authority: "deterministic" });
@@ -124,9 +178,19 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
       commands.push({ command_id: v.command_id, track: cmd.track, enforcement: cmd.enforcement, argv: null, builtin: null, exit_code: null, duration_ms: 0, status: "skipped", stdout_path: null, stderr_path: null, summary: "no hidden task tests for this task", tests_passed: null, tests_failed: null });
       continue;
     }
-    if (cmd.track === "business_invariant" && !input.hiddenInvariantTestsDir) {
-      commands.push({ command_id: v.command_id, track: cmd.track, enforcement: cmd.enforcement, argv: null, builtin: null, exit_code: null, duration_ms: 0, status: "skipped", stdout_path: null, stderr_path: null, summary: "no hidden invariant tests configured", tests_passed: null, tests_failed: null });
-      continue;
+    if (cmd.track === "business_invariant") {
+      // Fail closed: every bound blocking invariant that the policy says is verified by a hidden test must have that test available.
+      for (const b of input.contract.business_invariants.filter((x) => x.enforcement === "blocking")) {
+        const inv = input.policy.invariants.find((i) => i.id === b.id);
+        for (const t of inv?.verified_by ?? []) {
+          const present = !!input.hiddenInvariantTestsDir && fs.existsSync(path.join(input.hiddenInvariantTestsDir, path.basename(t)));
+          if (!present) findings.push({ id: nextId("F-INV"), category: "business_invariant", severity: "blocking", rule_id: b.id, source_evidence_ids: evidenceFor(b.id), test: path.basename(t), expected: `${b.id} verified by ${t}`, observed: "hidden test file unavailable to the verifier", message: `${b.id} is blocking but its hidden test ${path.basename(t)} is not available; cannot verify — failing closed`, location: null, log_path: null, authority: "trusted_policy" });
+        }
+      }
+      if (!input.hiddenInvariantTestsDir) {
+        commands.push({ command_id: v.command_id, track: cmd.track, enforcement: cmd.enforcement, argv: null, builtin: null, exit_code: null, duration_ms: 0, status: "skipped", stdout_path: null, stderr_path: null, summary: "no hidden invariant tests configured", tests_passed: null, tests_failed: null });
+        continue;
+      }
     }
     const junit = path.join(attemptDir, `${v.command_id}.junit.xml`);
     const argv = cmd.argv.map((a) => a.replace("{python}", resolvePython()).replace("{snapshot}", snapshot).replace("{hidden_tests_dir}", hiddenDir).replace("{junit}", junit));
@@ -136,6 +200,19 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
     rec.tests_passed = cases.filter((c) => c.status === "passed").length;
     rec.tests_failed = cases.filter((c) => c.status === "failed" || c.status === "error").length;
     const category = cmd.track === "business_invariant" ? "business_invariant" : "functional";
+    // Hidden tests are trusted config: the set of reported test names must equal the set discovered statically.
+    // Candidate code runs inside the pytest process and could forge the JUnit file; this check raises the bar
+    // (and ARCH-style forbidden_names rules catch the common tampering patterns), but only isolation removes the risk.
+    const hiddenSubdir = cmd.requires_task_tests ? path.join(hiddenDir, "task") : cmd.track === "business_invariant" ? path.join(hiddenDir, "invariants") : null;
+    if (hiddenSubdir) {
+      const expected = discoverTestNames(hiddenSubdir);
+      const reported = new Set(cases.map((c) => c.name.replace(/\[.*$/, "")));
+      const missing = [...expected].filter((n) => !reported.has(n));
+      const extra = [...reported].filter((n) => !expected.has(n));
+      if (expected.size && (missing.length || extra.length)) {
+        findings.push({ id: nextId("F-FORGE"), category, severity: "blocking", rule_id: "TEST-INVENTORY-MISMATCH", source_evidence_ids: [], test: null, expected: `${expected.size} hidden test(s): ${[...expected].slice(0, 6).join(", ")}${expected.size > 6 ? ", …" : ""}`, observed: `${reported.size} reported${missing.length ? `; missing ${missing.slice(0, 4).join(", ")}` : ""}${extra.length ? `; unexpected ${extra.slice(0, 4).join(", ")}` : ""}`, message: `${v.command_id}: reported test results do not match the hidden test inventory (possible tampering with the test process or report)`, location: null, log_path: rec.stdout_path, authority: "deterministic" });
+      }
+    }
     const authority = cmd.track === "business_invariant" || v.command_id.includes("hidden") ? "hidden_test" : "project_test";
     // A command that did not run to a clean exit is a failure in itself, whether or not any test case was recorded.
     if (rec.status !== "passed" && !cases.some((c) => c.status === "failed" || c.status === "error")) {

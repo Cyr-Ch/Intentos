@@ -11,6 +11,8 @@ Rule kinds:
                     dotted name ends with one of `forbidden_callees`.
   required_import:  files matching `paths` that define functions must import one of `required_modules`.
   frozen_paths:     handled by the TypeScript verifier from the Git diff (reported here as skipped).
+  forbidden_names:  files matching `paths` may not reference any dotted name in `forbidden_names`
+                    (e.g. sys.argv, os._exit) nor contain a string literal listed in `forbidden_literals`.
 """
 from __future__ import annotations
 
@@ -85,6 +87,24 @@ def callee_name(call: ast.Call) -> str | None:
         except Exception:
             return func.attr
     return None
+
+
+def import_aliases(tree: ast.AST) -> dict[str, str]:
+    """Map local names to the canonical dotted name they import (`import os as _os` -> {_os: os})."""
+    out: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                out[alias.asname or alias.name.split(".")[0]] = alias.name if alias.asname else alias.name.split(".")[0]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                out[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+    return out
+
+
+def canonicalize(dotted: str, aliases: dict[str, str]) -> str:
+    head, *rest = dotted.split(".")
+    return ".".join([aliases.get(head, head), *rest])
 
 
 def imports_match(imported: str, forbidden: str) -> bool:
@@ -165,6 +185,36 @@ def check(root: str, rules: list[dict[str, Any]], changed_files: list[str]) -> d
                             "in_changed_file": rel in changed_files,
                         }
                     )
+        elif kind == "forbidden_names":
+            names = rule.get("forbidden_names", [])
+            literals = [lit.lower() for lit in rule.get("forbidden_literals", [])]
+            for rel in targets:
+                aliases = import_aliases(trees[rel])
+                for node in ast.walk(trees[rel]):
+                    hit = None
+                    if isinstance(node, (ast.Attribute, ast.Name)):
+                        try:
+                            dotted = ast.unparse(node)
+                        except Exception:
+                            dotted = None
+                        canonical = canonicalize(dotted, aliases) if dotted else None
+                        if canonical and any(canonical == n or canonical.endswith("." + n) for n in names):
+                            hit = f"references '{dotted}' ({canonical})"
+                    elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+                        low = node.value.lower()
+                        if any(lit in low for lit in literals):
+                            hit = f"contains literal {node.value!r}"
+                    if hit:
+                        findings.append(
+                            {
+                                "rule_id": rid,
+                                "kind": kind,
+                                "path": rel,
+                                "line": getattr(node, "lineno", 1),
+                                "message": f"{rel}:{getattr(node, 'lineno', 1)} {hit}, forbidden for {', '.join(paths)} ({rid})",
+                                "in_changed_file": rel in changed_files,
+                            }
+                        )
         elif kind == "frozen_paths":
             continue  # evaluated from the diff by the orchestrator
         else:

@@ -127,6 +127,16 @@ describe("blocking constraints need trusted authority", () => {
     expect(out.route).toBe("reject");
     expect(out.issues.some((i) => i.code === "unconfirmed_blocking")).toBe(true);
   });
+  it("an advisory reference to a conflicted constraint routes implement to clarify", () => {
+    const c = base();
+    const conflicted: EvidencePack = structuredClone(pack);
+    conflicted.invariants[0]!.status = "conflicted";
+    conflicted.invariants[0]!.binding = false;
+    c.business_invariants = c.business_invariants.map((b) => (b.id === conflicted.invariants[0]!.id ? { ...b, enforcement: "advisory" as const } : b));
+    const out = compileContract(c, conflicted, env.indexed.policy, { hasTaskTests: true });
+    expect(out.route).toBe("clarify");
+    expect(out.issues.some((i) => i.code === "conflicted_constraints")).toBe(true);
+  });
   it("a model-inferred rule cannot be blocking", () => {
     const c: ChangeContract = base();
     const inferred: EvidencePack = structuredClone(pack);

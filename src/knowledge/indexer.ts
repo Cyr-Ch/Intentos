@@ -466,6 +466,8 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
         forbidden_callees: rule.forbidden_callees,
         allowed_paths: rule.allowed_paths,
         required_modules: rule.required_modules,
+        forbidden_names: rule.forbidden_names,
+        forbidden_literals: rule.forbidden_literals,
       },
       policy_id: policy.policy_id,
     };

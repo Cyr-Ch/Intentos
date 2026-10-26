@@ -16,7 +16,12 @@ describe("workflow transitions", () => {
     expect(canTransition("APPROVED", "REVIEW_READY")).toBe(false);
     expect(canTransition("CONTRACT_PROPOSED", "APPROVED")).toBe(false);
     for (const s of TERMINAL_STATES) expect(canTransition(s, "VERIFYING")).toBe(false);
-    expect(() => assertTransition("REVIEW_READY", "FAILED")).toThrow(InvalidTransitionError);
+    expect(() => assertTransition("ABSTAINED", "FAILED")).toThrow(InvalidTransitionError);
+    expect(() => assertTransition("FAILED", "REVIEW_READY")).toThrow(InvalidTransitionError);
+    // review outcomes may only be revoked downwards by independent re-verification
+    expect(canTransition("REVIEW_READY", "FAILED")).toBe(true);
+    expect(canTransition("REVIEW_READY", "HUMAN_REVIEW")).toBe(true);
+    expect(canTransition("HUMAN_REVIEW", "REVIEW_READY")).toBe(false);
   });
   it("persists transitions transactionally and refuses invalid ones", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "intentos-wf-"));

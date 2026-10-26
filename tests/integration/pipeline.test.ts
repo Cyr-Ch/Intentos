@@ -10,6 +10,10 @@ import type { ReportJson } from "../../src/reports/generate.ts";
 import type { CodingEngine } from "../../src/codex/adapter.ts";
 import { buildOfflineContract } from "../../src/codex/offline.ts";
 import type { EvidencePack } from "../../src/knowledge/retrieval.ts";
+import { applyReverification } from "../../src/orchestrator/runner.ts";
+import { verifyWorktree, scanProtectedAccess, discoverTestNames } from "../../src/verification/runner.ts";
+import type { ChangeContract } from "../../src/contracts/schemas.ts";
+import { spawnSync } from "node:child_process";
 
 let env: TestEnv;
 let baseHead: string;
@@ -116,6 +120,60 @@ describe("offline pipeline — implement route", () => {
     const { outcome, verification } = await run(offline({}));
     expect(outcome.state).not.toBe("REVIEW_READY");
     expect(verification!.findings.some((f) => f.rule_id === "NO-CHANGES")).toBe(true);
+  });
+});
+
+describe("verifier tampering resistance (host execution; see docs/security.md for the isolation caveat)", () => {
+  it("candidate code that forges the JUnit report from inside the test process is blocked", async () => {
+    const { outcome, verification } = await run(offline({ patchFile: PATCHES.forgeJunit }));
+    expect(outcome.state).toBe("FAILED");
+    const rules = verification!.findings.filter((f) => f.severity === "blocking").map((f) => f.rule_id);
+    expect(rules).toContain("TEST-INVENTORY-MISMATCH"); // forged names != hidden inventory
+    expect(rules).toContain("ARCH-006"); // sys.argv / os._exit / junit references caught statically
+  });
+
+  it("bound blocking invariants whose hidden tests are unavailable fail closed instead of counting as passed", async () => {
+    const { rs } = await run(offline({ patchFile: PATCHES.good }));
+    const contract = JSON.parse(rs.row.contract_json!) as ChangeContract;
+    const pack = rs.readJson<EvidencePack>("evidence")!;
+    const result = verifyWorktree({ runId: rs.runId, attempt: 9, worktree: rs.row.worktree_path!, baseSha: rs.row.base_sha, contract, contractHash: rs.row.contract_hash!, policy: env.indexed.policy, pack, outDir: path.join(rs.runDir, "verification-probe"), hiddenTaskTestsDir: null, hiddenInvariantTestsDir: null, simulated: true });
+    expect(result.status).toBe("failed");
+    expect(result.findings.filter((f) => f.severity === "blocking").map((f) => f.rule_id)).toEqual(expect.arrayContaining(["INV-001", "INV-003"]));
+    expect(result.findings.some((f) => f.rule_id === "NO-ACCEPTANCE-TESTS")).toBe(true);
+  });
+
+  it("hidden test inventory discovery finds every hidden test function", () => {
+    const names = discoverTestNames(path.join(PATCHES.good, "..", "..", "hidden_tests", "startup_billing", "invariants"));
+    expect(names.has("test_locked_enterprise_contract_gets_no_discount_lines")).toBe(true);
+    expect(names.size).toBeGreaterThanOrEqual(11);
+  });
+
+  it("recorded implementer commands that touch protected artifacts become review findings", () => {
+    const file = path.join(env.home, "events-probe.jsonl");
+    fs.writeFileSync(file, [
+      JSON.stringify({ phase: "implement", payload: { type: "item.completed", item: { type: "command_execution", command: "cat ../../benchmarks/hidden_tests/startup_billing/invariants/test_inv_001_locked_contracts.py" } } }),
+      JSON.stringify({ phase: "implement", payload: { type: "item.completed", item: { type: "command_execution", command: "python -m pytest -q" } } }),
+      JSON.stringify({ phase: "plan", payload: { type: "item.completed", item: { type: "command_execution", command: "cat policies/startup_billing.yaml" } } }),
+    ].join("\n"));
+    const findings = scanProtectedAccess(file);
+    expect(findings).toHaveLength(1); // planner phase is read-only by design and not flagged
+    expect(findings[0]!.rule_id).toBe("PROTECTED-ARTIFACT-ACCESS");
+    expect(findings[0]!.severity).toBe("review");
+  });
+
+  it("an independent re-verification that fails revokes REVIEW_READY", async () => {
+    const { rs, outcome } = await run(offline({ patchFile: PATCHES.good }));
+    expect(outcome.state).toBe("REVIEW_READY");
+    // Someone edits the worktree after review: the legacy adapter gains code (ARCH-004).
+    expect(spawnSync("git", ["apply", PATCHES.legacyAdapter], { cwd: rs.row.worktree_path!, encoding: "utf8" }).status).toBe(0);
+    const contract = JSON.parse(rs.row.contract_json!) as ChangeContract;
+    const pack = rs.readJson<EvidencePack>("evidence")!;
+    const result = verifyWorktree({ runId: rs.runId, attempt: 2, worktree: rs.row.worktree_path!, baseSha: rs.row.base_sha, contract, contractHash: rs.row.contract_hash!, policy: env.indexed.policy, pack, outDir: path.join(rs.runDir, "verification"), hiddenTaskTestsDir: path.join(PATCHES.good, "..", "..", "hidden_tests", "startup_billing", "tasks", "task-a-enterprise-promo"), hiddenInvariantTestsDir: path.join(PATCHES.good, "..", "..", "hidden_tests", "startup_billing", "invariants"), simulated: true });
+    expect(result.status).toBe("failed");
+    const r = applyReverification(rs, result);
+    expect(r.previous).toBe("REVIEW_READY");
+    expect(r.current).toBe("FAILED");
+    expect(JSON.parse(rs.row.result_json!).revoked_from).toBe("REVIEW_READY");
   });
 });
 

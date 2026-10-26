@@ -27,9 +27,19 @@ and relies on Git worktrees plus the Codex sandbox for isolation. Use it on trus
 - **Proposed memory cannot bind.** Reviewer feedback and model proposals carry `model_inference` authority and are
   excluded from blocking enforcement until a human approves them.
 
+- **Tamper detection in the verifier.** JUnit reports for hidden tests must match the statically discovered
+  hidden test inventory; application/test code may not reference `sys.argv`, `os._exit` or verifier artifact names
+  (`forbidden_names` rule, aliases resolved); bound blocking invariants fail closed when their hidden test is
+  missing; implementer commands that reference protected artifacts are flagged for human review; a later
+  `intentos verify` can revoke REVIEW_READY but never upgrade a state.
+
 ## Known gaps (do not deploy without addressing)
 
-- No container/VM isolation: `pytest` executes the candidate's code and any `conftest.py` with host privileges.
+- No container/VM isolation: `pytest` executes the candidate's code and any `conftest.py` with host privileges. A
+  determined adversarial implementer could still forge results from inside the process (e.g. by enumerating hidden
+  test names); the checks above raise the bar, they do not close it.
+- The Codex read-only sandbox allows reading the whole filesystem, so hidden tests and policies are *readable* by the
+  live implementer (only detected, not prevented).
 - Network is not blocked during verification (only statically forbidden via architecture rules).
 - The Codex sandbox (`workspace-write`, network disabled) is a control, not a guarantee; an escape would land in the
   host user's permissions.
