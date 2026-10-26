@@ -227,7 +227,7 @@ program
       const server = await startReviewServer(state, { port: opts.port ? Number(opts.port) : 0, open: opts.open, log: (line) => console.log(`  ${line}`) });
       console.log("  press Ctrl-C to stop without finishing (decisions so far are kept)");
       const result = await server.done;
-      console.log(`Review finished: approved ${result.accepted}${result.assigned.length ? ` (${result.assigned.join("; ")})` : ""}, rejected ${result.rejected}, skipped ${result.skipped}, pending ${result.pending}`);
+      console.log(`Review finished: approved ${result.accepted}${result.assigned.length ? ` (${result.assigned.join("; ")})` : ""}${result.merged ? `, ${result.merged} related folded in` : ""}, rejected ${result.rejected}, skipped ${result.skipped}, pending ${result.pending}`);
       if (result.hidden_tests_needing_attention.length) console.log(`  hidden tests to finish by hand: ${result.hidden_tests_needing_attention.join(", ")}`);
       if (result.feedback) console.log(`  feedback recorded: ${result.feedback.accept_tokens.length} accept / ${result.feedback.reject_tokens.length} reject terms`);
       if (result.index) console.log(`  re-indexed (${result.index.mode}, policy ${result.index.policy_id})${result.index.unresolved_sources.length ? `; unresolved policy sources: ${result.index.unresolved_sources.map((u) => `${u.owner} ${u.path}${u.heading ? `#${u.heading}` : ""}`).join("; ")}` : ""}`);

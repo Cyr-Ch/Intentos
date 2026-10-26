@@ -55,7 +55,11 @@ describe("intentos review", () => {
     expect(noToken.status).toBe(403);
     const page = await fetch(server.url);
     expect(page.status).toBe(200);
-    expect(await page.text()).toContain("IntentOS policy review");
+    const html = await page.text();
+    expect(html).toContain("IntentOS policy review");
+    const script = html.split("<script>")[1]!.split("</script>")[0]!;
+    const vm = await import("node:vm");
+    expect(() => vm.compileFunction(script)).not.toThrow(); // the page script must be valid JavaScript as served
     const bad = await fetch(`http://127.0.0.1:${server.port}/api/state`);
     expect(bad.status).toBe(403);
     const { status, body } = await api("/api/state");
@@ -112,6 +116,30 @@ describe("intentos review", () => {
     expect(policy.decisions.find((d) => d.id === "DEC-001")!.supersedes).toBeUndefined();
   });
 
+  it("folds related candidates into one invariant with several hidden tests", async () => {
+    const declined = find(/declined payment leaves entitlements unchanged/i);
+    const grants = find(/apply upgrade grants entitlements after payment/i);
+    expect(declined.cluster_members).toContain(grants.id); // the ranker put them in one cluster
+    const { status, body } = await api("/api/decide", { method: "POST", body: JSON.stringify({ id: declined.id, action: "accept", statement: "Entitlements change only after a payment is confirmed; a declined payment leaves them unchanged.", merge_ids: [grants.id] }) });
+    expect(status, JSON.stringify(body)).toBe(200);
+    const d = body.decision;
+    expect(d.merged_ids).toEqual([grants.id]);
+    expect(d.result.assigned_id).toBe("INV-003");
+    expect(d.result.warnings.join(" ")).toMatch(/folded/);
+    const policy = loadPolicyFile(policyFile);
+    const inv = policy.invariants.find((i) => i.id === "INV-003")!;
+    expect(inv.verified_by).toHaveLength(2);
+    for (const t of inv.verified_by) expect(fs.existsSync(path.join(PROJECT_ROOT, t))).toBe(true);
+    expect(inv.verified_by.join(" ")).toMatch(/declined_payment/);
+    expect(inv.verified_by.join(" ")).toMatch(/apply_upgrade/);
+    expect(inv.applies_to_paths).toEqual(expect.arrayContaining([...(declined.applies_to_paths ?? []), ...(grants.applies_to_paths ?? [])]));
+    expect(policy.invariants.length).toBe(3); // one entry, not two
+    const st = (await api("/api/state")).body;
+    expect(st.decisions.find((x: { id: string }) => x.id === grants.id)).toMatchObject({ action: "merge", merged_into: "INV-003" });
+    expect((await api("/api/decide", { method: "POST", body: JSON.stringify({ id: grants.id, action: "accept" }) })).status).toBe(409); // folded candidates cannot be approved again
+    expect((await api("/api/decide", { method: "POST", body: JSON.stringify({ id: find(/locked until expires/i).id, action: "accept", merge_ids: [find(/app\/legacy is frozen/i).id] }) })).status).toBe(409); // only invariants fold
+  });
+
   it("rejections and skips are recorded; unknown actions and ids are refused", async () => {
     const currency = find(/currency mismatch raises/i);
     const rej = await api("/api/decide", { method: "POST", body: JSON.stringify({ id: currency.id, action: "reject", reason: "value-object validation" }) });
@@ -122,7 +150,8 @@ describe("intentos review", () => {
     expect((await api("/api/decide", { method: "POST", body: JSON.stringify({ id: "CAND-999", action: "accept" }) })).status).toBe(409);
     expect((await api("/api/decide", { method: "POST", body: JSON.stringify({ id: currency.id, action: "explode" }) })).status).toBe(400);
     const decisions = JSON.parse(fs.readFileSync(state.decisions_file, "utf8")) as Array<{ id: string; action: string }>;
-    expect(decisions.filter((d) => d.action === "accept").length).toBe(4);
+    expect(decisions.filter((d) => d.action === "accept").length).toBe(5);
+    expect(decisions.filter((d) => d.action === "merge").length).toBe(1);
     expect(decisions.some((d) => d.id === currency.id && d.action === "reject")).toBe(true);
   });
 
@@ -130,15 +159,15 @@ describe("intentos review", () => {
     const { status, body } = await api("/api/finish", { method: "POST", body: "{}" });
     expect(status).toBe(200);
     const f = body.finished as FinishResult;
-    expect(f).toMatchObject({ accepted: 4, rejected: 1, skipped: 1 });
+    expect(f).toMatchObject({ accepted: 5, merged: 1, rejected: 1, skipped: 1 });
     expect(f.assigned).toEqual(expect.arrayContaining([expect.stringMatching(/^INV-001 /), expect.stringMatching(/^ARCH-001 /), expect.stringMatching(/^DEC-001 /)]));
-    expect(f.feedback!.accepted_ids.length).toBeGreaterThanOrEqual(4);
+    expect(f.feedback!.accepted_ids.length).toBeGreaterThanOrEqual(6); // folded candidates count as accepted: their hidden tests are in the policy
     expect(f.feedback!.accept_tokens).toEqual(expect.arrayContaining(["cancelled", "discount"]));
     expect(fs.existsSync(state.feedback_file)).toBe(true);
     expect(f.index).not.toBeNull();
     expect(f.index!.unresolved_sources).toEqual([]); // the new docs/intentos-policy.md section and the existing heading both bind
     const result = await server.done;
-    expect(result.accepted).toBe(4);
+    expect(result.accepted).toBe(5);
     await expect(fetch(`http://127.0.0.1:${server.port}/api/state`, { headers: { "x-review-token": server.token } })).rejects.toThrow();
   });
 

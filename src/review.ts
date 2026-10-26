@@ -49,9 +49,14 @@ export interface AcceptResult {
 export interface Decision {
   id: string;
   title: string;
-  action: "accept" | "reject" | "skip";
+  /** `merge`: folded into another candidate's approval (its hidden test joined that invariant's `verified_by`). */
+  action: "accept" | "reject" | "skip" | "merge";
   statement?: string;
   reason?: string;
+  /** For `merge`: the candidate whose approval absorbed this one. */
+  merged_into?: string;
+  /** For `accept`: candidates folded into this approval. */
+  merged_ids?: string[];
   by: string;
   at: string;
   result?: AcceptResult;
@@ -59,6 +64,7 @@ export interface Decision {
 
 export interface FinishResult {
   accepted: number;
+  merged: number;
   rejected: number;
   skipped: number;
   pending: number;
@@ -187,18 +193,26 @@ function writeHiddenTest(dir: string, assignedId: string, title: string, draft: 
   return { file, complete: draft.standalone };
 }
 
-/** Apply an approval: policy block with a real id, hidden test file, document section. Throws (and leaves the policy untouched) when the result would not validate. */
-export function acceptCandidate(state: ReviewState, c: Candidate, statement: string | undefined, by: string): AcceptResult {
+/**
+ * Apply an approval: policy block with a real id, hidden test file(s), document section. `merged` are related invariant
+ * candidates folded into the same rule: each contributes its hidden test, paths, scope and sources to the one entry.
+ * Throws (and leaves the policy untouched) when the result would not validate.
+ */
+export function acceptCandidate(state: ReviewState, c: Candidate, statement: string | undefined, by: string, merged: Candidate[] = []): AcceptResult {
   const warnings: string[] = [];
   const text = (statement ?? c.classification?.rule ?? c.statement).trim();
   if (!text) throw new Error("a rule needs a statement");
+  if (merged.length && (c.kind !== "invariant" || merged.some((m) => m.kind !== "invariant"))) throw new Error("only invariant candidates can be folded into one approval");
+  const group = [c, ...merged];
   const doc = YAML.parseDocument(fs.readFileSync(state.policy_file, "utf8"));
-  const evidence = c.evidence.map((e) => `${e.type} ${e.ref}: ${e.excerpt}`.slice(0, 200));
-  const hasDocSource = (c.sources ?? []).some((s) => s.path.toLowerCase().endsWith(".md") && s.heading);
+  const evidence = group.flatMap((g) => g.evidence.map((e) => `${e.type} ${e.ref}: ${e.excerpt}`.slice(0, 200))).slice(0, 12);
+  const uniq = <T,>(xs: T[]) => [...new Set(xs)];
+  const docSources = uniq(group.flatMap((g) => (g.sources ?? []).filter((s) => s.path.toLowerCase().endsWith(".md") && s.heading).map((s) => JSON.stringify({ path: s.path, heading: s.heading })))).map((j) => JSON.parse(j) as { path: string; heading: string });
   let docSection: AcceptResult["doc_section"] = null;
-  const sources = hasDocSource ? (c.sources ?? []).filter((s) => s.heading).map((s) => ({ path: s.path, heading: s.heading })) : [];
+  const sources: Array<{ path: string; heading?: string }> = [...docSources];
   if (!sources.length && c.kind !== "decision") {
-    const section = ensureDocSection(state.repo_path, state.doc_file, c.title, text, evidence);
+    const body = merged.length ? `${text}\n\nCovers: ${group.map((g) => g.title).join("; ")}.` : text;
+    const section = ensureDocSection(state.repo_path, state.doc_file, c.title, body, evidence);
     docSection = { path: section.path, heading: section.heading };
     sources.push({ path: section.path, heading: section.heading });
     if (section.created) warnings.push(`added section "${section.heading}" to ${section.path} in the repository; commit it so the policy can bind it`);
@@ -208,15 +222,18 @@ export function acceptCandidate(state: ReviewState, c: Candidate, statement: str
   let hiddenComplete = true;
   if (c.kind === "invariant") {
     assigned = nextPolicyId(doc, "INV");
-    let verifiedBy: string[] = [];
-    if (c.suggested_hidden_test) {
-      const written = writeHiddenTest(state.hidden_tests_dir, assigned, c.title, c.suggested_hidden_test);
-      hiddenTest = written.file;
-      hiddenComplete = written.complete;
-      verifiedBy = [path.relative(PROJECT_ROOT, written.file).split(path.sep).join("/")];
+    const verifiedBy: string[] = [];
+    for (const g of group) {
+      if (!g.suggested_hidden_test) continue;
+      const written = writeHiddenTest(state.hidden_tests_dir, assigned, g.title, g.suggested_hidden_test);
+      hiddenTest = hiddenTest ?? written.file;
+      hiddenComplete = hiddenComplete && written.complete;
+      verifiedBy.push(path.relative(PROJECT_ROOT, written.file).split(path.sep).join("/"));
       if (!written.complete) warnings.push(`hidden test ${path.basename(written.file)} is not self-contained; see its TODO header`);
-    } else warnings.push("no hidden test: the invariant is shown to the planner and implementer but the verifier cannot execute it (listed under unverified areas)");
-    appendToPolicy(state.policy_file, "invariants", { id: assigned, statement: text, scope: c.scope ?? [], applies_to_paths: c.applies_to_paths ?? [], authority: "approved_policy", approved_by: by, sources, verified_by: verifiedBy, enforcement: "blocking" });
+    }
+    if (!verifiedBy.length) warnings.push("no hidden test: the invariant is shown to the planner and implementer but the verifier cannot execute it (listed under unverified areas)");
+    if (merged.length) warnings.push(`folded ${merged.map((m) => m.id).join(", ")} into this rule: ${verifiedBy.length} hidden test(s) on one invariant`);
+    appendToPolicy(state.policy_file, "invariants", { id: assigned, statement: text, scope: uniq(group.flatMap((g) => g.scope ?? [])), applies_to_paths: uniq(group.flatMap((g) => g.applies_to_paths ?? [])), authority: "approved_policy", approved_by: by, sources, verified_by: verifiedBy, enforcement: "blocking" });
   } else if (c.kind === "architecture_rule" || c.kind === "frozen_paths") {
     assigned = nextPolicyId(doc, "ARCH");
     const rule = (c.rule ?? {}) as { kind?: string; paths?: string[]; forbidden_modules?: string[] };
@@ -238,18 +255,32 @@ function saveDecisions(state: ReviewState): void {
   fs.writeFileSync(state.decisions_file, JSON.stringify(state.decisions, null, 2));
 }
 
-export function decide(state: ReviewState, input: { id: string; action: Decision["action"]; statement?: string; reason?: string }): Decision {
+const settled = (state: ReviewState, id: string): Decision | undefined => state.decisions.find((d) => d.id === id && (d.action === "accept" || d.action === "merge"));
+
+export function decide(state: ReviewState, input: { id: string; action: "accept" | "reject" | "skip"; statement?: string; reason?: string; merge_ids?: string[] }): Decision {
   const c = state.candidates.find((x) => x.id === input.id);
   if (!c) throw new Error(`unknown candidate ${input.id}`);
   if (state.finished) throw new Error("this review is finished; start a new one");
-  const existing = state.decisions.find((d) => d.id === input.id && d.action === "accept");
-  if (existing) throw new Error(`${input.id} was already approved as ${existing.result?.assigned_id}`);
+  const existing = settled(state, input.id);
+  if (existing) throw new Error(existing.action === "accept" ? `${input.id} was already approved as ${existing.result?.assigned_id}` : `${input.id} was folded into ${existing.merged_into}`);
   const decision: Decision = { id: c.id, title: c.title, action: input.action, by: state.by, at: nowIso() };
+  const mergedDecisions: Decision[] = [];
   if (input.action === "accept") {
+    const mergeIds = [...new Set((input.merge_ids ?? []).filter((m) => m !== c.id))];
+    const merged = mergeIds.map((m) => {
+      const cand = state.candidates.find((x) => x.id === m);
+      if (!cand) throw new Error(`unknown candidate ${m} in merge_ids`);
+      const prior = settled(state, m);
+      if (prior) throw new Error(`${m} is already ${prior.action === "accept" ? `approved as ${prior.result?.assigned_id}` : `folded into ${prior.merged_into}`}`);
+      return cand;
+    });
     decision.statement = (input.statement ?? c.classification?.rule ?? c.statement).trim();
-    decision.result = acceptCandidate(state, c, decision.statement, state.by);
+    decision.result = acceptCandidate(state, c, decision.statement, state.by, merged);
+    decision.merged_ids = merged.map((m) => m.id);
+    for (const m of merged) mergedDecisions.push({ id: m.id, title: m.title, action: "merge", merged_into: decision.result.assigned_id, by: state.by, at: decision.at });
   } else if (input.action === "reject") decision.reason = (input.reason ?? "").trim().slice(0, 300);
-  state.decisions = [...state.decisions.filter((d) => d.id !== c.id), decision];
+  const touched = new Set([c.id, ...mergedDecisions.map((d) => d.id)]);
+  state.decisions = [...state.decisions.filter((d) => !touched.has(d.id)), decision, ...mergedDecisions];
   saveDecisions(state);
   return decision;
 }
@@ -258,6 +289,7 @@ export function finishReview(state: ReviewState): FinishResult {
   const accepted = state.decisions.filter((d) => d.action === "accept");
   const result: FinishResult = {
     accepted: accepted.length,
+    merged: state.decisions.filter((d) => d.action === "merge").length,
     rejected: state.decisions.filter((d) => d.action === "reject").length,
     skipped: state.decisions.filter((d) => d.action === "skip").length,
     pending: state.candidates.filter((c) => !state.decisions.some((d) => d.id === c.id)).length,
@@ -349,7 +381,7 @@ export function startReviewServer(state: ReviewState, opts: { port?: number; ope
         if (req.headers["x-review-token"] !== token) return json(res, 403, { error: "bad token" });
         if (req.method === "GET" && url.pathname === "/api/state") return json(res, 200, publicState(state));
         if (req.method === "POST" && url.pathname === "/api/decide") {
-          const body = JSON.parse((await readBody(req)) || "{}") as { id: string; action: Decision["action"]; statement?: string; reason?: string };
+          const body = JSON.parse((await readBody(req)) || "{}") as { id: string; action: "accept" | "reject" | "skip"; statement?: string; reason?: string; merge_ids?: string[] };
           if (!["accept", "reject", "skip"].includes(body.action)) return json(res, 400, { error: "action must be accept, reject or skip" });
           try {
             return json(res, 200, { decision: decide(state, body) });
@@ -462,7 +494,7 @@ function render() {
   document.getElementById('count').textContent = done + ' / ' + total + ' decided';
   document.getElementById('bar').style.width = (total ? 100*done/total : 0) + '%';
   const list = document.getElementById('list');
-  list.innerHTML = state.candidates.map(c => { const d = decisionOf(c.id); const cls = d ? (d.action==='accept'?'acc':d.action==='reject'?'rej':'skp') : ''; const mark = d ? (d.action==='accept' ? '✓ ' + (d.result ? d.result.assigned_id : '') : d.action==='reject' ? '✗' : '→') : '·';
+  list.innerHTML = state.candidates.map(c => { const d = decisionOf(c.id); const cls = d ? (d.action==='accept'||d.action==='merge'?'acc':d.action==='reject'?'rej':'skp') : ''; const mark = d ? (d.action==='accept' ? '✓ ' + (d.result ? d.result.assigned_id : '') : d.action==='merge' ? '⇒ ' + d.merged_into : d.action==='reject' ? '✗' : '→') : '·';
     return '<button class="' + (c.id===current?'current':'') + '" data-id="' + c.id + '"><span class="st ' + cls + '">' + esc(mark) + '</span>' + esc(c.title) + '</button>'; }).join('');
   list.querySelectorAll('button').forEach(b => b.onclick = () => { current = b.dataset.id; lastResult = null; render(); });
   const card = document.getElementById('card');
@@ -471,7 +503,8 @@ function render() {
   if (!c) { card.innerHTML = '<div class="empty">No candidates to review.</div>' + finishBar(); return; }
   const d = decisionOf(c.id); const k = c.classification;
   card.innerHTML = '<div class="kind">' + esc(c.kind.replace('_',' ')) + ' · ' + esc(c.id) + '</div><h2>' + esc(c.title) + '</h2>'
-    + '<div class="row">score <b>' + c.score.toFixed(2) + '</b> (' + esc(c.relevance) + ') · evidence confidence <b>' + esc(c.confidence) + '</b>' + (c.cluster_members && c.cluster_members.length ? ' · same rule as ' + esc(c.cluster_members.join(', ')) : '') + '</div>'
+    + '<div class="row">score <b>' + c.score.toFixed(2) + '</b> (' + esc(c.relevance) + ') · evidence confidence <b>' + esc(c.confidence) + '</b></div>'
+    + relatedHtml(c, d)
     + (k ? '<div class="cls"><b>' + esc(k.category.replace('_',' ')) + '</b> · ' + (k.keep?'keep':'set aside') + ' — ' + esc(k.reason) + (k.rule_rejected ? '<br><span class="warnline">rewrite rejected: ' + esc(k.rule_rejected) + '</span>' : '') + '</div>' : '')
     + '<label>Rule statement (edit before approving)</label><textarea id="stmt">' + esc((d && d.statement) || (k && k.rule) || c.statement) + '</textarea>'
     + (k && k.rule ? '<div class="row">original: ' + esc(c.statement) + '</div>' : '')
@@ -485,18 +518,27 @@ function render() {
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
   on('accept', () => act('accept')); on('reject', () => act('reject')); on('skip', () => act('skip')); on('finish', finish);
 }
+function relatedHtml(c, d) {
+  const members = (c.cluster_members || []).map(id => state.candidates.find(x => x.id === id)).filter(Boolean);
+  if (!members.length) return '';
+  if (d && d.action === 'merge') return '<div class="cls">Folded into <b>' + esc(d.merged_into) + '</b> as one of its hidden tests.</div>';
+  const rows = members.map(m => { const md = decisionOf(m.id); const canFold = c.kind === 'invariant' && m.kind === 'invariant' && !md; const pre = canFold && !!m.hidden_test;
+    return '<li><label style="display:inline;margin:0;font-size:13px;color:var(--ink)"><input type="checkbox" class="fold" value="' + m.id + '"' + (pre ? ' checked' : '') + (canFold ? '' : ' disabled') + '> ' + esc(m.id) + ' · ' + esc(m.title) + (md ? ' <span class="st">(' + esc(md.action === 'accept' ? 'approved as ' + md.result.assigned_id : md.action === 'merge' ? 'folded into ' + md.merged_into : md.action) + ')</span>' : m.hidden_test ? '' : ' <span class="st">(no test)</span>') + '</label></li>'; }).join('');
+  return '<div class="cls"><b>Related candidates</b> share terms with this candidate and may describe the same rule. Tick the ones to fold into this approval: they become extra hidden tests of <i>one</i> invariant instead of separate entries.<ul class="ev">' + rows + '</ul></div>';
+}
 function finishBar() { return '<button class="btn fin" id="finish">Finish review' + (pending().length ? ' (' + pending().length + ' pending)' : '') + '</button>'; }
 async function act(action) {
   const c = state.candidates.find(x => x.id === current); if (!c) return;
   const statement = (document.getElementById('stmt')||{}).value, reason = (document.getElementById('reason')||{}).value;
-  try { const r = await api('/api/decide', { method:'POST', body: JSON.stringify({ id: c.id, action, statement, reason }) });
-    const d = r.decision; lastResult = d.action==='accept' ? { text: 'Approved as ' + d.result.assigned_id + ' → ' + d.result.policy_file + (d.result.hidden_test ? '; hidden test ' + d.result.hidden_test : ''), warnings: d.result.warnings } : { text: d.action==='reject' ? 'Rejected' : 'Skipped' };
+  const merge_ids = action === 'accept' ? Array.from(document.querySelectorAll('input.fold:checked')).map(i => i.value) : [];
+  try { const r = await api('/api/decide', { method:'POST', body: JSON.stringify({ id: c.id, action, statement, reason, merge_ids }) });
+    const d = r.decision; lastResult = d.action==='accept' ? { text: 'Approved as ' + d.result.assigned_id + (d.merged_ids && d.merged_ids.length ? ' (with ' + d.merged_ids.join(', ') + ')' : '') + ' → ' + d.result.policy_file + (d.result.hidden_test ? '; hidden test(s) under ' + d.result.hidden_test.replace(/[^/]+$/, '') : ''), warnings: d.result.warnings } : { text: d.action==='reject' ? 'Rejected' : 'Skipped' };
     await load(); const p = pending(); if (p.length) { current = p[0].id; render(); }
   } catch (e) { lastResult = { error: e.message }; render(); }
 }
 async function finish() { try { await api('/api/finish', { method:'POST', body:'{}' }); await load(); } catch (e) { lastResult = { error: e.message }; render(); } }
 function finishedHtml(f) { return '<div class="done"><h2>Review finished</h2><ul>'
-  + '<li>approved <b>' + f.accepted + '</b>' + (f.assigned.length ? ': ' + esc(f.assigned.join('; ')) : '') + '</li><li>rejected <b>' + f.rejected + '</b>, skipped <b>' + f.skipped + '</b>, left pending <b>' + f.pending + '</b></li>'
+  + '<li>approved <b>' + f.accepted + '</b>' + (f.assigned.length ? ': ' + esc(f.assigned.join('; ')) : '') + (f.merged ? ' (' + f.merged + ' related candidate(s) folded in as extra hidden tests)' : '') + '</li><li>rejected <b>' + f.rejected + '</b>, skipped <b>' + f.skipped + '</b>, left pending <b>' + f.pending + '</b></li>'
   + (f.hidden_tests_needing_attention.length ? '<li class="warnline">hidden tests to finish by hand: ' + esc(f.hidden_tests_needing_attention.join(', ')) + '</li>' : '')
   + (f.feedback ? '<li>feedback recorded for the next run: ' + f.feedback.accept_tokens.length + ' accept terms, ' + f.feedback.reject_tokens.length + ' reject terms</li>' : (f.feedback_error ? '<li class="warnline">feedback: ' + esc(f.feedback_error) + '</li>' : ''))
   + (f.index ? '<li>repository re-indexed (' + esc(f.index.mode) + ', policy ' + esc(f.index.policy_id) + ')' + (f.index.unresolved_sources.length ? '<span class="warnline"> — unresolved policy sources: ' + esc(f.index.unresolved_sources.map(u => u.owner + ' ' + u.path + (u.heading?'#'+u.heading:'')).join('; ')) + '</span>' : '') + '</li>' : (f.index_error ? '<li class="warnline">index: ' + esc(f.index_error) + '</li>' : ''))
