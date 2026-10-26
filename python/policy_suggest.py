@@ -16,10 +16,11 @@ import ast
 import json
 import os
 import re
+import math
 import subprocess
 import sys
 import textwrap
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Any
 
 SKIP_DIRS = {".git", "__pycache__", ".pytest_cache", ".tox", ".venv", "venv", "node_modules", "build", "dist", ".eggs", ".mypy_cache", ".ruff_cache", ".intentos", ".intentos_hidden", "docs/_build"}
@@ -38,6 +39,34 @@ LAYER_VOCAB = {"api", "apis", "domain", "services", "service", "models", "model"
 FROZEN_NAME_RE = re.compile(r"(legacy|deprecated|obsolete|old|compat|v1)", re.I)
 SETUP_NAMES = {"setup_class", "setup_method", "setup", "setUp", "setUpClass", "teardown_class", "teardown_method", "teardown", "tearDown", "tearDownClass", "setup_function", "teardown_function"}
 CHANGELOG_RE = re.compile(r"\b(deprecat\w*|removed|remove|breaking|no longer|renamed|dropped|drop support|must now|is now required)\b", re.I)
+# --- ranking vocabulary -------------------------------------------------------------------------------------------
+# Words that say nothing about a domain: everyday English plus programming vocabulary.
+GENERIC_STOP = set("""a an the and or of to in for on with by from as at is are be been was were this that these those it its into
+than then also not no yes if else when while do does did done get set add remove new old true false none null self cls args
+kwargs return returns raise raises given should test tests testing case cases default defaults value values param params
+parameter parameters argument arguments result results output outputs input inputs object objects type types list dict
+tuple string str int float bool number numbers name names key keys item items data read write load save create make build
+run call calls called check checks checked use used using function functions method methods class classes module modules
+package packages import imports def main init print log logger error errors exception exceptions message messages format
+formats option options config configuration setting settings mode modes flag flags start end first last next previous
+current all any each every some more most less least other others same different based via without with empty given
+correct wrong actually allow allows allowed usage use necessary needed need needs new adr adrs decision decisions policy
+policies rule rules business house readme architecture overview summary notes note section sections heading app src lib
+service services api domain module layer only without empty warning warnings invalid valid gets get goes given""".split())
+# Library, tooling, packaging and file-system vocabulary: a candidate dominated by these is about the environment, not the domain.
+INFRA_STOP = set("""pandas numpy pd np dataframe dataframes df series dtype dtypes index indexes column columns csv json yaml toml xml
+pip install installed installation setup packaging wheel sdist version versions release releases merge merges merged merging
+merger path paths filepath filepaths datapath file files folder folders dir directory directories position positions attribute
+attributes label labels script scripts example examples black isort flake8 lint linting mypy pytest tox ci github workflow
+deprecated deprecation deprecations futurewarning docstring docstrings typo typos readme docs documentation sphinx rst md
+hardcoded hard coded include creation refactor rename renamed moved move cleanup workaround compat compatibility
+python3 python requirements dependency dependencies""".split())
+# Words that make a statement a property of behaviour (rule shape) versus a description of a mechanism (fix shape).
+PROPERTY_WORDS = {"never", "no", "not", "only", "must", "always", "unchanged", "equal", "equals", "sum", "sums", "zero", "within", "bounded", "negative", "positive", "same", "conserve", "conserved", "conserves", "preserve", "preserved", "preserves", "raises", "rejects", "cannot", "exactly", "once", "invalid", "required", "forbidden", "idempotent", "monotonic", "total", "consistent", "valid"}
+MECHANISM_WORDS = {"fix", "fixed", "merge", "merger", "correct", "position", "attribute", "label", "path", "filepath", "install", "installed", "rename", "move", "refactor", "workaround", "hardcoded", "replace", "include", "creation", "creating", "issue", "bug", "compat", "update", "updated", "upgrade", "bump"}
+PRIOR_BY_SOURCE = {"adr": 0.8, "test": 0.6, "doc": 0.6, "import": 0.5, "history": 0.4, "commit": 0.3, "changelog": 0.3}
+RELEVANCE_BANDS = ((0.6, "high"), (0.4, "medium"), (0.0, "low"))
+
 ADR_FIELD_RE = re.compile(r"^\*{0,2}(Status|Date|Supersedes|Superseded-by|Deciders|Owner)\*{0,2}\s*:\s*\*{0,2}(.+?)\*{0,2}\s*$", re.I)
 MD_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 RST_UNDERLINE_RE = re.compile(r"^([=\-~^\"'`:#*+_.])\1{2,}\s*$")
@@ -85,6 +114,64 @@ def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "candidate"
 
 
+def split_identifier(name: str) -> list[str]:
+    """`add_weekdays2df` -> [add, weekdays, df]; `HeatBuilding` -> [heat, building]."""
+    parts = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name).replace("_", " ").split()
+    out: list[str] = []
+    for part in parts:
+        for tok in re.findall(r"[a-zA-Z]{3,}", part):
+            out.append(tok.lower())
+    return out
+
+
+def stem(token: str) -> str:
+    """Light plural folding so `discounts`/`discount` and `holidays`/`holiday` count as one term."""
+    if len(token) > 4 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 4 and token.endswith("s") and not token.endswith(("ss", "us", "is")):
+        return token[:-1]
+    return token
+
+
+def text_tokens(text: str) -> list[str]:
+    toks: list[str] = []
+    for word in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", text):
+        toks.extend(split_identifier(word) if ("_" in word or re.search(r"[a-z][A-Z]", word)) else [word.lower()] if len(word) >= 3 else [])
+    return [stem(t) for t in toks]
+
+
+class DomainVocabulary:
+    """What the repository talks about, from its own identifiers, docstrings and headings; infra and generic words excluded."""
+
+    def __init__(self, feedback: dict[str, list[str]] | None = None) -> None:
+        self.counts: Counter[str] = Counter()
+        self.max = 1
+        fb = feedback or {}
+        self.accept = {t.lower() for t in fb.get("accept_tokens", [])}
+        self.reject = {t.lower() for t in fb.get("reject_tokens", [])}
+
+    def learn(self, tokens: list[str], weight: int = 1) -> None:
+        for t in tokens:
+            t = stem(t)
+            if t in GENERIC_STOP or t in INFRA_STOP or len(t) < 3 or t.isdigit():
+                continue
+            self.counts[t] += weight
+        self.max = max(self.counts.values(), default=1)
+
+    def weight(self, token: str) -> float | None:
+        """Domain weight in [0.5, 1] (or 1.25 for reviewer-accepted terms), -1 for infra or reviewer-rejected terms, None for neutral."""
+        if token in self.reject or token in INFRA_STOP:
+            return -1.0
+        if token in self.accept:
+            return 1.25
+        if token in GENERIC_STOP:
+            return None
+        c = self.counts.get(token, 0)
+        if not c:
+            return None
+        return 0.5 + 0.5 * math.log1p(c) / math.log1p(self.max)
+
+
 def node_source(source: str, node: ast.AST) -> str:
     """Full source lines of a node including its decorators, dedented to column 0 (keeps relative indentation)."""
     lines = source.splitlines()
@@ -99,9 +186,12 @@ def sentences(text: str) -> list[str]:
 
 
 class Miner:
-    def __init__(self, repo: str, max_commits: int) -> None:
+    def __init__(self, repo: str, max_commits: int, feedback: dict[str, list[str]] | None = None) -> None:
         self.repo = os.path.abspath(repo)
         self.max_commits = max_commits
+        self.vocab = DomainVocabulary(feedback)
+        self._indegree: dict[str, int] | None = None
+        self._test_age: dict[str, int] = {}
         self.files = tracked_files(self.repo)
         self.py_files = [f for f in self.files if f.endswith(".py")]
         self.internal = {module_name_for(f) for f in self.py_files}
@@ -496,7 +586,7 @@ class Miner:
             self.add(
                 "architecture_rule",
                 f"{b} must not import {a}",
-                f"Modules under {b}/ must not import {a_mod} (today {a} depends on {b}, never the reverse).",
+                f"Modules under {b}/ must not import {a_mod} (as of this revision {a} depends on {b}, never the reverse).",
                 confidence,
                 ev[:6],
                 rule={"kind": "forbidden_import", "paths": [f"{b}/**"], "forbidden_modules": [a_mod]},
@@ -557,6 +647,175 @@ class Miner:
         for i, c in enumerate(self.candidates, 1):
             c["id"] = f"CAND-{i:03d}"
 
+    # ---------- ranking
+    def build_vocabulary(self) -> None:
+        for rel in self.py_files:
+            if is_test_path(rel):
+                continue
+            tree = self.tree(rel)
+            if tree is None:
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    self.vocab.learn(split_identifier(node.name), 2)
+                    doc = ast.get_docstring(node)
+                    if doc:
+                        self.vocab.learn(text_tokens(doc.split("\n")[0]))
+                elif isinstance(node, ast.arg):
+                    self.vocab.learn(split_identifier(node.arg))
+                elif isinstance(node, ast.Attribute):
+                    self.vocab.learn(split_identifier(node.attr))
+                elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                    self.vocab.learn(split_identifier(node.id))
+            self.vocab.learn(split_identifier(os.path.basename(rel)[:-3]), 2)
+        for rel in self.files:
+            if rel.lower().endswith((".md", ".rst")) and not DOC_SKIP_RE.match(os.path.basename(rel)):
+                text = read_text(os.path.join(self.repo, rel)) or ""
+                for line in text.splitlines():
+                    m = MD_HEADING_RE.match(line)
+                    if m:
+                        self.vocab.learn(text_tokens(m.group(2)), 2)
+
+    def indegree(self) -> dict[str, int]:
+        """How many internal modules import each source file (centrality in the import graph)."""
+        if self._indegree is None:
+            importers: dict[str, set[str]] = defaultdict(set)
+            for rel in self.py_files:
+                if is_test_path(rel):
+                    continue
+                for target, _ in self.internal_imports(rel):
+                    tpath = self.path_for_module(target)
+                    if tpath and tpath != rel:
+                        importers[tpath].add(rel)
+            self._indegree = {k: len(v) for k, v in importers.items()}
+        return self._indegree
+
+    def test_age_days(self, path: str, name: str) -> int | None:
+        key = f"{path}::{name}"
+        if key in self._test_age:
+            return self._test_age[key]
+        first = run_git(self.repo, "log", "--format=%ad", "--date=short", "--reverse", "-S", f"def {name}(", "--", path).strip().split("\n")[0]
+        head = run_git(self.repo, "log", "-1", "--format=%ad", "--date=short").strip()
+        age = None
+        if first and head:
+            try:
+                import datetime as _dt
+                age = (_dt.date.fromisoformat(head) - _dt.date.fromisoformat(first)).days
+            except ValueError:
+                age = None
+        self._test_age[key] = age if age is not None else -1
+        return age
+
+    def candidate_tokens(self, c: dict[str, Any]) -> list[str]:
+        """Words the candidate is about: title, statement, test names, document sentences and commit subjects (not signatures)."""
+        parts = [c["title"], c["statement"]]
+        for e in c["evidence"]:
+            if e["type"] in ("doc", "commit", "adr"):
+                parts.append(str(e.get("excerpt", "")))
+            if e["type"] == "test":
+                parts.append(str(e.get("ref", "")).split("::")[-1])
+        return text_tokens(" ".join(parts))
+
+    def domain_tokens(self, c: dict[str, Any]) -> set[str]:
+        return {t for t in self.candidate_tokens(c) if (self.vocab.weight(t) or 0) > 0}
+
+    def score(self, c: dict[str, Any], cluster_types: set[str]) -> tuple[float, dict[str, float]]:
+        toks = self.candidate_tokens(c)
+        weights = [self.vocab.weight(t) for t in toks]
+        scored = [w for w in weights if w is not None]
+        if scored:
+            density = (sum(scored)) / len(scored)  # in [-1, 1.25]
+            domain = max(0.0, min(1.0, (density + 1) / 2))
+        else:
+            domain = 0.5  # nothing domain-specific and nothing infrastructural either: neutral
+        tset = set(toks)
+        shape_raw = (1 if tset & PROPERTY_WORDS else 0) - (1 if tset & MECHANISM_WORDS else 0)
+        shape = (shape_raw + 1) / 2
+        corroboration = 0.0 if len(cluster_types) <= 1 else 0.6 if len(cluster_types) == 2 else 1.0
+        deg = self.indegree()
+        maxdeg = max(deg.values(), default=0)
+        cent = 0.0
+        for p in c.get("applies_to_paths", []):
+            if p.endswith("/**"):
+                prefix = p[:-3] + "/"
+                cent = max(cent, max((v for k, v in deg.items() if k.startswith(prefix)), default=0))
+            else:
+                cent = max(cent, deg.get(p, 0))
+        centrality = cent / maxdeg if maxdeg else 0.0
+        primary = c["evidence"][0]["type"]
+        stability = 0.5
+        if primary == "test":
+            e = c["evidence"][0]
+            age = self.test_age_days(str(e.get("path", "")), str(e.get("ref", "")).split("::")[-1]) if e.get("path") else None
+            stability = min(1.0, age / 365) if age is not None and age >= 0 else 0.3
+        elif primary in ("doc", "adr"):
+            stability = 0.7
+        elif primary == "commit":
+            stability = 0.3
+        prior = PRIOR_BY_SOURCE.get(primary, 0.4)
+        signals = {"domain": round(domain, 3), "shape": round(shape, 3), "corroboration": round(corroboration, 3), "centrality": round(centrality, 3), "stability": round(stability, 3), "prior": prior}
+        total = 0.35 * domain + 0.15 * shape + 0.2 * corroboration + 0.1 * centrality + 0.1 * stability + 0.1 * prior
+        return round(max(0.0, min(1.0, total)), 3), signals
+
+    def cluster(self) -> None:
+        """Group candidates that express the same rule; clusters pool their evidence types for corroboration.
+
+        Links need shared distinctive terms weighted by rarity, and a cluster is capped so one common word can never
+        chain most of the candidates together.
+        """
+        n = len(self.candidates)
+        toksets = [self.domain_tokens(c) for c in self.candidates]
+        df: Counter[str] = Counter()
+        for ts in toksets:
+            df.update(ts)
+        # A term in more than half of the candidates says nothing about a cluster.
+        distinctive = [{t for t in ts if df[t] <= max(2, n * 0.5)} for ts in toksets]
+        idf = {t: math.log((n + 1) / (c + 1)) + 0.1 for t, c in df.items()}
+        parent = list(range(n))
+        size = [1] * n
+
+        def find(i: int) -> int:
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        pairs: list[tuple[float, int, int]] = []
+        for i in range(n):
+            for j in range(i + 1, n):
+                a, b = distinctive[i], distinctive[j]
+                if not a or not b:
+                    continue
+                shared = a & b
+                if not shared:
+                    continue
+                jac = sum(idf[t] for t in shared) / sum(idf[t] for t in a | b)
+                if (len(shared) >= 2 and jac >= 0.25) or jac >= 0.5:
+                    pairs.append((jac, i, j))
+        for _, i, j in sorted(pairs, reverse=True):  # strongest links first; a cluster never exceeds 8 members
+            ri, rj = find(i), find(j)
+            if ri == rj or size[ri] + size[rj] > 8:
+                continue
+            parent[rj] = ri
+            size[ri] += size[rj]
+
+        groups: dict[int, list[int]] = defaultdict(list)
+        for i in range(n):
+            groups[find(i)].append(i)
+        for members in groups.values():
+            common: Counter[str] = Counter()
+            for i in members:
+                common.update(distinctive[i] if len(members) > 1 else toksets[i])
+            key = "-".join(t for t, _ in common.most_common(2)) or "misc"
+            types = {e["type"] for i in members for e in self.candidates[i]["evidence"] if e["type"] != "history"}  # a lost path is not a second source
+            for i in members:
+                c = self.candidates[i]
+                c["cluster"] = key
+                c["cluster_size"] = len(members)
+                c["cluster_members"] = [self.candidates[j]["id"] for j in members if j != i]
+                c["score"], c["signals"] = self.score(c, types)
+                c["relevance"] = next(label for threshold, label in RELEVANCE_BANDS if c["score"] >= threshold)
+
     def policy_block(self, c: dict[str, Any], policy_id: str) -> dict[str, Any]:
         slug = slugify(c["title"])
         if c["kind"] == "invariant":
@@ -574,19 +833,27 @@ class Miner:
         return block
 
     def run(self, policy_id: str) -> dict[str, Any]:
+        self.build_vocabulary()
         self.mine_commits()
         self.mine_tests()
         self.merge_commits_into_tests()
         self.mine_docs()
         self.mine_structure()
         self.mine_changelogs()
-        order = {"high": 0, "medium": 1, "low": 2}
-        self.candidates.sort(key=lambda c: (order[c["confidence"]], c["kind"], c["id"]))
         for i, c in enumerate(self.candidates, 1):
             c["id"] = f"CAND-{i:03d}"
+        self.cluster()
+        order = {"high": 0, "medium": 1, "low": 2}
+        self.candidates.sort(key=lambda c: (-c["score"], order[c["confidence"]], c["kind"], c["id"]))
+        old_ids = {c["id"]: f"CAND-{i:03d}" for i, c in enumerate(self.candidates, 1)}
+        for i, c in enumerate(self.candidates, 1):
+            c["id"] = f"CAND-{i:03d}"
+            c["rank"] = i
+            c["cluster_members"] = [old_ids[m] for m in c.get("cluster_members", [])]
             c["policy_block"] = self.policy_block(c, policy_id)
         head = run_git(self.repo, "rev-parse", "HEAD").strip()
-        return {"repo": self.repo, "head": head, "policy_id": policy_id, "candidates": self.candidates, "counts": {k: sum(1 for c in self.candidates if c["kind"] == k) for k in ("invariant", "architecture_rule", "frozen_paths", "decision")}, "warnings": self.warnings}
+        top_terms = [t for t, _ in self.vocab.counts.most_common(25)]
+        return {"repo": self.repo, "head": head, "policy_id": policy_id, "candidates": self.candidates, "counts": {k: sum(1 for c in self.candidates if c["kind"] == k) for k in ("invariant", "architecture_rule", "frozen_paths", "decision")}, "vocabulary": top_terms, "warnings": self.warnings}
 
 
 def main(argv: list[str]) -> int:
@@ -594,8 +861,15 @@ def main(argv: list[str]) -> int:
     parser.add_argument("repo")
     parser.add_argument("--policy-id", default="policy")
     parser.add_argument("--max-commits", type=int, default=500)
+    parser.add_argument("--feedback", help="JSON file with accept_tokens / reject_tokens learned from earlier reviews")
     args = parser.parse_args(argv)
-    json.dump(Miner(args.repo, args.max_commits).run(args.policy_id), sys.stdout)
+    feedback = None
+    if args.feedback and os.path.exists(args.feedback):
+        try:
+            feedback = json.load(open(args.feedback, "r", encoding="utf-8"))
+        except (OSError, ValueError):
+            feedback = None
+    json.dump(Miner(args.repo, args.max_commits, feedback).run(args.policy_id), sys.stdout)
     return 0
 
 

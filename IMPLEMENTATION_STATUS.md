@@ -13,7 +13,7 @@ Last updated: 2026-10-26 (`intentos onboard` and `intentos suggest` landed after
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 15 files, **90 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 16 files, **96 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean. Suggestion-ranking benchmark on the fixture (`tests/integration/suggest_rank.test.ts`): precision@10 = 0.90, no unit-test/preamble noise in the top 10, mean score of policy material 0.64 vs 0.46 for noise.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -198,6 +198,35 @@ read back as authority. Observed:
   `__init__` does import its subpackages).
 - Tests: `python/tests/test_policy_suggest.py` (9), `tests/integration/suggest.test.ts` (3, incl. the Codex evidence
   guard with an injected engine).
+
+## Suggestion ranking, classification and review feedback (2026-10-26)
+The first demandlib run needed a person to go from 26 candidates to 2; that filtering is now computed. The miner
+builds a domain vocabulary from the repository's own identifiers, docstrings and headings (generic and infrastructure
+words excluded, plurals folded) and scores every candidate: domain density 0.35, rule shape vs fix shape 0.15,
+corroboration by distinct evidence types across its cluster 0.2, import-graph centrality 0.1, test age (`git log -S`)
+0.1, source prior 0.1. Clusters link candidates sharing rarity-weighted distinctive terms (cap 8). Results are ordered
+by score with `relevance` bands; `--min-score` cuts the tail. `--classify` sends the top candidates (default 40, batches
+of 20) to one read-only Codex thread with a strict schema (category, keep, reason, one-sentence rule, cluster,
+duplicate_of): unknown ids are ignored, a rewrite using an identifier absent from the evidence is rejected and the
+original statement kept, set-aside candidates stay in the review document under a rescue heading and out of the YAML.
+`--record` compares the last `suggestions.json` with the policy file (adopted hidden test, cited heading, matching rule,
+statement overlap) and writes `feedback.json` with accept/reject terms the next ranking applies (accepted terms weigh
+1.25, rejected ones count as infrastructure). Observed:
+- Fixture benchmark: precision@10 = 0.90, 0 negatives in the top 10, locked/cancelled contract rules share a cluster
+  with the `Locked contracts` section, largest cluster 5 of 28. Feedback test: after a policy adopts the cancelled
+  contract rule, that candidate's score rises and the money value-object tests sink.
+- demandlib: the holiday cluster (4 tests) leads at 0.86/0.77, robustness rules (negative factors, invalid TRY region,
+  zero-sum demand) score 0.64–0.66, the pandas/merge/pip/datapath commits fall to 0.14–0.41 (low) — the ordering a
+  reviewer produced by hand, now computed.
+- Live `--classify` on demandlib (gpt-5.6-terra, ChatGPT session, 2 batches): first run kept 10 of 26 but set aside two
+  holiday tests "because the test name gives no expected behaviour" — the prompt had only shown names. With each test's
+  body in the prompt the second run kept 11 (all four holiday rules, the zero-sum and negative-factor robustness rules,
+  the documented house-parameter constraints) and set aside all pandas/merge/pip/datapath/tooling candidates; rewrites
+  cite the real functions (`add_weekdays2df` with `holidays=[]` must issue no warning and no weekday equal to 0;
+  `create_bdew_load_profiles` with `holidays=None` must warn "No holidays given"). One rewrite was rejected by the
+  evidence guard in each run. The 26 → 2 that a person did by hand is now 26 → 11 by machine, with the 11 readable.
+- Tests: `tests/integration/suggest_rank.test.ts` (6: benchmark, --min-score, classification with an injected engine,
+  rewrite guard, CLI, feedback loop); python tests updated for score/rank/cluster fields.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

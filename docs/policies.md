@@ -183,6 +183,15 @@ API layer); with empty path lists the third detector is simply inactive.
    `approved_by: TODO`, and, for rule-like tests, a hidden-test draft lifted from the existing test. Candidates that
    have no document of their own get an ADR draft with `Status: Proposed`; `--with-codex` lets Codex write the ADR
    prose from the evidence in a read-only thread, and any ADR that cites evidence it was not given is dropped.
+   Candidates are ordered by a business-relevance score computed from the repository itself (how much of the
+   candidate is in the repository's own vocabulary rather than library or tooling words, whether it is shaped like a
+   property or like a fix, how many independent sources corroborate its cluster, how central the code it touches
+   is, how long its test has existed). `--classify` adds a model pass over the top candidates: Codex labels each as
+   business rule, robustness rule, implementation detail, environment, tooling or duplicate, keeps or sets aside,
+   rewrites the statement as one testable sentence, and names its cluster. The model cannot add candidates, its
+   rewrite is discarded if it uses an identifier the evidence does not contain, and set-aside candidates stay in
+   the review document under a rescue heading. After you have pasted what you keep, `--record` derives accept and
+   reject terms from your decisions and the next run ranks with them.
    Nothing in these files has authority: you delete what is wrong, edit the rest, and approve by pasting.
 3. Decide what must never change and write it down as Markdown in the repository, one heading per rule (ADRs,
    `docs/business-policy.md`). The indexer needs headings to bind. Accepted ADR drafts count: change their status.

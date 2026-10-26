@@ -110,8 +110,11 @@ def test_layering_and_frozen_directories(tmp_path: pathlib.Path):
 def test_ordering_ids_and_cli(tmp_path: pathlib.Path):
     repo = _repo(tmp_path)
     out = ps.Miner(str(repo), 100).run("billing")
-    confidences = [c["confidence"] for c in out["candidates"]]
-    assert confidences == sorted(confidences, key={"high": 0, "medium": 1, "low": 2}.get)
+    scores = [c["score"] for c in out["candidates"]]
+    assert scores == sorted(scores, reverse=True)
+    assert all(c["rank"] == i for i, c in enumerate(out["candidates"], 1))
+    assert all(set(c["signals"]) == {"domain", "shape", "corroboration", "centrality", "stability", "prior"} for c in out["candidates"])
+    assert all(c["relevance"] in ("high", "medium", "low") and c["cluster"] for c in out["candidates"])
     assert [c["id"] for c in out["candidates"]] == [f"CAND-{i:03d}" for i in range(1, len(out["candidates"]) + 1)]
     res = subprocess.run([sys.executable, "-I", str(HERE.parent / "policy_suggest.py"), str(repo), "--policy-id", "billing"], capture_output=True, text=True, check=True)
     assert '"policy_id": "billing"' in res.stdout

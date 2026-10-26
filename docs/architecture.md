@@ -99,9 +99,19 @@ they touched, with regression tests added in the same commit), test functions wh
 (one candidate per section, source = path + heading), ADR fields (`Status`, `Supersedes` → decision status and
 lineage), module-level internal imports aggregated per layer directory (an edge A→B with no B→A becomes
 "B must not import A"), directories whose name or history says frozen, and changelog deprecations. Candidates are
-ordered by confidence and every policy block carries `approved_by: TODO`. With `--with-codex` the candidates and
-their evidence go to one read-only planning thread with a strict JSON schema; an ADR whose `candidate_ids` include
-an id that was not offered is dropped, so the model cannot smuggle in rationale the repository does not support.
+ranked by a business-relevance score and every policy block carries `approved_by: TODO`. The ranker builds a domain
+vocabulary from the repository's own identifiers, docstrings and headings (generic and infrastructure words
+excluded; plurals folded) and scores each candidate on domain density (0.35), rule shape versus fix shape (0.15),
+corroboration by distinct evidence types across its cluster (0.2), import-graph centrality of the paths it applies
+to (0.1), test age from `git log -S` (0.1) and a prior by source type (0.1). Clusters link candidates that share
+rarity-weighted distinctive terms, capped at eight members so a common word cannot chain the whole list.
+`tests/integration/suggest_rank.test.ts` is the precision benchmark against the fixture's real policy. With
+`--classify`, batches of twenty top candidates go to one read-only planning thread with a strict JSON schema
+(category, keep, reason, rule, cluster, duplicate_of); unknown ids are ignored, a rewrite that uses an identifier
+absent from the evidence is rejected, and set-aside candidates remain visible. With `--with-codex` the kept
+candidates' evidence goes to a thread that drafts ADR prose; an ADR whose `candidate_ids` include an id that was not
+offered is dropped. `--record` compares the last `suggestions.json` with the policy file (adopted hidden test,
+cited source heading, matching rule or statement) and writes accept/reject term weights the miner applies next time.
 Nothing the command writes is read back as authority.
 
 ## Architectural surprise (review signals)

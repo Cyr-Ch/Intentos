@@ -10,12 +10,17 @@ import { buildEvidencePack } from "./knowledge/retrieval.ts";
 import { renderEvidencePack } from "./reports/explain.ts";
 import { registerRunCommands } from "./cli_run.ts";
 import { onboardRepository } from "./onboard.ts";
-import { suggestPolicy, type SuggestResult } from "./suggest.ts";
+import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./suggest.ts";
+import { repoIdFor } from "./knowledge/indexer.ts";
 
 function printSuggestions(result: SuggestResult): void {
   console.log(`Suggestions for ${result.repo_path} (policy ${result.policy_id}, ${result.head.slice(0, 7)})`);
-  console.log(`  candidates:   ${result.candidates.length} (${Object.entries(result.counts).map(([k, v]) => `${k} ${v}`).join(", ")})`);
-  for (const c of result.candidates) console.log(`    ${c.id}  ${c.confidence.padEnd(6)} ${c.kind.padEnd(17)} ${c.title.slice(0, 70)}`);
+  console.log(`  candidates:   ${result.candidates.length} (${Object.entries(result.counts).map(([k, v]) => `${k} ${v}`).join(", ")}), ordered by business-relevance score`);
+  for (const c of result.candidates) {
+    const verdict = c.classification ? ` ${c.classification.keep ? "KEEP" : "drop"} ${c.classification.category}` : "";
+    console.log(`    ${c.id}  ${c.score.toFixed(2)} ${c.relevance.padEnd(6)} ${c.kind.padEnd(17)} ${c.title.slice(0, 60).padEnd(60)}${c.cluster_size > 1 ? ` [${c.cluster}]` : ""}${verdict}`);
+  }
+  if (result.classification.used) console.log(`  classified:   ${result.classification.classified} by ${result.classification.model ?? "codex"}: kept ${result.classification.kept}, set aside ${result.classification.filtered}${result.classification.rewrites_rejected ? `, ${result.classification.rewrites_rejected} rewrite(s) rejected` : ""}${result.classification.note ? ` (${result.classification.note})` : ""}`);
   console.log(`  review:       ${result.files.markdown}`);
   console.log(`  paste-ready:  ${result.files.yaml}`);
   if (result.adr_dir) console.log(`  ADR drafts:   ${result.adrs.length} in ${result.adr_dir} (Status: Proposed)`);
@@ -160,13 +165,37 @@ program
   .option("--adr-dir <dir>", "where ADR drafts go (default <repo>/docs/decisions)")
   .option("--with-codex", "let Codex turn the mined evidence into ADR prose in a read-only thread (spends tokens; model text is validated against the evidence)", false)
   .option("--max-commits <n>", "how many commits to scan", "500")
-  .option("--min-confidence <level>", "drop candidates below high|medium|low", "low")
-  .action(async (repo: string, opts: { policyId?: string; out?: string; writeAdrs: boolean; adrDir?: string; withCodex: boolean; maxCommits: string; minConfidence: string }) => {
+  .option("--min-confidence <level>", "drop candidates below high|medium|low (evidence confidence)", "low")
+  .option("--min-score <0..1>", "drop candidates whose business-relevance score is below this", "0")
+  .option("--classify", "let Codex sort the top candidates (keep/drop, category, rule rewrite, cluster) in a read-only thread; verdicts are validated against the evidence", false)
+  .option("--classify-top <n>", "how many top-ranked candidates to classify", "40")
+  .option("--feedback <file>", "accept/reject token weights from earlier reviews (default <out>/feedback.json)")
+  .option("--record", "do not mine: compare the last suggestions with the policy file and write feedback.json for the next run", false)
+  .action(async (repo: string, opts: { policyId?: string; out?: string; writeAdrs: boolean; adrDir?: string; withCodex: boolean; maxCommits: string; minConfidence: string; minScore: string; classify: boolean; classifyTop: string; feedback?: string; record: boolean }) => {
     const json = program.opts().json as boolean;
     try {
+      if (opts.record) {
+        const paths = ensureHome(resolvePaths());
+        const outDir = path.resolve(opts.out ?? path.join(paths.home, "onboard", repoIdFor(path.resolve(repo))));
+        const suggestionsFile = path.join(outDir, "suggestions.json");
+        const previous = fs.existsSync(suggestionsFile) ? (JSON.parse(fs.readFileSync(suggestionsFile, "utf8")) as { policy_id: string }) : null;
+        const policyId = opts.policyId ?? previous?.policy_id;
+        if (!policyId) fail(`no previous suggestions in ${outDir}; run intentos suggest first or pass --policy-id`);
+        const fb = recordReviewFeedback(suggestionsFile, path.join(paths.policies, `${policyId}.yaml`), opts.feedback ?? path.join(outDir, "feedback.json"));
+        if (json) console.log(JSON.stringify(fb, null, 2));
+        else {
+          console.log(`Recorded review feedback for ${policyId}: accepted ${fb.accepted_ids.length} (${fb.accepted_ids.join(", ") || "none"}), rejected ${fb.rejected_ids.length}`);
+          console.log(`  accept terms: ${fb.accept_tokens.slice(0, 12).join(", ")}${fb.accept_tokens.length > 12 ? ", …" : ""}`);
+          console.log(`  reject terms: ${fb.reject_tokens.slice(0, 12).join(", ")}${fb.reject_tokens.length > 12 ? ", …" : ""}`);
+          console.log(`  -> ${opts.feedback ?? path.join(outDir, "feedback.json")} (used automatically by the next intentos suggest)`);
+        }
+        return;
+      }
       const level = opts.minConfidence as "high" | "medium" | "low";
       if (!["high", "medium", "low"].includes(level)) fail(`--min-confidence must be high, medium or low (got ${opts.minConfidence})`);
-      const result = await suggestPolicy(repo, { policyId: opts.policyId, outDir: opts.out, writeAdrs: opts.writeAdrs, adrDir: opts.adrDir, withCodex: opts.withCodex, maxCommits: Number(opts.maxCommits), minConfidence: level }, (line) => {
+      const minScore = Number(opts.minScore);
+      if (!(minScore >= 0 && minScore <= 1)) fail(`--min-score must be between 0 and 1 (got ${opts.minScore})`);
+      const result = await suggestPolicy(repo, { policyId: opts.policyId, outDir: opts.out, writeAdrs: opts.writeAdrs, adrDir: opts.adrDir, withCodex: opts.withCodex, maxCommits: Number(opts.maxCommits), minConfidence: level, minScore, classify: opts.classify, classifyTop: Number(opts.classifyTop), feedbackFile: opts.feedback }, (line) => {
         if (!json) console.error(`[suggest] ${line}`);
       });
       if (json) console.log(JSON.stringify(result, null, 2));

@@ -52,7 +52,7 @@ machine-readable output; every command exits non-zero on critical failure.
 | Command | Writes |
 |---|---|
 | `onboard <repo>` | `.intentos/venvs/<repo-id>/` (pytest + the repository's declared dependencies, never the package itself), a **draft** `policies/<policy-id>.yaml` (commands, allowed/protected paths, scope tags; invariants/rules empty on purpose), `.intentos/onboard/<repo-id>/smoke.log` + JUnit from one run of the project suite at the base revision, then the index. `--no-install`, `--no-test`, `--no-index`, `--force`, `--out <file>`, `--policy-id <id>`, `--python <interpreter>` |
-| `suggest <repo>` | `.intentos/onboard/<repo-id>/{suggestions.json, policy-suggestions.md, policy-suggestions.yaml}`: policy **candidates** mined from commits that record fixes, rule-like test names, must/never sentences in documents, ADR files, one-directional layer imports, frozen directories and changelog deprecations, each with its evidence and a paste-ready block (`approved_by: TODO`). `--write-adrs` adds `docs/decisions/ADR-nnnn-*.md` drafts (`Status: Proposed`) to the repository; `--with-codex` lets Codex write the ADR prose from the evidence (validated: an ADR citing evidence it was not given is dropped). `onboard --suggest` runs it after indexing. Nothing it writes is approved |
+| `suggest <repo>` | `.intentos/onboard/<repo-id>/{suggestions.json, policy-suggestions.md, policy-suggestions.yaml}`: policy **candidates** mined from commits that record fixes, rule-like test names, must/never sentences in documents, ADR files, one-directional layer imports, frozen directories and changelog deprecations, each with its evidence, a business-relevance score (the repository's own vocabulary, rule shape, corroboration across sources, import-graph centrality, test age) and a paste-ready block (`approved_by: TODO`); candidates expressing one rule are clustered. `--min-score` cuts the tail; `--classify` lets Codex sort the top candidates (keep/drop, category, one-sentence rule rewrite, cluster) in a read-only thread, with every verdict validated against the evidence and dropped candidates kept in a rescue section; `--record` compares the last run with the policy file and writes `feedback.json`, which the next run uses to raise accepted terms and lower rejected ones. `--write-adrs` adds `docs/decisions/ADR-nnnn-*.md` drafts (`Status: Proposed`); `--with-codex` lets Codex write the ADR prose from the evidence (an ADR citing evidence it was not given is dropped). `onboard --suggest` runs it after indexing. Nothing it writes is approved |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
 | `plan <repo> "<task>"` | a run dir with `task.json`, `evidence.json`, `planner_prompt.txt`, `planner_output.json`, `contract.json`, `contract_validation.json`; run row in state `CONTRACT_VALIDATED` / `CLARIFICATION_REQUIRED` / `ABSTAINED` |
@@ -84,9 +84,11 @@ The draft gets a run to `HUMAN_REVIEW`. `REVIEW_READY` needs the parts only a pe
 Markdown sources and hidden tests, and architecture rules (see docs/policies.md). Verifier commands use the
 repository's venv automatically (`INTENTOS_PYTHON` still overrides it).
 
-To avoid writing those from scratch, `npm run intentos -- suggest ~/repos/demandlib --write-adrs` mines the
-repository for candidates (fix commits, rule-like tests, must/never sentences, layer imports) and writes a review
-document, paste-ready YAML and proposed ADRs. You delete what is wrong, edit the rest and approve by pasting.
+To avoid writing those from scratch, `npm run intentos -- suggest ~/repos/demandlib --classify --write-adrs` mines
+the repository for candidates (fix commits, rule-like tests, must/never sentences, layer imports), ranks them by
+business relevance, lets Codex sort and reword the top ones, and writes a review document, paste-ready YAML and
+proposed ADRs. You delete what is wrong, edit the rest and approve by pasting. Afterwards
+`npm run intentos -- suggest ~/repos/demandlib --record` learns from what you kept, so the next run is quieter.
 
 ## Layout
 
