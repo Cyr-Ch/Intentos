@@ -82,7 +82,7 @@ export function buildOfflineContract(pack: EvidencePack, opts: Pick<OfflineOptio
     reuse_candidates: topSymbols.map((s) => ({ symbol_id: s.symbol_id, action: s.reuse_recommendation === "required" ? ("must_reuse" as const) : ("consider_reuse" as const), evidence_ids: [s.evidence_id], rationale: s.recommendation_basis })),
     architecture_constraints: pack.architecture_rules.filter((r) => r.binding).map((r) => ({ id: r.id, evidence_ids: [...r.evidence_ids], enforcement: "blocking" as const })),
     affected_modules: affected,
-    allowed_paths: [...pack.allowed_path_universe],
+    allowed_paths: deriveAllowedPaths(pack),
     protected_paths: [...pack.protected_paths],
     verification: pack.commands.filter((c) => !c.requires_task_tests).map((c, i) => ({ id: `VER-${String(i + 1).padStart(3, "0")}`, command_id: c.command_id, origin: "trusted_config" as const })),
     open_questions: opts.route === "clarify" ? [{ id: "Q-001", question: "The task requires a business policy decision not present in approved sources.", blocking: true }] : [],
@@ -90,4 +90,26 @@ export function buildOfflineContract(pack: EvidencePack, opts: Pick<OfflineOptio
     max_repairs: 2,
   };
   return contract;
+}
+
+/**
+ * Narrow allowed paths from the probable impact: the top-level directories of impacted files plus tests,
+ * intersected with the policy universe. A catch-all universe ("**") is never passed through verbatim.
+ */
+export function deriveAllowedPaths(pack: EvidencePack): string[] {
+  const universe = pack.allowed_path_universe;
+  const catchAll = universe.some((u) => u === "**" || u === "*" || u === "**/*");
+  if (!catchAll) return [...universe];
+  const dirs = new Set<string>();
+  for (const f of pack.impact.probable_files) {
+    const top = f.path.split("/")[0]!;
+    if (top && !f.path.includes("..") && top !== f.path) dirs.add(`${top}/**`);
+  }
+  for (const t of pack.tests) {
+    const top = t.path.split("/")[0]!;
+    if (top && top !== t.path) dirs.add(`${top}/**`);
+  }
+  const protectedTops = new Set(pack.protected_paths.map((p) => p.split("/")[0]!));
+  const out = [...dirs].filter((d) => !protectedTops.has(d.split("/")[0]!)).sort();
+  return out.length ? out : ["src/**", "tests/**"];
 }

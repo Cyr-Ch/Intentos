@@ -263,7 +263,7 @@ export class KnowledgeStore {
         this.db.prepare(`DELETE FROM ${table} WHERE repo_id = ? AND revision = ?`).run(repoId, revision);
       }
       const insNode = this.db.prepare(
-        "INSERT INTO nodes(id, repo_id, revision, kind, qualified_name, attributes_json) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO nodes(id, repo_id, revision, kind, qualified_name, attributes_json) VALUES (?, ?, ?, ?, ?, ?)",
       );
       for (const n of nodes) insNode.run(n.id, repoId, revision, n.kind, n.qualified_name, n.attributes_json);
       const insEdge = this.db.prepare(

@@ -119,7 +119,9 @@ export function compileContract(raw: unknown, pack: EvidencePack, policy: Policy
       continue;
     }
     if (!withinUniverse(p, universe)) err("outside_universe", `allowed path "${p}" is outside the policy allowlist (${universe.join(", ")})`, "allowed_paths");
-    if (matchesAny(p, protectedAll) || protectedAll.some((pp) => globToRegExp(p).test(pp.replace(/\*\*/g, "x").replace(/\*/g, "x")))) {
+    if (p === "**" || p === "*" || p === "**/*") {
+      err("allowed_path_too_broad", `allowed path "${p}" is a catch-all; list the directories the change may touch (e.g. "pkg/**", "tests/**")`, "allowed_paths");
+    } else if (matchesAny(p, protectedAll) || protectedAll.some((pp) => globToRegExp(p).test(pp.replace(/\*\*/g, "x").replace(/\*/g, "x")))) {
       err("protected_writable", `allowed path "${p}" would make a protected path writable`, "allowed_paths");
     }
   }

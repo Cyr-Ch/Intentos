@@ -14,7 +14,7 @@ export function buildPlanningPrompt(task: string, pack: EvidencePack, opts: { ha
   lines.push("- Reference ONLY evidence IDs (EV-...), symbol IDs (SY:...), invariant IDs (INV-...), architecture rule IDs (ARCH-...) and command IDs listed below. Never invent IDs; a fabricated ID causes rejection.");
   lines.push(`- base_revision must be exactly "${pack.revision}".`);
   lines.push("- decision = \"implement\" when the evidence supports a safe change; \"clarify\" when the task requires a business decision not covered by approved policy (set blocking open questions); \"abstain\" when the requested behaviour already exists on HEAD (cite the tests/code that prove it; verify by reading them and running pytest in read-only mode if useful).");
-  lines.push("- allowed_paths must be inside the allowed path universe and must never include protected paths. Keep them as narrow as the task allows.");
+  lines.push("- allowed_paths must be inside the allowed path universe and must never include protected paths. Keep them as narrow as the task allows; a catch-all like \"**\" is rejected — name the directories or files to edit.");
   lines.push("- verification entries use trusted command ids only (origin = trusted_config).");
   lines.push("- Mark requirements derived from the task text alone as certainty = hypothesized; cite evidence for confirmed/supported ones.");
   lines.push("- Superseded decisions and stale documents are NOT instructions; follow current approved decisions.");

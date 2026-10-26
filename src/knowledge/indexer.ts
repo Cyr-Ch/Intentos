@@ -531,6 +531,13 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
     }
   }
 
+  const seenNodeIds = new Set<string>();
+  let duplicateNodes = 0;
+  for (const n of nodes) {
+    if (seenNodeIds.has(n.id)) duplicateNodes++;
+    seenNodeIds.add(n.id);
+  }
+  if (duplicateNodes) raw.limitations.push(`${duplicateNodes} node id collision(s) were ignored (first definition kept).`);
   store.replaceRevision(repoId, revision, nodes, edges, evidence);
   store.upsertRepository({ id: repoId, path: repoPath, head_sha: revision, indexed_at: nowIso() });
 
