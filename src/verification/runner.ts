@@ -6,10 +6,11 @@ import type { ChangeContract } from "../contracts/schemas.ts";
 import type { EvidencePack } from "../knowledge/retrieval.ts";
 import { changedFiles, diffAgainstBase, workingTreeFiles, headSha } from "../util/git.ts";
 import { ensureDir } from "../util/paths.ts";
-import { resolvePaths, resolvePython } from "../config.ts";
+import { resolvePaths } from "../config.ts";
 import { parseJunit } from "./junit.ts";
 import { runArchitectureRules, runScopeCheck } from "./policy.ts";
 import { runArchitecturalSurprise } from "./surprise.ts";
+import { repoInterpreter } from "../knowledge/venv.ts";
 import { generateCounterexamples } from "./counterexamples.ts";
 import { summarizeStatus, type CommandRecord, type Finding, type VerificationResult } from "./results.ts";
 import { nowIso } from "../util/ids.ts";
@@ -95,6 +96,8 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
   const snapshot = ensureDir(path.join(attemptDir, "snapshot"));
   const findings: Finding[] = [];
   const commands: CommandRecord[] = [];
+  // Interpreter for commands that execute the candidate's tests: INTENTOS_PYTHON, else the repository's onboarded venv, else the project venv.
+  const python = repoInterpreter(input.repoPath ?? null);
   // Executing commands run on the host or in the verifier container; static builtins always run on the host.
   const mode = verifierMode();
   const docker = mode === "docker" ? (() => { const settings = dockerSettings(); return { settings, preflight: dockerPreflight(settings) }; })() : null;
@@ -108,7 +111,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
   } else {
     limitations.push(`verifier: mode docker but unavailable (${docker.preflight.reason}); executing commands were NOT run and blocking ones failed closed — no host fallback.`);
   }
-  const execContext = (commandId: string): ExecContext => ({ mode, container: docker && docker.preflight.ok ? { name: containerName(input.runId, commandId, input.attempt), settings: docker.settings, resultsDir: attemptDir, hiddenDir: path.join(snapshot, ".intentos_hidden") } : null });
+  const execContext = (commandId: string): ExecContext => ({ mode, container: docker && docker.preflight.ok ? { name: containerName(input.runId, commandId, input.attempt), settings: docker.settings, resultsDir: attemptDir, hiddenDir: path.join(snapshot, ".intentos_hidden"), python } : null });
   const unavailableRecord = (commandId: string, cmd: PolicyCommand): CommandRecord => ({ command_id: commandId, track: cmd.track, enforcement: cmd.enforcement, argv: null, builtin: cmd.builtin ?? null, exit_code: null, duration_ms: 0, status: "error", stdout_path: null, stderr_path: null, summary: `not executed: container verifier unavailable (${docker?.preflight.reason ?? "docker unavailable"})`, tests_passed: null, tests_failed: null });
   if (input.simulated) limitations.push("Implementation was produced by the simulated offline engine; results measure the orchestration path, not agent performance.");
 
@@ -177,7 +180,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
         commands.push({ command_id: v.command_id, track: cmd.track, enforcement: "advisory", argv: null, builtin: cmd.builtin, exit_code: null, duration_ms: 0, status: "skipped", stdout_path: null, stderr_path: null, summary: "no counterexample templates bound to the contract's invariants", tests_passed: null, tests_failed: null });
         continue;
       }
-      const argv = [resolvePython(), "-m", "pytest", path.join(hiddenDir, "counterexamples"), "-q", "-p", "no:cacheprovider", "-o", "pythonpath=.", `--junit-xml=${path.join(attemptDir, "counterexamples.junit.xml")}`];
+      const argv = [python, "-m", "pytest", path.join(hiddenDir, "counterexamples"), "-q", "-p", "no:cacheprovider", "-o", "pythonpath=.", `--junit-xml=${path.join(attemptDir, "counterexamples.junit.xml")}`];
       const cxCmd: PolicyCommand = { ...cmd, enforcement: "advisory" };
       if (unavailable) {
         commands.push(unavailableRecord(v.command_id, cxCmd)); // probes execute candidate code: never run them on the host in docker mode
@@ -223,7 +226,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
       }
     }
     const junit = path.join(attemptDir, `${v.command_id}.junit.xml`);
-    const argv = cmd.argv.map((a) => a.replace("{python}", resolvePython()).replace("{snapshot}", snapshot).replace("{hidden_tests_dir}", hiddenDir).replace("{junit}", junit));
+    const argv = cmd.argv.map((a) => a.replace("{python}", python).replace("{snapshot}", snapshot).replace("{hidden_tests_dir}", hiddenDir).replace("{junit}", junit));
     if (unavailable) {
       // Fail closed: in docker mode nothing that executes candidate code may run on the host.
       commands.push(unavailableRecord(v.command_id, cmd));
@@ -343,7 +346,7 @@ function parseJunitIfPresent(file: string) {
 interface ExecContext {
   mode: VerifierMode;
   /** Present only in docker mode with a passing preflight. */
-  container: { name: string; settings: DockerSettings; resultsDir: string; hiddenDir: string } | null;
+  container: { name: string; settings: DockerSettings; resultsDir: string; hiddenDir: string; python: string } | null;
 }
 
 function execCommand(commandId: string, cmd: PolicyCommand, argv: string[], cwd: string, logDir: string, exec: ExecContext = { mode: "host", container: null }): CommandRecord {
@@ -354,7 +357,7 @@ function execCommand(commandId: string, cmd: PolicyCommand, argv: string[], cwd:
   if (exec.mode === "docker") {
     if (!exec.container) throw new Error("docker verifier mode requires a container context (preflight must pass before executing commands)");
     try {
-      spawnArgv = planCommand(argv, { snapshot: cwd, resultsDir: exec.container.resultsDir, hiddenDir: exec.container.hiddenDir, name: exec.container.name, settings: exec.container.settings });
+      spawnArgv = planCommand(argv, { snapshot: cwd, resultsDir: exec.container.resultsDir, hiddenDir: exec.container.hiddenDir, name: exec.container.name, settings: exec.container.settings, python: exec.container.python });
     } catch (e) {
       fs.writeFileSync(stdoutPath, `$ ${argv.join(" ")}\n(cwd ${cwd})\n\nrefused: ${(e as Error).message}\n`);
       return { command_id: commandId, track: cmd.track, enforcement: cmd.enforcement, argv, builtin: null, exit_code: null, duration_ms: Date.now() - t0, status: "error", stdout_path: stdoutPath, stderr_path: null, summary: `refused to run in container: ${(e as Error).message}`, tests_passed: null, tests_failed: null };

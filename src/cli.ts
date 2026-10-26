@@ -9,6 +9,7 @@ import { loadIndexedRepo } from "./knowledge/repo.ts";
 import { buildEvidencePack } from "./knowledge/retrieval.ts";
 import { renderEvidencePack } from "./reports/explain.ts";
 import { registerRunCommands } from "./cli_run.ts";
+import { onboardRepository } from "./onboard.ts";
 
 const program = new Command();
 program
@@ -83,6 +84,45 @@ program
       if (opts.out) fs.writeFileSync(opts.out, JSON.stringify(pack, null, 2));
       if (program.opts().json) console.log(JSON.stringify(pack, null, 2));
       else console.log(renderEvidencePack(pack));
+    } catch (err) {
+      fail((err as Error).message);
+    } finally {
+      store.close();
+    }
+  });
+
+program
+  .command("onboard")
+  .description("Bring a repository under IntentOS: probe it, create a per-repo venv with its dependencies, write a DRAFT policy, run its suite once, index it")
+  .argument("<repo>", "path to the repository root (a Git checkout)")
+  .option("--policy-id <id>", "policy id (default: sanitised project name, else folder name)")
+  .option("--out <file>", "where to write the draft policy (default policies/<policy-id>.yaml)")
+  .option("--python <interpreter>", "interpreter used to create the venv, or used directly with --no-install")
+  .option("--no-install", "do not create a venv or install dependencies")
+  .option("--no-test", "do not run the project suite at the base revision")
+  .option("--no-index", "do not index the repository")
+  .option("--force", "overwrite an existing policy file", false)
+  .action((repo: string, opts: { policyId?: string; out?: string; python?: string; install: boolean; test: boolean; index: boolean; force: boolean }) => {
+    const store = openStore();
+    const json = program.opts().json as boolean;
+    try {
+      const result = onboardRepository(store, repo, { policyId: opts.policyId, out: opts.out, python: opts.python, install: opts.install, test: opts.test, index: opts.index, force: opts.force }, (line) => {
+        if (!json) console.error(`[onboard] ${line}`);
+      });
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      console.log(`Onboarded ${result.repo_path}`);
+      console.log(`  repo_id:      ${result.repo_id}`);
+      console.log(`  layout:       ${result.probe.layout} (packages: ${result.probe.packages.join(", ") || "none"}; tests: ${result.probe.test_paths.join(", ") || "none found"})`);
+      console.log(`  interpreter:  ${result.interpreter}${result.venv ? `  (venv ${result.venv}; ${result.installed?.length ?? 0} package(s) installed)` : ""}`);
+      console.log(`  policy:       ${result.policy_file} (DRAFT, id ${result.policy_id})`);
+      console.log(`  suite:        ${result.smoke.status}${result.smoke.tests_passed !== null ? ` (${result.smoke.tests_passed} passed, ${result.smoke.tests_failed} failed)` : ""} — ${result.smoke.summary}`);
+      if (result.index) console.log(`  index:        ${result.index.mode}, policy ${result.index.policy_id}, ${Object.entries(result.index.counts).filter(([k]) => k.startsWith("nodes.")).map(([k, v]) => `${k.slice(6)}=${v}`).join(", ")}`);
+      for (const w of result.warnings) console.log(`  warning:      ${w}`);
+      console.log("  next:");
+      for (const n of result.next_steps) console.log(`    - ${n}`);
     } catch (err) {
       fail((err as Error).message);
     } finally {

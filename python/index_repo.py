@@ -40,8 +40,11 @@ def sha256_text(text: str) -> str:
 
 
 def module_name_for(path: str) -> str:
+    """Dotted module name for a repository-relative path. A leading `src/` (the src layout) is not part of the name."""
     rel = path[:-3] if path.endswith(".py") else path
     parts = rel.split("/")
+    if len(parts) > 1 and parts[0] == "src":
+        parts = parts[1:]
     if parts and parts[-1] == "__init__":
         parts = parts[:-1]
     return ".".join(parts)

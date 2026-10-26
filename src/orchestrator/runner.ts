@@ -11,12 +11,13 @@ import { codexAuthStatus, LiveCodexEngine, type CodingEngine, type ImplementResu
 import { OfflineEngine, type OfflineOptions } from "../codex/offline.ts";
 import { verifyWorktree } from "../verification/runner.ts";
 import { describeVerifier } from "../verification/sandbox.ts";
+import { repoInterpreter } from "../knowledge/venv.ts";
 import type { VerificationResult } from "../verification/results.ts";
 import { RunStore, type TaskRecord } from "./store.ts";
 import { BudgetExceededError, RunBudget, defaultLimits, type RunLimits } from "./limits.ts";
 import { TERMINAL_STATES, type RunState } from "./workflow.ts";
 import { resolveHiddenTests } from "./tasks.ts";
-import { ensureHome, resolvePaths, resolvePython, codexSettings, PROJECT_ROOT } from "../config.ts";
+import { ensureHome, resolvePaths, codexSettings, PROJECT_ROOT } from "../config.ts";
 import { newRunId, nowIso } from "../util/ids.ts";
 import { addWorktree, headSha, isDirty, diffAgainstBase, changedFiles } from "../util/git.ts";
 import { generateReport } from "../reports/generate.ts";
@@ -78,16 +79,17 @@ export function createRun(store: KnowledgeStore, indexed: IndexedRepo, task: str
   const rs = new RunStore(store, runId, runDir);
   rs.writeJson("task", taskRecord);
   rs.writeText("baseCommit", `${indexed.revision}\n`);
-  rs.writeJson("environment", environmentInfo(opts));
+  rs.writeJson("environment", environmentInfo(opts, indexed.repoPath));
   rs.event("run.created", { task: taskRecord, options: { mode: opts.mode, requireApproval: !!opts.requireApproval, offline: opts.offline ?? null } });
   rs.update({});
   return rs;
 }
 
-function environmentInfo(opts: RunOptions) {
+function environmentInfo(opts: RunOptions, repoPath?: string) {
+  const python = repoInterpreter(repoPath);
   let pythonVersion = "unknown";
   try {
-    pythonVersion = execSync(`"${resolvePython()}" --version`, { encoding: "utf8" }).trim();
+    pythonVersion = execSync(`"${python}" --version`, { encoding: "utf8" }).trim();
   } catch {
     /* ignore */
   }
@@ -104,6 +106,7 @@ function environmentInfo(opts: RunOptions) {
     node: process.version,
     platform: `${process.platform}-${process.arch}`,
     python: pythonVersion,
+    python_path: python,
     codex_sdk: sdkVersion,
     codex_auth: { available: auth.available, mode: auth.mode },
     codex_model: settings.model ?? "codex-default",

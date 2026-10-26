@@ -115,3 +115,24 @@ def test_only_files_parses_listed_paths_but_resolves_imports_against_all_modules
     bad.write_text(json.dumps({"not": "a list"}))
     res = subprocess.run([sys.executable, "-I", str(PY / "index_repo.py"), str(tiny_repo), "--only-files", str(bad)], capture_output=True, text=True)
     assert res.returncode == 2 and "error" in json.loads(res.stdout)
+
+
+def test_src_layout_module_names_drop_the_src_prefix(tmp_path: pathlib.Path):
+    repo = tmp_path / "s"
+    (repo / "src" / "pkg").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    (repo / "src" / "pkg" / "__init__.py").write_text("")
+    (repo / "src" / "pkg" / "core.py").write_text("def f():\n    return 1\n")
+    (repo / "src" / "pkg" / "api.py").write_text("from pkg.core import f\nfrom . import core\n\n\ndef g():\n    return f() + core.f()\n")
+    (repo / "tests" / "test_core.py").write_text("from pkg.core import f\n\n\ndef test_f():\n    assert f() == 1\n")
+    _git(repo, "init", "-q", "-b", "main")
+    _git(repo, "add", "-A")
+    _git(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+    result = index_repo.index_repo(str(repo), 1_000_000)
+    qns = {s.qualified_name for s in result.symbols}
+    assert "pkg.core.f" in qns and "pkg.api.g" in qns and not any(q.startswith("src.") for q in qns)
+    assert "pkg.core" in result.modules and "src.pkg.core" not in result.modules
+    resolved = {(i.from_module, i.to_module) for i in result.imports if i.resolved_internal}
+    assert ("pkg.api", "pkg.core") in resolved  # absolute import resolves without the src prefix
+    assert ("pkg.api", "pkg") in resolved  # relative `from . import core` resolves to the package
+    assert ("tests.test_core", "pkg.core") in resolved

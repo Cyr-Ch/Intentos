@@ -1,6 +1,6 @@
 # IntentOS — Implementation Status
 
-Last updated: 2026-10-26 (branch `feature/m4-m6-2026-10-26`: container verifier, architectural-surprise signals, resume re-entry and incremental re-indexing landed). Everything below was observed in this checkout; nothing is projected.
+Last updated: 2026-10-26 (`intentos onboard` landed after the M4–M6 features: container verifier, architectural-surprise signals, resume re-entry, incremental re-indexing). Everything below was observed in this checkout; nothing is projected.
 
 ## Summary
 
@@ -13,7 +13,7 @@ Last updated: 2026-10-26 (branch `feature/m4-m6-2026-10-26`: container verifier,
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 13 files, **79 passed** (4 of them need a Docker daemon plus the `intentos-verifier:0.1` image and skip otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full); `npm run test:python` → **15 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 14 files, **87 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **21 passed**; `npm run typecheck` clean.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -140,6 +140,33 @@ rule ids `SURPRISE-NEW-DEPENDENCY` / `SURPRISE-DUPLICATE-HELPER` / `SURPRISE-API
   and the report gains an "Architectural surprise (review signals)" section.
 - `benchmarks/evaluate.ts --offline`: the five recorded rows keep their outcomes (A good REVIEW_READY, A bad FAILED,
   B/C nopatch FAILED, D ABSTAINED).
+
+## Onboarding command (2026-10-26)
+`intentos onboard <repo>` does the mechanical part of bringing a repository under IntentOS and refuses to invent
+the authoritative part. `python/onboard_probe.py` (read-only, stdlib) reports project name and declared dependencies
+(pyproject `[project]`, poetry, setup.cfg, requirements files), `src`/flat layout, packages, test directories, pytest
+configuration, tox `PYTHONPATH` hints, Markdown documents and packaging files worth protecting. `src/onboard.ts` then
+creates `.intentos/venvs/<repo-id>` with pytest plus the declared dependencies (never the package itself, because
+verification runs from a snapshot copy), writes a DRAFT `policies/<id>.yaml` that parses under `PolicySchema` with
+commands/paths/scope tags filled in and invariants/rules/decisions empty, runs the drafted `pytest_project` command
+once at the base revision and records the JUnit result, and indexes. `repoInterpreter()` makes the verifier, the
+counterexample probes, the container argv translation and `environment.json` use the repository's venv when it
+exists; `INTENTOS_PYTHON` still overrides everything. `docs/policies.md` explains what a policy can say.
+Two indexer fixes surfaced by onboarding a real src-layout repository (oemof/demandlib): module names now drop the
+leading `src/` (so `oemof.demand.*` imports resolve as internal; 45 import edges instead of none on demandlib), and
+the incremental cache carries an extractor fingerprint so a changed extractor forces a full re-index instead of
+carrying stale names. Real run on demandlib: venv with numpy/pandas/matplotlib/geopandas, draft `oemof_demand.yaml`
+(`src/**`, `tests/**` allowed; docs/packaging protected; `pytest src tests docs -o "pythonpath=src tests"`), suite
+49 passed / 1 failed (`test_no_warning_with_empty_holidays`, a pandas-deprecation warning under pandas 3 — an
+upstream environment issue, reported honestly), 26 files indexed, `explain` ranks `ElecSlp`, `set_holidays_in_df`
+and the holiday tests for a holiday-calendar task.
+Observed: `python/tests/test_onboard_probe.py` (4: src layout + optional test extras + tox hint, flat layout with
+requirements/setup.cfg, explicit pytest pythonpath and self-dependency dropped, CLI entry point);
+`tests/integration/onboard.test.ts` (7: src-layout draft + passing smoke + index with the fallback-policy warning when
+written outside `policies/`, `--force` guard and an honest `failed` smoke, the startup_billing fixture (flat layout,
+`pythonpath=.`), interpreter precedence, a draft that parses without packaging metadata, declared testpaths with
+trailing slashes and doctest roots kept out of allowed paths, CLI `--json`); `python/tests/test_index_repo.py`
+src-layout module names; `tests/integration/incremental_index.test.ts` extractor-fingerprint invalidation.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

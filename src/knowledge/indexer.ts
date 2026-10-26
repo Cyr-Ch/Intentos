@@ -127,6 +127,8 @@ const INCREMENTAL_MAX_CHANGED_RATIO = 0.6;
 
 export interface IndexCacheFile {
   version: number;
+  /** Fingerprint of python/index_repo.py that produced `raw`; a different extractor invalidates the cache. */
+  extractor: string;
   repo_id: string;
   revision: string;
   written_at: string;
@@ -161,12 +163,25 @@ export function indexCacheFile(paths: IntentosPaths, repoId: string, revision: s
   return path.join(paths.indexCache, repoId, `${revision}.json`);
 }
 
-export function readIndexCache(file: string, repoId: string, revision: string): IndexCacheFile | null {
+let extractorFingerprintMemo: { file: string; value: string } | null = null;
+
+/** Short hash of the Python extractor's source: a cache written by a different extractor is never reused. */
+export function extractorFingerprint(paths: IntentosPaths = resolvePaths()): string {
+  const file = path.join(paths.python, "index_repo.py");
+  if (extractorFingerprintMemo?.file === file) return extractorFingerprintMemo.value;
+  const value = shortHash(fs.readFileSync(file, "utf8"), 16);
+  extractorFingerprintMemo = { file, value };
+  return value;
+}
+
+/** The cache for `revision`, or null; with `extractor` given, a cache written by another extractor version is also null. */
+export function readIndexCache(file: string, repoId: string, revision: string, extractor?: string): IndexCacheFile | null {
   if (!fs.existsSync(file)) return null;
   try {
     const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as Partial<IndexCacheFile>;
     if (parsed.version !== INDEX_CACHE_VERSION || parsed.repo_id !== repoId || parsed.revision !== revision) return null;
     if (!parsed.blobs || typeof parsed.blobs !== "object" || !parsed.raw || parsed.raw.partial) return null;
+    if (extractor !== undefined && parsed.extractor !== extractor) return null;
     return parsed as IndexCacheFile;
   } catch {
     return null;
@@ -356,9 +371,11 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
   else if (!previous) fallbackNotes.push("full index: no previous revision indexed for this repository (incremental mode needs one)");
   else if (dirtyNow) fallbackNotes.push("full re-index: working tree has uncommitted changes (incremental mode needs a clean tree)");
   else {
-    prevCache = readIndexCache(indexCacheFile(paths, repoId, previous), repoId, previous);
-    if (!prevCache) fallbackNotes.push(`full re-index: no extraction cache for previous revision ${previous.slice(0, 7)}`);
-    else {
+    const cacheFile = indexCacheFile(paths, repoId, previous);
+    prevCache = readIndexCache(cacheFile, repoId, previous, extractorFingerprint(paths));
+    if (!prevCache) {
+      fallbackNotes.push(readIndexCache(cacheFile, repoId, previous) ? `full re-index: the extraction cache for ${previous.slice(0, 7)} was written by a different extractor version` : `full re-index: no extraction cache for previous revision ${previous.slice(0, 7)}`);
+    } else {
       const planned = planIncremental(prevCache.blobs, headBlobs, previous);
       if ("tooLarge" in planned) {
         fallbackNotes.push(`full re-index: ${planned.tooLarge.changed} of ${planned.tooLarge.total} indexed files changed since ${previous.slice(0, 7)} (over ${Math.round(INCREMENTAL_MAX_CHANGED_RATIO * 100)}%)`);
@@ -772,7 +789,7 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
   if (!dirty) {
     cacheFile = indexCacheFile(paths, repoId, revision);
     fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
-    const cache: IndexCacheFile = { version: INDEX_CACHE_VERSION, repo_id: repoId, revision, written_at: nowIso(), blobs: headBlobs, raw: { ...raw, partial: false, only_files: [] } };
+    const cache: IndexCacheFile = { version: INDEX_CACHE_VERSION, extractor: extractorFingerprint(paths), repo_id: repoId, revision, written_at: nowIso(), blobs: headBlobs, raw: { ...raw, partial: false, only_files: [] } };
     fs.writeFileSync(cacheFile, JSON.stringify(cache));
   }
 

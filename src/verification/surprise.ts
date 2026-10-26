@@ -45,8 +45,10 @@ interface ScriptFinding {
   observed: string;
 }
 
+/** Mirrors python/index_repo.py `module_name_for`: a leading `src/` (src layout) is not part of the module name. */
 export function moduleNameFor(p: string): string {
   const parts = p.replace(/\.py$/, "").split("/");
+  if (parts.length > 1 && parts[0] === "src") parts.shift();
   if (parts[parts.length - 1] === "__init__") parts.pop();
   return parts.join(".");
 }

@@ -161,6 +161,20 @@ describe("incremental re-indexing", () => {
     expect(buildEvidencePack(env.store, loadIndexedRepo(env.store, env.repo), TASK_A).invariants.find((i) => i.id === "INV-001")!.binding).toBe(true);
   });
 
+  it("never reuses a cache written by a different extractor version", () => {
+    const before = indexRepository(env.store, env.repo, { full: true });
+    expect(before.cache_file).not.toBeNull();
+    const cache = JSON.parse(fs.readFileSync(before.cache_file!, "utf8")) as { extractor: string };
+    expect(cache.extractor).toMatch(/^[0-9a-f]{16}$/);
+    fs.writeFileSync(before.cache_file!, JSON.stringify({ ...cache, extractor: "0000000000000000" }));
+    commitAll(env.repo, "no-op after extractor change");
+    const after = indexRepository(env.store, env.repo);
+    expect(after.mode).toBe("full");
+    expect(after.limitations.some((l) => /different extractor version/.test(l))).toBe(true);
+    commitAll(env.repo, "no-op with a fresh cache");
+    expect(indexRepository(env.store, env.repo).mode).toBe("incremental");
+  });
+
   it("falls back to a full index on --full or a dirty tree, and drops nodes of deleted files", () => {
     const repoId = env.indexed.repo.id;
     const full = indexRepository(env.store, env.repo, { full: true });

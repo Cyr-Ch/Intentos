@@ -13,6 +13,8 @@ export interface IntentosPaths {
   worktrees: string;
   fixtures: string;
   venv: string;
+  /** Per-repository venvs created by `intentos onboard` (`<home>/venvs/<repo-id>`). */
+  venvs: string;
   policies: string;
   hiddenTests: string;
   python: string;
@@ -29,6 +31,7 @@ export function resolvePaths(home = process.env.INTENTOS_HOME ?? path.join(PROJE
     worktrees: path.join(home, "worktrees"),
     fixtures: path.join(home, "fixtures"),
     venv: path.join(home, "venv"),
+    venvs: path.join(home, "venvs"),
     policies: path.join(PROJECT_ROOT, "policies"),
     hiddenTests: path.join(PROJECT_ROOT, "benchmarks", "hidden_tests"),
     python: path.join(PROJECT_ROOT, "python"),

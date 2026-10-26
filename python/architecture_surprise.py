@@ -62,8 +62,11 @@ def matches_any(path: str, globs: list[str]) -> bool:
 
 
 def module_name_for(path: str) -> str:
+    """Mirrors index_repo.module_name_for: a leading `src/` (src layout) is not part of the module name."""
     rel = path[:-3] if path.endswith(".py") else path
     parts = rel.split("/")
+    if len(parts) > 1 and parts[0] == "src":
+        parts = parts[1:]
     if parts and parts[-1] == "__init__":
         parts = parts[:-1]
     return ".".join(parts)

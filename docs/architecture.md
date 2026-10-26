@@ -80,6 +80,16 @@ into a blocking finding even when no test case was parsed, and "passed with zero
 The result records `verifier: {mode, image, image_digest}`; in docker mode an unavailable daemon or image produces
 `VERIFIER-UNAVAILABLE` blocking findings instead of a silent fallback to the host (`src/verification/sandbox.ts`).
 
+## Onboarding (`intentos onboard`)
+
+`src/onboard.ts` runs the read-only probe `python/onboard_probe.py` (project name and declared dependencies from
+pyproject / poetry / setup.cfg / requirements files, `src` vs flat layout, test directories, pytest configuration,
+tox `PYTHONPATH` hints, Markdown documents, packaging files to protect), creates `.intentos/venvs/<repo-id>` with
+pytest plus the declared dependencies, renders a draft policy that parses under `PolicySchema` with empty
+invariants/rules/decisions, runs the drafted `pytest_project` command once against the base revision and records
+the JUnit result, then indexes. `repoInterpreter()` (`src/knowledge/venv.ts`) makes the verifier, the counterexample
+probes and `environment.json` use the repository's venv when it exists; `INTENTOS_PYTHON` overrides it.
+
 ## Architectural surprise (review signals)
 
 `architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists
@@ -127,3 +137,8 @@ confirmed). When the current hash differs from the approved one the source and i
 pack shows the constraint as non-binding and the compiler rejects any contract that makes it blocking, routing the
 planner to clarify. The conflict persists across later revisions until a human re-approves it by pinning the new
 `content_sha256` in the policy or by restoring the section text.
+The cache records a fingerprint of `python/index_repo.py`; a cache written by a different extractor version is never
+reused (full re-index with a note), so extractor changes such as the `src/` layout handling cannot leak stale
+names through the incremental path. Module names drop a leading `src/` component (src layout), so absolute imports
+like `from oemof.demand.tools import …` resolve as internal.
+

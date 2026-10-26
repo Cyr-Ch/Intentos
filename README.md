@@ -51,6 +51,7 @@ machine-readable output; every command exits non-zero on critical failure.
 
 | Command | Writes |
 |---|---|
+| `onboard <repo>` | `.intentos/venvs/<repo-id>/` (pytest + the repository's declared dependencies, never the package itself), a **draft** `policies/<policy-id>.yaml` (commands, allowed/protected paths, scope tags; invariants/rules empty on purpose), `.intentos/onboard/<repo-id>/smoke.log` + JUnit from one run of the project suite at the base revision, then the index. `--no-install`, `--no-test`, `--no-index`, `--force`, `--out <file>`, `--policy-id <id>`, `--python <interpreter>` |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
 | `plan <repo> "<task>"` | a run dir with `task.json`, `evidence.json`, `planner_prompt.txt`, `planner_output.json`, `contract.json`, `contract_validation.json`; run row in state `CONTRACT_VALIDATED` / `CLARIFICATION_REQUIRED` / `ABSTAINED` |
@@ -62,7 +63,25 @@ machine-readable output; every command exits non-zero on critical failure.
 | `decision propose/approve/supersede/list`, `feedback <run-id> "<text>"` | `decisions` rows; feedback is always *proposed* until approved |
 
 Runtime data lives in `.intentos/` (gitignored). Trusted configuration lives in `policies/*.yaml` and
-`benchmarks/hidden_tests/` inside this checkout — never inside the target repository.
+`benchmarks/hidden_tests/` inside this checkout — never inside the target repository. What a policy can say, and
+how it is used at each stage, is in [docs/policies.md](docs/policies.md).
+
+## Onboarding a repository
+
+```bash
+git clone https://github.com/oemof/demandlib ~/repos/demandlib
+npm run intentos -- onboard ~/repos/demandlib
+#   probes the layout (src/ vs flat, test dirs, pytest config, declared dependencies)
+#   creates .intentos/venvs/<repo-id> with pytest + dependencies (the package itself is never installed:
+#   verification runs from a snapshot copy, so tests import the code through pythonpath)
+#   writes policies/demandlib.yaml as a DRAFT and runs the suite once at the base revision
+#   indexes the repository
+npm run intentos -- explain ~/repos/demandlib "<task>"
+```
+
+The draft gets a run to `HUMAN_REVIEW`. `REVIEW_READY` needs the parts only a person can write: invariants with
+Markdown sources and hidden tests, and architecture rules (see docs/policies.md). Verifier commands use the
+repository's venv automatically (`INTENTOS_PYTHON` still overrides it).
 
 ## Layout
 
