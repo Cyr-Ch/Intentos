@@ -43,7 +43,7 @@ import crypto from "node:crypto";
 
 const SERVER_INSTRUCTIONS = [
   "IntentOS keeps a repository's business rules as an approved policy (invariants, architecture rules, decisions) backed by hidden tests, and gives you an evidence pack before you plan a change. Always pass absolute repository paths.",
-  'Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) review_start, then review_next repeatedly: each call shows the reviewer one mined candidate through this host\'s own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never invent candidates of your own. (4) review_close when no candidates remain.',
+  'Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) review_start. If its result says ui=widget, the reviewer works inside the inline widget: do not call review_next (it would show the same candidate again as a form); wait for the reviewer to say they are done. If it says ui=link, give the reviewer the link. Otherwise call review_next repeatedly: each call shows the reviewer one mined candidate through this host\'s own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never invent candidates of your own. (4) review_close when no candidates remain, or when the reviewer says they are done and the widget did not finish.',
   "Before planning or implementing a change: explain for the evidence pack, policy for the approved rules.",
 ].join("\n");
 
@@ -60,6 +60,8 @@ interface Session {
   state: ReviewState;
   token: string;
   http: ReviewServer | null;
+  /** How the host shows this review: inline widget, or a link to the local page (with elicitation forms on top). */
+  ui: "widget" | "link";
   started_at: string;
 }
 
@@ -309,13 +311,13 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         const state = await loadReviewState(args.repo, { policyId: args.policy_id, outDir: args.out_dir, policyFile: args.policy_file, hiddenTestsRoot: args.hidden_tests_root, by: args.by ?? defaultReviewer(), includeFiltered: args.include_filtered, store: opts.store, log });
         const widget = uiSupported();
         const http = widget ? null : await startReviewServer(state, { port: 0, open: false, log });
-        session = { state, token: crypto.randomBytes(16).toString("hex"), http, started_at: nowIso() };
+        session = { state, token: crypto.randomBytes(16).toString("hex"), http, ui: widget ? "widget" : "link", started_at: nowIso() };
         log(`review_start ${args.repo}: ${state.candidates.length} candidates, ui=${widget ? "widget" : "link"}; ${describeClient()}`);
         const pending = state.candidates.filter((c) => !state.decisions.some((d) => d.id === c.id)).length;
         const summary = state.candidates.slice(0, 40).map((c) => ({ id: c.id, kind: c.kind, title: c.title, score: c.score, relevance: c.relevance, decided: state.decisions.find((d) => d.id === c.id)?.action ?? null }));
         const unclassified = state.candidates.length > 0 && state.candidates.every((c) => !c.classification);
         const head = `Policy review for ${state.policy_id}: ${state.candidates.length} candidate(s), ${pending} pending. Approvals go to ${state.policy_file}.${unclassified ? " These candidates are ranked but not classified (noise included); onboard with classify=true first for a filtered list." : ""}`;
-        const body = widget ? "The review is rendered inline; the reviewer approves or rejects each candidate there. Do not try to approve on their behalf." : `This host does not render MCP Apps. Ask the reviewer to open this link in a browser to approve or reject candidates: ${http!.url}`;
+        const body = widget ? "The review is rendered inline; the reviewer approves, rejects and finishes there. Do not try to approve on their behalf, and do not call review_next: it would show the same candidate a second time as a form. Wait for the reviewer to say they are done." : `This host does not render MCP Apps. Ask the reviewer to open this link in a browser to approve or reject candidates: ${http!.url}`;
         return text(`${head}\n${body}`, { policy_id: state.policy_id, policy_file: state.policy_file, candidates: summary, pending, ui: widget ? "widget" : "link", ...(http ? { url: http.url } : {}) });
       } catch (e) {
         const msg = (e as Error).message;
@@ -378,13 +380,15 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
   server.registerTool(
     "review_next",
     {
-      description: "Present the next pending policy candidate (or a given id) to the reviewer through the host's own prompt and apply their decision (approve / reject / skip, editable statement). The decision comes from the reviewer via elicitation, never from the model; the result reports what they chose. Call review_start first; call again for the next candidate.",
+      description: "Present the next pending policy candidate (or a given id) to the reviewer through the host's own prompt and apply their decision (approve / reject / skip, editable statement). The decision comes from the reviewer via elicitation, never from the model; the result reports what they chose. Call review_start first; call again for the next candidate. Not for hosts where review_start rendered the widget (ui=widget): the reviewer decides inside it.",
       inputSchema: z.object({ id: z.string().optional().describe("candidate id; default: next pending") }),
     },
     async ({ id }, ctx: ServerContext): Promise<CallToolResult | InputRequiredResult> => {
       if (!session) return fail("no review in progress; call review_start first");
       const state = session.state;
       if (state.finished) return fail("this review is finished; call review_start to begin a new one");
+      // A host that rendered the widget (the Codex app does) must not also get the form: one prompt per candidate.
+      if (session.ui === "widget") return text(`The review is rendered inline as a widget by this host; the reviewer approves, rejects and finishes it there. review_next is not needed and would show the same candidate a second time. Wait for the reviewer to say they are done, then call status.`, { ui: "widget", deferred: true, pending: state.candidates.filter((x) => !state.decisions.some((d) => d.id === x.id)).length });
       const c = nextPending(state, id);
       if (!c) return text("No candidates pending; call review_close to finish the review.", { pending: 0 });
       if (state.decisions.some((d) => d.id === c.id && (d.action === "accept" || d.action === "merge"))) return fail(`${c.id} was already decided`);

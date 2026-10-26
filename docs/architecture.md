@@ -142,8 +142,10 @@ elicitation, `review_next` builds a form (decision enum defaulting to skip, edit
 classifier's rewrite, optional reason, fold-related toggle) and obtains the reviewer's answer through the host: on
 2026-07-28-era clients by returning an `input_required` result that the client fulfils and retries
 (`acceptedContent` on the retry), on earlier clients through the push-style `elicitInput` request. `review_close`
-confirms finishing the same way. Client capabilities, negotiated protocol version and tool calls are logged to
-`.intentos/mcp.log`.
+confirms finishing the same way. The session remembers how the host showed the review (`ui: widget | link`): when the
+widget was rendered, `review_next` returns a deferral (not an error) instead of a form, so a host with both
+capabilities (the Codex app declares the UI extension at call time and elicitation) shows each candidate once, in
+the widget. Client capabilities, negotiated protocol version and tool calls are logged to `.intentos/mcp.log`.
 
 Onboarding from the host: `status` reports whether the repository has a policy file (and how many approved rules), an
 index, mined and classified candidates and how many are undecided, plus the state of a running job and the next tool

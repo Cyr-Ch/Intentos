@@ -303,6 +303,13 @@ stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
   reviewer"), `review_start` and `review_next`; the headless session cancelled the form, and Codex reported the
   outcome (17 tests passed at the base revision, 28 candidates, 11 kept, 0 approved) with the review link as the
   fallback. The CLI was never typed by anyone.
+- Widget first (2026-10-26): in the Codex app the same review appeared twice, as the inline widget and as the
+  elicitation form, because the app declares the UI extension (`text/html;profile=mcp-app`, seen at call time in
+  `mcp.log`, not at initialize) and elicitation, and the model followed the instructions into `review_next`. The
+  session now records `ui: widget | link`; with the widget rendered, `review_next` returns a deferral (not an error)
+  and the instructions and `review_start`'s result say to wait for the reviewer instead. The Codex CLI client still
+  has no UI extension and keeps the form path. Test: a UI-capable host calling `review_next` after `review_start`
+  gets the deferral.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

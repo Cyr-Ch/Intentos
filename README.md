@@ -134,11 +134,13 @@ draft policy, one run of the suite, index, candidate mining, classification by C
 Codex polls `status` until it is done), then `review_start` and `review_next` for each candidate, then `review_close`.
 `onboard` refuses to overwrite an existing policy unless `force=true`.
 
-Hosts that render MCP Apps show the review inline. Codex does not render widgets but supports **elicitation**, so in
-Codex `review_next` shows a form (approve / reject / skip, the editable rule statement, fold related tests) and
-`review_close` asks to confirm. The answers travel host → server; the model only sees the outcome and cannot decide
-for you, and the instructions tell it not to invent candidates. Hosts with neither get the token-protected local link
-from `review_start`. `.intentos/mcp.log` shows what the client declared and every tool call.
+The Codex app renders MCP Apps, so there the review appears inline as the widget (list, progress, approve / reject /
+fold, finish) and `review_next` steps aside: a host that rendered the widget never also gets the form. The Codex CLI
+(`codex exec`, the terminal UI) does not render widgets but supports **elicitation**, so there `review_next` shows a
+form (approve / reject / skip, the editable rule statement, fold related tests) and `review_close` asks to confirm.
+Either way the answers travel host → server; the model only sees the outcome and cannot decide for you, and the
+instructions tell it not to invent candidates. Hosts with neither get the token-protected local link from
+`review_start`. `.intentos/mcp.log` shows what the client declared and every tool call.
 
 ## Environment variables
 

@@ -96,6 +96,11 @@ describe("intentos mcp", () => {
       expect(s.candidates.length).toBeGreaterThan(10);
       expect(JSON.stringify(start)).not.toContain(built.current()!.token); // the model-visible result never carries the widget token
       expect(textOf(start as never)).toMatch(/Do not try to approve on their behalf/);
+      // The Codex app renders the widget and supports elicitation: review_next must defer to the widget, not show a form too.
+      const deferred = await client.callTool({ name: "review_next", arguments: {} });
+      expect(deferred.isError, textOf(deferred as never)).toBeFalsy();
+      expect(structured(deferred).deferred).toBe(true);
+      expect(textOf(deferred as never)).toMatch(/rendered inline as a widget/);
       const cancelled = s.candidates.find((c: { title: string }) => /cancelled contract gets no discount/i.test(c.title));
 
       // model-style calls without the token are refused, with and without a guessed token
