@@ -94,6 +94,11 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 3. Node strip-only TS mode forbids parameter properties → avoided (bin runs sources directly, no build step required).
 4. Verifier initially reported `passed` when pytest failed to start (no JUnit cases) → fixed with explicit non-pass findings, zero-tests-collected findings and a consistency guard; regression test added.
 
+## Live benchmark matrix (2026-10-26)
+Clean full-vs-baseline rows for all four tasks are in docs/evaluation.md. Headline: baseline Codex edited protected
+policy/ADR docs on 3 of 3 implementation tasks (caught by the scope gate, repaired once); guided runs needed 0 repairs
+and touched only contract-scoped files; IntentOS clarified on C and abstained with evidence on D. One row per cell.
+
 ## External-repository validation (2026-10-26)
 Indexed and queried `encode/httpx` with the fallback policy; three defects found and fixed (duplicate node ids,
 catch-all allowed paths from the offline planner, weak lexical ranking). Retrieval now uses corpus IDF weighting and
