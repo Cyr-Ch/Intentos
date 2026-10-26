@@ -19,6 +19,8 @@ Outputs go to `.intentos/benchmarks/<timestamp>/results.{json,md}`. Every metric
 run's persisted `verification.json` / `metrics.json`; nothing is estimated. Baseline rows that beat the
 full pipeline are reported as-is.
 
-Fairness notes (spec §11.3/§13.1): both variants share the task text, base commit, allowed paths, verifier
-and hidden tests; the baseline prompt is the bare task plus "run pytest", with no restrictions beyond the
-sandbox. Hidden tests are never visible to either implementer.
+Fairness notes (spec §11.3/§13.1): both variants share the task text, base commit, verifier and hidden tests.
+The baseline has **no planner and no evidence**: a deterministic contract derived from the policy supplies the
+same allowed paths and repair budget, and Codex receives only the task text plus "run pytest". Consequently the
+baseline always implements; on tasks whose correct outcome is clarify or abstain, "route ok" is false for it by
+construction and the interesting question is what it changed. Hidden tests are never visible to either implementer.
