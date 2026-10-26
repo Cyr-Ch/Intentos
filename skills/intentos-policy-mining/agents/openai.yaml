@@ -1,0 +1,6 @@
+interface:
+  display_name: "IntentOS policy mining"
+  short_description: "Find a repository's business rules, prove each with a test, submit them for review"
+  default_prompt: "Bring this repository under IntentOS: mine its business rules with their tests and start the review."
+policy:
+  allow_implicit_invocation: true

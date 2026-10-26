@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
 import json
 import os
 import re
@@ -856,13 +857,212 @@ class Miner:
         return {"repo": self.repo, "head": head, "policy_id": policy_id, "candidates": self.candidates, "counts": {k: sum(1 for c in self.candidates if c["kind"] == k) for k in ("invariant", "architecture_rule", "frozen_paths", "decision")}, "vocabulary": top_terms, "warnings": self.warnings}
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Host-authored candidates: the coding agent follows the intentos-policy-mining skill and submits candidates with a
+# test each. Nothing in the submission is trusted: every reference is checked against the repository, existing tests
+# are lifted with the miner's machinery, policy blocks are built the same way as for mined candidates. Tests the agent
+# wrote are run by the caller (they need the repository's interpreter); here they are only parsed.
+
+EVIDENCE_TYPES = ("test", "commit", "doc", "adr", "changelog", "import", "history")
+CANDIDATE_KINDS = ("invariant", "architecture_rule", "frozen_paths", "decision")
+CATEGORIES = ("business_rule", "robustness_rule")
+LEVELS = ("high", "medium", "low")
+RELEVANCE_SCORE = {"high": 0.9, "medium": 0.6, "low": 0.3}
+
+
+class Ingestor:
+    def __init__(self, repo: str) -> None:
+        self.m = Miner(repo, max_commits=0)
+        self.tracked = set(self.m.files)
+
+    def path_ok(self, p: str) -> bool:
+        if p.endswith("/**"):
+            prefix = p[:-3].rstrip("/") + "/"
+            return any(f.startswith(prefix) for f in self.tracked)
+        return p in self.tracked or any(fnmatch.fnmatch(f, p) for f in self.tracked)
+
+    def find_test(self, ref: str) -> tuple[dict[str, Any] | None, str | None, Any]:
+        parts = ref.split("::")
+        rel, names = parts[0], parts[1:]
+        if not names or len(names) > 2:
+            return None, f"test reference {ref!r} must be path::test_name or path::Class::test_name", None
+        tree = self.m.tree(rel)
+        if tree is None:
+            return None, f"{rel} is not a Python file in the repository", None
+        source = self.m._sources[rel]
+        cls = None
+        if len(names) == 2:
+            cls = next((n for n in getattr(tree, "body", []) if isinstance(n, ast.ClassDef) and n.name == names[0]), None)
+            if cls is None:
+                return None, f"class {names[0]} not found in {rel}", None
+            node = next((n for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == names[1]), None)
+        else:
+            node = next((n for n in getattr(tree, "body", []) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == names[0]), None)
+        if node is None:
+            return None, f"test {names[-1]} not found in {rel}", None
+        return self.m._draft_hidden_test(rel, tree, source, node, cls), None, node
+
+    def check_evidence(self, e: dict[str, Any]) -> str | None:
+        t, ref, excerpt = e.get("type"), str(e.get("ref", "")).strip(), str(e.get("excerpt", "")).strip()
+        if t not in EVIDENCE_TYPES:
+            return f"evidence type {t!r} must be one of {', '.join(EVIDENCE_TYPES)}"
+        if not ref:
+            return "evidence needs a ref"
+        if not excerpt:
+            return f"evidence {ref}: quote the source line in excerpt"
+        e["ref"], e["excerpt"] = ref, excerpt[:400]
+        if t == "commit":
+            if not re.fullmatch(r"[0-9a-fA-F]{7,40}", ref):
+                return f"commit evidence {ref!r} is not a sha"
+            if run_git(self.m.repo, "cat-file", "-t", ref).strip() != "commit":
+                return f"commit {ref} is not in this repository"
+            return None
+        if t == "history":
+            return None
+        rel, line = ref.split("::")[0], None
+        if "::" not in ref and ":" in rel:
+            head, _, maybe = rel.rpartition(":")
+            if maybe.isdigit():
+                rel, line = head, int(maybe)
+        if rel not in self.tracked:
+            return f"{rel} is not a tracked file in this repository"
+        if line is not None and line > len((read_text(os.path.join(self.m.repo, rel)) or "").splitlines()):
+            return f"{rel} has no line {line}"
+        e.setdefault("path", rel)
+        if line is not None:
+            e.setdefault("line", line)
+        if t == "test" and "::" in ref:
+            _, err, node = self.find_test(ref)
+            if err:
+                return err
+            e.setdefault("line", node.lineno)
+        return None
+
+    def ingest(self, proposals: list[dict[str, Any]], policy_id: str, start: int = 1) -> dict[str, Any]:
+        accepted: list[dict[str, Any]] = []
+        rejected: list[dict[str, Any]] = []
+        for p in proposals:
+            reasons: list[str] = []
+            kind = p.get("kind", "invariant")
+            title = str(p.get("title", "")).strip()[:120]
+            statement = str(p.get("statement", "")).strip()[:400]
+            if kind not in CANDIDATE_KINDS:
+                reasons.append(f"kind must be one of {', '.join(CANDIDATE_KINDS)}")
+            if len(title) < 3:
+                reasons.append("title is missing")
+            if len(statement) < 10:
+                reasons.append("statement is missing or too short")
+            evidence = [dict(e) for e in p.get("evidence", []) if isinstance(e, dict)]
+            for e in evidence:
+                err = self.check_evidence(e)
+                if err:
+                    reasons.append(err)
+            paths = [str(x) for x in p.get("applies_to_paths", []) or []]
+            for x in paths:
+                if is_test_path(x.replace("/**", "")):
+                    reasons.append(f"applies_to_paths {x} is a test path; name the production code the rule governs")
+                elif not self.path_ok(x):
+                    reasons.append(f"applies_to_paths {x} matches no tracked file")
+            draft: dict[str, Any] | None = None
+            test = p.get("test") or {}
+            if kind == "invariant":
+                if isinstance(test, dict) and test.get("existing"):
+                    ref = str(test["existing"])
+                    draft, err, node = self.find_test(ref)
+                    if err:
+                        reasons.append(err)
+                    elif not any(e.get("type") == "test" and e.get("ref") == ref for e in evidence):
+                        rel = ref.split("::")[0]
+                        evidence.append({"type": "test", "ref": ref, "excerpt": (ast.get_source_segment(self.m._sources[rel], node) or "").split("\n")[0].strip(), "path": rel, "line": node.lineno})
+                elif isinstance(test, dict) and isinstance(test.get("source"), str) and test["source"].strip():
+                    src = test["source"]
+                    if "def test_" not in src:
+                        reasons.append("test.source must define at least one test_ function")
+                    else:
+                        try:
+                            ast.parse(src)
+                        except SyntaxError as ex:
+                            reasons.append(f"test.source does not parse: {ex.msg} (line {ex.lineno})")
+                    draft = {"from": f"codex:{slugify(title)}", "imports": "", "source": src.strip() + "\n", "notes": [], "standalone": True, "pending_run": True}
+                else:
+                    reasons.append("an invariant needs a test: test.existing (a test in the repository) or test.source (a pytest module you wrote)")
+            if not evidence and not reasons:
+                reasons.append("at least one evidence item is required")
+            rule = p.get("rule")
+            if kind in ("architecture_rule", "frozen_paths"):
+                if not isinstance(rule, dict) or not rule.get("paths"):
+                    reasons.append("an architecture rule needs rule.paths (globs) and, for forbidden_import, rule.forbidden_modules")
+                    rule = None
+                else:
+                    rule = {"kind": rule.get("kind") or ("forbidden_import" if kind == "architecture_rule" else "frozen_paths"), "paths": [str(x) for x in rule["paths"]]}
+                    if p["rule"].get("forbidden_modules"):
+                        rule["forbidden_modules"] = [str(x) for x in p["rule"]["forbidden_modules"]]
+                    for x in rule["paths"]:
+                        if not self.path_ok(x):
+                            reasons.append(f"rule path {x} matches no tracked file")
+                    if rule["kind"] == "forbidden_import" and not rule.get("forbidden_modules"):
+                        reasons.append("forbidden_import needs rule.forbidden_modules")
+            else:
+                rule = None
+            if reasons:
+                rejected.append({"title": title or "(untitled)", "reasons": reasons})
+                continue
+            category = p.get("category") if p.get("category") in CATEGORIES else "business_rule"
+            relevance = p.get("relevance") if p.get("relevance") in LEVELS else "medium"
+            confidence = p.get("confidence") if p.get("confidence") in LEVELS else "medium"
+            slug = slugify(title)[:40]
+            c: dict[str, Any] = {
+                "id": "",
+                "kind": kind,
+                "title": title,
+                "statement": statement,
+                "confidence": confidence,
+                "evidence": evidence,
+                "applies_to_paths": paths,
+                "scope": self.m.scope_tags(paths or list((rule or {}).get("paths", []))),
+                "suggested_hidden_test": draft,
+                "authored_by": "codex",
+                "classification": {"category": category, "keep": True, "reason": str(p.get("rationale", "")).strip()[:600], "rule": None, "rule_rejected": None, "cluster": slug, "duplicate_of": None},
+                "score": RELEVANCE_SCORE[relevance],
+                "signals": {k: 0.0 for k in ("domain", "shape", "corroboration", "centrality", "stability", "prior")},
+                "relevance": relevance,
+                "cluster": slug,
+                "cluster_size": 1,
+                "cluster_members": [],
+                "rank": 0,
+            }
+            if rule:
+                c["rule"] = rule
+            sources = [s for s in p.get("sources", []) or [] if isinstance(s, dict) and s.get("path")]
+            if sources:
+                c["sources"] = [{"path": str(s["path"]), "heading": s.get("heading")} for s in sources]
+            if kind == "decision":
+                c["status"] = str(p.get("status") or "approved")
+            accepted.append(c)
+        for i, c in enumerate(accepted, start):
+            c["id"] = f"CAND-{i:03d}"
+            c["rank"] = i - start + 1
+            c["policy_block"] = self.m.policy_block(c, policy_id)
+        head = run_git(self.m.repo, "rev-parse", "HEAD").strip()
+        counts = {k: sum(1 for c in accepted if c["kind"] == k) for k in CANDIDATE_KINDS}
+        return {"repo": self.m.repo, "head": head, "policy_id": policy_id, "candidates": accepted, "rejected": rejected, "counts": counts, "warnings": []}
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repo")
     parser.add_argument("--policy-id", default="policy")
     parser.add_argument("--max-commits", type=int, default=500)
     parser.add_argument("--feedback", help="JSON file with accept_tokens / reject_tokens learned from earlier reviews")
+    parser.add_argument("--ingest", help="do not mine: validate host-authored candidates from this JSON file (a list, or {candidates: [...]}) and print them in the miner's shape")
+    parser.add_argument("--start", type=int, default=1, help="with --ingest: first candidate number (appending to an earlier list)")
     args = parser.parse_args(argv)
+    if args.ingest:
+        with open(args.ingest, "r", encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        proposals = loaded["candidates"] if isinstance(loaded, dict) else loaded
+        json.dump(Ingestor(args.repo).ingest(list(proposals), args.policy_id, args.start), sys.stdout)
+        return 0
     feedback = None
     if args.feedback and os.path.exists(args.feedback):
         try:

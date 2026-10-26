@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import pathlib
 import subprocess
 import sys
@@ -212,3 +213,45 @@ def test_commit_paths_follow_moved_files(tmp_path: pathlib.Path):
     leap = next(c for c in out["candidates"] if "leap year" in c["title"].lower())
     assert leap["applies_to_paths"] == ["src/oemof_demand/regions.py"]
     assert not any(e["type"] == "history" for e in leap["evidence"])
+
+
+def test_ingest_checks_references_lifts_existing_tests_and_requires_a_test_per_invariant(tmp_path: pathlib.Path):
+    repo = _repo(tmp_path)
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
+    proposals = [
+        {
+            "kind": "invariant",
+            "title": "Cancelled contracts get no discount",
+            "statement": "A contract whose status is cancelled must never receive a volume discount.",
+            "category": "business_rule",
+            "rationale": "Revenue would be understated.",
+            "relevance": "high",
+            "evidence": [{"type": "commit", "ref": head[:7], "excerpt": "Fix typo in readme"}],
+            "applies_to_paths": ["app/services/discounts.py"],
+            "test": {"existing": "tests/test_discounts.py::test_cancelled_contract_gets_no_discount"},
+        },
+        {"kind": "invariant", "title": "Invented reference", "statement": "Money must never go negative in any case.", "evidence": [{"type": "doc", "ref": "docs/nope.md:3", "excerpt": "x"}], "test": {"existing": "tests/test_money.py::test_subtraction_never_goes_negative"}},
+        {"kind": "invariant", "title": "No test given", "statement": "Quotes must always carry a currency code.", "evidence": [{"type": "commit", "ref": "deadbeef", "excerpt": "x"}]},
+        {"kind": "architecture_rule", "title": "api never imports legacy", "statement": "The api package must never import the legacy adapter.", "evidence": [{"type": "import", "ref": "app/api/checkout.py:1", "excerpt": "from app.services.pricing import quote"}], "rule": {"kind": "forbidden_import", "paths": ["app/api/**"], "forbidden_modules": ["app.legacy"]}},
+        {"kind": "invariant", "title": "Written test", "statement": "Pricing quotes must always return a Money value.", "evidence": [{"type": "doc", "ref": "docs/business-policy.md:5", "excerpt": "Locked contracts never receive discounts"}], "test": {"source": "from app.services.pricing import quote\nfrom app.domain.money import Money\n\n\ndef test_quote_returns_money():\n    assert isinstance(quote(), Money)\n"}},
+    ]
+    out = ps.Ingestor(str(repo)).ingest(proposals, "r", start=3)
+    assert [c["id"] for c in out["candidates"]] == ["CAND-003", "CAND-004", "CAND-005"]
+    lifted = out["candidates"][0]
+    assert lifted["suggested_hidden_test"]["from"] == "tests/test_discounts.py::test_cancelled_contract_gets_no_discount"
+    assert "def test_cancelled_contract_gets_no_discount" in lifted["suggested_hidden_test"]["source"]
+    assert any(e["type"] == "test" and e["line"] == 4 for e in lifted["evidence"])  # the test became evidence with its line
+    assert lifted["policy_block"]["verified_by"] and lifted["classification"]["keep"] is True and lifted["authored_by"] == "codex"
+    assert lifted["score"] == 0.9 and lifted["scope"] == ["services", "discounts"]
+    arch = out["candidates"][1]
+    assert arch["policy_block"]["kind"] == "forbidden_import" and arch["policy_block"]["forbidden_modules"] == ["app.legacy"]
+    written = out["candidates"][2]
+    assert written["suggested_hidden_test"]["from"] == "codex:written-test" and written["suggested_hidden_test"]["pending_run"] is True
+    reasons = {r["title"]: " ".join(r["reasons"]) for r in out["rejected"]}
+    assert "docs/nope.md is not a tracked file" in reasons["Invented reference"]
+    assert "commit deadbeef is not in this repository" in reasons["No test given"] and "needs a test" in reasons["No test given"]
+    # CLI entry point
+    f = tmp_path / "proposals.json"
+    f.write_text(json.dumps({"candidates": proposals[:1]}))
+    res = subprocess.run([sys.executable, "-I", str(HERE.parent / "policy_suggest.py"), str(repo), "--policy-id", "r", "--ingest", str(f)], capture_output=True, text=True, check=True)
+    assert json.loads(res.stdout)["candidates"][0]["id"] == "CAND-001"

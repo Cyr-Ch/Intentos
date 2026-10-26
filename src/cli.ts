@@ -13,6 +13,7 @@ import { onboardRepository } from "./onboard.ts";
 import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./suggest.ts";
 import { defaultReviewer, loadReviewState, startReviewServer } from "./review.ts";
 import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
+import { ingestProposals, installSkill, SKILL_NAME, skillText } from "./propose.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 
 function printSuggestions(result: SuggestResult): void {
@@ -261,6 +262,50 @@ program
       store.close();
     }
   });
+
+program
+  .command("propose")
+  .description(`Validate host-authored policy candidates (JSON written per the ${SKILL_NAME} skill) against a repository, run their tests in its venv, and write the review files`)
+  .argument("<repo>", "path to the repository root (a Git checkout)")
+  .requiredOption("--file <json>", "a JSON list of candidates, or {candidates: [...]}")
+  .option("--policy-id <id>", "policy id (default: sanitised project name)")
+  .option("--policy-file <file>", "policy file (default policies/<policy-id>.yaml)")
+  .option("--out <dir>", "directory of the review files (default .intentos/onboard/<repo-id>)")
+  .option("--append", "add to the candidates accepted by an earlier propose instead of replacing them", false)
+  .action(async (repo: string, opts: { file: string; policyId?: string; policyFile?: string; out?: string; append: boolean }) => {
+    const json = program.opts().json as boolean;
+    try {
+      const loaded = JSON.parse(fs.readFileSync(opts.file, "utf8")) as unknown;
+      const list = Array.isArray(loaded) ? loaded : ((loaded as { candidates?: unknown[] }).candidates ?? []);
+      const r = await ingestProposals(repo, list, { policyId: opts.policyId, policyFile: opts.policyFile, outDir: opts.out, append: opts.append }, (line) => console.error(`[propose] ${line}`));
+      if (json) {
+        console.log(JSON.stringify(r, null, 2));
+        return;
+      }
+      console.log(`${r.accepted.length} accepted, ${r.rejected.length} rejected; review list: ${r.candidates.length} candidate(s) in ${r.files.json}`);
+      for (const a of r.accepted) console.log(`  ${a.id}  ${a.title}  [${a.kind}; test: ${a.verified}${a.notes.length ? `; ${a.notes.join("; ")}` : ""}]`);
+      for (const x of r.rejected) console.log(`  rejected  ${x.title}\n    ${x.reasons.join("\n    ")}`);
+    } catch (err) {
+      fail((err as Error).message);
+    }
+  });
+
+const skill = program.command("skill").description(`The ${SKILL_NAME} skill: how Codex mines a repository's business rules into IntentOS candidates`);
+skill
+  .command("install")
+  .description("symlink the skill into a Codex skills directory (default ~/.agents/skills, scanned by Codex for every project)")
+  .option("--dir <dir>", "skills directory")
+  .option("--force", "replace a non-symlink entry of the same name", false)
+  .action((opts: { dir?: string; force: boolean }) => {
+    try {
+      const r = installSkill({ dir: opts.dir, force: opts.force });
+      console.log(`${r.created ? "installed" : "already installed"}: ${r.link} -> ${r.target}`);
+      console.log(`Codex picks it up on its next start; $${SKILL_NAME} invokes it explicitly.`);
+    } catch (err) {
+      fail((err as Error).message);
+    }
+  });
+skill.command("show").description("print the skill text").action(() => console.log(skillText()));
 
 const fixture = program.command("fixture").description("Manage the demonstration fixture repository");
 fixture

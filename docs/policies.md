@@ -173,6 +173,10 @@ API layer); with empty path lists the third detector is simply inactive.
 
 ## Writing one for a new repository
 
+The fast path is to let the coding agent do it under review: `intentos onboard`, then the `intentos-policy-mining`
+skill (installed by `intentos skill install`) has Codex mine the rules with a test each and submit them through the
+MCP `propose` tool; `intentos review` or the review widget approves them. The rest of this section is the manual path.
+
 1. Run `intentos onboard <repo>`: it drafts identity, paths, scope tags and commands, creates the venv, runs the
    suite once and indexes. The draft is explicit about being a draft.
 2. Run `intentos suggest <repo> --write-adrs` to get candidates instead of a blank page. It mines commits whose

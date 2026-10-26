@@ -56,7 +56,7 @@ describe("intentos mcp", () => {
     try {
       const tools = (await client.listTools()).tools;
       const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-      expect(Object.keys(byName).sort()).toEqual(["explain", "onboard", "policy", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "status"]);
+      expect(Object.keys(byName).sort()).toEqual(["explain", "mined", "mining_guide", "onboard", "policy", "propose", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "status"]);
       expect((byName.review_start!._meta as any).ui.resourceUri).toBe(REVIEW_RESOURCE_URI);
       for (const name of ["review_session", "review_state", "review_decide", "review_finish"]) expect((byName[name]!._meta as any).ui.visibility, name).toEqual(["app"]);
       for (const name of ["explain", "policy", "review_start", "review_next", "review_close"]) expect((byName[name]!._meta as any)?.ui?.visibility, name).toBeUndefined();
@@ -309,4 +309,48 @@ describe("intentos mcp — onboarding from the host (status → onboard → stat
       await built.close();
     }
   }, 240_000);
+});
+
+describe("intentos mcp — mining by the host (the intentos-policy-mining skill)", () => {
+  it("serves the guide and the raw list, turns a proposal into the review list, and status reports it as host-authored", async () => {
+    const outDir = path.join(env.home, "propose-out");
+    fs.writeFileSync(policyFile, MINIMAL_POLICY);
+    const { client, built } = await connect();
+    try {
+      expect(client.getInstructions()).toMatch(/intentos-policy-mining.*propose.*review_start/s);
+      const guide = await client.callTool({ name: "mining_guide", arguments: {} });
+      expect(textOf(guide as never)).toMatch(/^---\nname: intentos-policy-mining/);
+      const mined = structured((await client.callTool({ name: "mined", arguments: { repo: env.repo, out_dir: outDir } })) as never);
+      expect(mined.count).toBeGreaterThan(10);
+      const withTest = mined.candidates.find((c: { test: string | null }) => c.test) as { id: string; test: string };
+      const proposed = await client.callTool({
+        name: "propose",
+        arguments: {
+          repo: env.repo,
+          policy_file: policyFile,
+          out_dir: outDir,
+          candidates: [
+            { title: "Rule from the mined list", statement: "The behaviour proven by the cited test must be preserved as it is.", from_mined: withTest.id, rationale: "picked from the raw list" },
+            { title: "Made up", statement: "A rule citing a document that is not in the repository.", evidence: [{ type: "doc", ref: "docs/missing.md:1", excerpt: "x" }], test: { existing: withTest.test } },
+          ],
+        },
+      });
+      expect(proposed.isError, textOf(proposed as never)).toBeFalsy();
+      const p = structured(proposed as never);
+      expect(p.accepted.map((a: { verified: string }) => a.verified)).toEqual(["lifted"]);
+      expect(p.rejected[0].reasons.join(" ")).toMatch(/docs\/missing\.md is not a tracked file/);
+      expect(textOf(proposed as never)).toMatch(/append=true/);
+      const s = structured((await client.callTool({ name: "status", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir } })) as never);
+      expect(s.suggestions.authored_by).toBe("codex");
+      expect(s.pending).toBe(1);
+      expect(s.next).toMatch(/review_start/);
+      const review = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir, hidden_tests_root: path.join(env.home, "hidden-propose"), by: "tester" } });
+      expect(review.isError, textOf(review as never)).toBeFalsy();
+      expect(structured(review as never).candidates.map((c: { title: string }) => c.title)).toEqual(["Rule from the mined list"]);
+      expect(textOf(review as never)).not.toMatch(/not classified/);
+    } finally {
+      await client.close();
+      await built.close();
+    }
+  }, 120_000);
 });

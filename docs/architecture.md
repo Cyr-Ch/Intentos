@@ -159,6 +159,29 @@ same instruction. The stdio entry point widens `PATH` with the node binary's dir
 and `~/.local/bin` because GUI hosts start servers with a bare environment, and the printed Codex registration uses
 the absolute node path for the same reason.
 
+## Host-authored candidates (`skills/intentos-policy-mining`, `intentos propose`)
+
+The review list is what the coding agent selected, not what the miner emitted. The skill (`SKILL.md` with the
+`name`/`description` frontmatter Codex requires, plus `agents/openai.yaml` for the desktop app) tells the agent what a
+business rule is, where to look in which order, how to state a rule with evidence and how to supply a test: an
+existing test node, or a self-contained pytest module it writes. `installSkill` symlinks the folder into
+`~/.agents/skills` (Codex follows symlinked skill folders); the `mining_guide` tool serves the same text to hosts
+without skills, and the server instructions point at both.
+
+`ingestProposals` (`src/propose.ts`) is the trust boundary. Shape errors reject one proposal, never the batch
+(`ProposalSchema`). `from_mined` merges the evidence, paths and existing test of a candidate from `mined.json`, the
+deterministic miner's raw output cached per revision by `loadMined` (never written over the review list). The Python
+`Ingestor` (`policy_suggest.py --ingest`) checks every reference against the tracked files and the commit graph,
+refuses test paths in `applies_to_paths`, requires a test for every invariant, lifts an existing test with the
+miner's `_draft_hidden_test` (imports, constants, fixtures, class setup) and builds the policy block the same way as
+for mined candidates; a written test is only parsed there. Back in TypeScript each test runs in the repository's
+venv at HEAD with the policy's `pythonpath`: a written module from `<out>/proposed_tests/`, an existing test by its
+node id; a failure rejects the candidate with the pytest tail. Accepted candidates are written as `suggestions.json`
+with `authored_by: "codex"` and the classification fields filled from the agent's category and rationale, so
+`review_start`, the widget, the elicitation forms and `acceptCandidate` work unchanged; `append` keeps an earlier
+host-authored list and continues the ids, a plain call replaces it and clears stale decisions. The hidden-test header
+says whether the test was lifted or written by the agent and validated at the base revision.
+
 ## Architectural surprise (review signals)
 
 `architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists

@@ -310,6 +310,29 @@ stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
   and the instructions and `review_start`'s result say to wait for the reviewer instead. The Codex CLI client still
   has no UI extension and keeps the form path. Test: a UI-capable host calling `review_next` after `review_start`
   gets the deferral.
+- Mining by the host (2026-10-26): the candidates a reviewer sees are the ones Codex selected and backed with a test.
+  IntentOS ships the instructions as a Codex skill (`skills/intentos-policy-mining/SKILL.md`, installed into
+  `~/.agents/skills` by `intentos skill install`, served by the `mining_guide` tool to hosts without skills) and
+  takes the result through `propose`: shape errors per proposal, `from_mined` inheritance from the cached raw list
+  (`mined` tool), references checked against tracked files and the commit graph (Python `Ingestor`), a test required
+  for every invariant, existing tests lifted with the miner's machinery and run at HEAD, written tests run in the
+  repository's venv, rejections with the pytest tail, accepted candidates written as `suggestions.json` with
+  `authored_by: codex` so the review path is unchanged; `append` continues an earlier list. `onboard` no longer
+  classifies by default; `status` reports who authored the list and says to mine with the skill. Tests: Python
+  (`--ingest`: lifting, evidence lines, rejections, CLI), `tests/integration/propose.test.ts` (lifted / written /
+  architecture rule accepted; failing test, invented reference, untested invariant and malformed proposal rejected;
+  approval writes the agent's test; append and replace; `from_mined`; skill install and CLI), MCP (`mining_guide`,
+  `mined`, `propose`, `status` with `authored_by`, `review_start` on the host-authored list).
+- Headless Codex (0.154.0) on a throwaway copy of the fixture with the skill discoverable in `.agents/skills`, prompt
+  "Bring this repository under IntentOS and walk me through the policy candidates", no tool or skill names given:
+  `status` → `onboard` (11 s on the fixture) → `status` ("the current 28 candidates are the miner's; author your own
+  with the skill") → `mined` → two minutes of reading → `propose` with 18 candidates: 17 accepted, 1 rejected
+  (`sources` sent as strings), resubmitted twice with `append=true` until the shape was right → `review_start` with
+  18 candidates. All 16 invariants cite an existing test that was lifted and passed at HEAD (the fixture has a test
+  for every rule, so Codex rightly wrote none); the other two are an architecture rule and a decision. Codex's
+  summary grouped them (financial correctness, pricing, subscription safety, export contracts, design decisions) and
+  handed over the review link. The one rejection led to accepting a bare path string as a `sources` entry and to
+  documenting the shape in the skill.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

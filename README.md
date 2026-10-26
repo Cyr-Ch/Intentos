@@ -55,6 +55,8 @@ machine-readable output; every command exits non-zero on critical failure.
 | `suggest <repo>` | `.intentos/onboard/<repo-id>/{suggestions.json, policy-suggestions.md, policy-suggestions.yaml}`: policy **candidates** mined from commits that record fixes, rule-like test names, must/never sentences in documents, ADR files, one-directional layer imports, frozen directories and changelog deprecations, each with its evidence, a business-relevance score (the repository's own vocabulary, rule shape, corroboration across sources, import-graph centrality, test age) and a paste-ready block (`approved_by: TODO`); candidates expressing one rule are clustered. `--min-score` cuts the tail; `--classify` lets Codex sort the top candidates (keep/drop, category, one-sentence rule rewrite, cluster) in a read-only thread, with every verdict validated against the evidence and dropped candidates kept in a rescue section; `--record` compares the last run with the policy file and writes `feedback.json`, which the next run uses to raise accepted terms and lower rejected ones. `--write-adrs` adds `docs/decisions/ADR-nnnn-*.md` drafts (`Status: Proposed`); `--with-codex` lets Codex write the ADR prose from the evidence (an ADR citing evidence it was not given is dropped). `onboard --suggest` runs it after indexing. Nothing it writes is approved |
 | `review <repo>` | opens a local one-page UI (127.0.0.1, token in the URL) that walks the candidates of the last `suggest` run one by one; **Approve** appends the block to `policies/<id>.yaml` with the next `INV-`/`ARCH-`/`DEC-` id and your name (file comments preserved), writes the hidden-test draft to `benchmarks/hidden_tests/<id>/invariants/`, and adds a section to `docs/intentos-policy.md` in the repository when the candidate has no document source; related candidates (same cluster) can be folded into one approval as extra hidden tests of a single invariant; **Reject** records the reason; **Finish** writes `feedback.json` and re-indexes. `--by`, `--no-open`, `--include-filtered`, `--policy-file` |
 | `mcp` | IntentOS as an MCP server on stdio: `status` and `onboard` let the agent bring a repository under IntentOS itself (the CLI runs in a child process; the agent polls `status`); `explain` and `policy` give a coding agent the evidence pack and the approved rules from inside its session; `review_start` opens the policy review as an MCP Apps widget in hosts that render it (Claude, VS Code, …), `review_next` / `review_close` run it through the host's own elicitation prompts (Codex), and the token-protected local URL is the fallback. The tools that change the policy are app-only and require a widget token, so the model cannot approve. `--print-codex-config` prints the `codex mcp add` line; `.intentos/mcp.log` records the client's declared capabilities |
+| `propose <repo> --file <json>` | validates host-authored candidates (the `intentos-policy-mining` skill's output): references checked against the repository, existing tests lifted and run, written tests run in the repository's venv; writes the review files with `authored_by: codex` (`--append` keeps an earlier list) |
+| `skill install` / `skill show` | symlinks `skills/intentos-policy-mining` into `~/.agents/skills` (`--dir` for another skills directory) / prints the skill text |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
 | `plan <repo> "<task>"` | a run dir with `task.json`, `evidence.json`, `planner_prompt.txt`, `planner_output.json`, `contract.json`, `contract_validation.json`; run row in state `CONTRACT_VALIDATED` / `CLARIFICATION_REQUIRED` / `ABSTAINED` |
@@ -124,15 +126,37 @@ npm run verifier:image   # optional: build the container used by INTENTOS_VERIFI
 
 ```bash
 $(npm run -s intentos -- mcp --print-codex-config)   # registers the server with the absolute node path (GUI hosts start servers with a bare PATH)
+npm run -s intentos -- skill install                   # symlinks skills/intentos-policy-mining into ~/.agents/skills, where Codex looks
 codex                                                  # in the target repository
 > bring this repository under IntentOS and walk me through the policy candidates
 ```
 
 The server tells the host how to use it (MCP `instructions`), so one sentence is enough. Codex then calls `status`
 (where the repository stands and which tool to call next), `onboard` when it is not onboarded (venv and dependencies,
-draft policy, one run of the suite, index, candidate mining, classification by Codex; it runs in the background and
-Codex polls `status` until it is done), then `review_start` and `review_next` for each candidate, then `review_close`.
-`onboard` refuses to overwrite an existing policy unless `force=true`.
+draft policy, one run of the suite, index, raw candidate mining; it runs in the background and Codex polls `status`
+until it is done), mines the business rules itself with the skill (next section) and submits them with `propose`,
+then `review_start`. `onboard` refuses to overwrite an existing policy unless `force=true`.
+
+## Mining the rules: the skill, the proposal, the check
+
+The candidates a reviewer sees are the ones **Codex** selected and backed with a test, not the deterministic miner's.
+IntentOS ships the instructions for that as a Codex skill, `skills/intentos-policy-mining/SKILL.md`: what a business
+rule is and is not, where to look and in which order (tests, fix commits, must/never sentences in documents, the
+import graph and frozen directories), how to state a rule, how to cite evidence, when to pick an existing test and
+when to write one, and the `propose` contract. `intentos skill install` symlinks it into `~/.agents/skills`; Codex
+loads it when the task matches its description or when you type `$intentos-policy-mining`, and a host without skills
+can read the same text through the `mining_guide` tool.
+
+Codex starts from `mined` (the deterministic raw list, cached per revision, with ready-made hidden-test drafts for
+rule-like tests), reads the repository, and calls `propose` with its candidates. IntentOS trusts nothing in that
+submission: every evidence reference must exist (file and line, test node, commit sha), `applies_to_paths` must match
+production code, an invariant must come with a test, and the test is run at the current revision in the repository's
+venv, whether Codex picked an existing one (lifted with its imports, fixtures and class setup, as the miner does) or
+wrote a new module. Failing tests, invented references and untested invariants are rejected with the reason, and Codex
+resubmits the fixed ones with `append=true`. What passes becomes the review list (`suggestions.json`, marked
+`authored_by: codex`); an approval writes the test file under `benchmarks/hidden_tests/<policy>/invariants/` and names
+it in the invariant's `verified_by`, so every approved rule has a verifier. `intentos propose <repo> --file c.json`
+is the same path from the command line.
 
 The Codex app renders MCP Apps, so there the review appears inline as the widget (list, progress, approve / reject /
 fold, finish) and `review_next` steps aside: a host that rendered the widget never also gets the form. The Codex CLI

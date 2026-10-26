@@ -188,7 +188,7 @@ function writeHiddenTest(dir: string, assignedId: string, title: string, draft: 
   let file = path.join(dir, `test_${assignedId.toLowerCase().replace("-", "_")}_${slug(title)}.py`);
   let n = 2;
   while (fs.existsSync(file)) file = path.join(dir, `test_${assignedId.toLowerCase().replace("-", "_")}_${slug(title)}_${n++}.py`);
-  const header = [`"""Hidden invariant test for ${assignedId}: ${title}.`, "", `Lifted from ${draft.from} by intentos review. Hidden tests run from the verification snapshot and must check behaviour`, "through interfaces the task description implies, never names only one change introduces.", ...(draft.notes.length ? ["", "TODO before relying on this test:", ...draft.notes.map((n) => `- ${n}`)] : []), '"""', ""];
+  const header = [`"""Hidden invariant test for ${assignedId}: ${title}.`, "", `${draft.from.startsWith("codex:") ? "Written by the coding agent (intentos-policy-mining skill), run and passing at the base revision" : `Lifted from ${draft.from}`} by intentos review. Hidden tests run from the verification snapshot and must check behaviour`, "through interfaces the task description implies, never names only one change introduces.", ...(draft.notes.length ? ["", "TODO before relying on this test:", ...draft.notes.map((n) => `- ${n}`)] : []), '"""', ""];
   fs.writeFileSync(file, header.join("\n") + draft.source.trimEnd() + "\n");
   return { file, complete: draft.standalone };
 }

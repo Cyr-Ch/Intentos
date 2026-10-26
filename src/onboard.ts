@@ -204,7 +204,7 @@ export function renderDraftPolicy(probe: ProbeResult, repoPath: string, policyId
   return L.join("\n");
 }
 
-function minimalEnv(): Record<string, string> {
+export function minimalEnv(): Record<string, string> {
   return { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: process.env.HOME ?? os.homedir(), PYTHONDONTWRITEBYTECODE: "1", PYTHONHASHSEED: "0", LANG: "C.UTF-8" };
 }
 
