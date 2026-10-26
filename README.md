@@ -88,6 +88,7 @@ docs/              architecture, security, evaluation
 npm test                 # vitest: unit + integration (builds the fixture in a temp INTENTOS_HOME per file)
 npm run test:python      # pytest for the indexer and architecture checker
 npm run typecheck
+npm run verifier:image   # optional: build the container used by INTENTOS_VERIFIER=docker (end-to-end container tests skip without it)
 ```
 
 ## Environment variables
@@ -101,3 +102,7 @@ npm run typecheck
 | `INTENTOS_CODEX_PATH` | override the Codex binary used by the SDK |
 | `INTENTOS_CODEX_TIMEOUT_MS` | per-turn timeout (default 20 min) |
 | `INTENTOS_RUN_TIMEOUT_MS` | whole-run wall budget (default 60 min) |
+| `INTENTOS_VERIFIER` | `host` (default) or `docker`: run every executing verification command in the verifier container; fails closed (`VERIFIER-UNAVAILABLE`) when Docker or the image is missing |
+| `INTENTOS_VERIFIER_IMAGE` | verifier image (default `intentos-verifier:0.1`; build with `npm run verifier:image`) |
+| `INTENTOS_DOCKER_BIN` | docker client used by the verifier (default `docker`) |
+| `INTENTOS_VERIFIER_CPUS`, `INTENTOS_VERIFIER_MEMORY` | container limits (default `1`, `1g`) |

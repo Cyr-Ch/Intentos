@@ -16,6 +16,7 @@
     "test:python": ".intentos/venv/bin/python -m pytest python/tests -q",
     "setup:python": "node --disable-warning=ExperimentalWarning bin/intentos.js setup python",
     "fixture:build": "node --disable-warning=ExperimentalWarning bin/intentos.js fixture build",
+    "verifier:image": "docker build -t intentos-verifier:0.1 docker/verifier",
     "demo": "bash scripts/demo.sh"
   },
   "dependencies": {

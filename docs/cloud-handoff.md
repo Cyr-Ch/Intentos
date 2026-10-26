@@ -15,6 +15,11 @@ local credentials or the local `.intentos/` runtime data.
    environment. Without them the agent can still do everything offline (tests, benchmarks with recorded
    patches, all engineering work on M4–M6); it must not claim live results.
 
+4. **Optional — container verifier:** `npm run verifier:image` needs registry access to pull
+   `python:3.12-slim-bookworm`. When Docker Hub answers 429 for anonymous pulls, build from a mirror:
+   `docker build --build-arg PYTHON_IMAGE=mirror.gcr.io/library/python:3.12-slim-bookworm -t intentos-verifier:0.1 docker/verifier`.
+   Then run with `INTENTOS_VERIFIER=docker`; without a daemon the container tests skip and docker mode fails closed.
+
 ## Bootstrap commands (run first in every cloud session)
 
 ```bash

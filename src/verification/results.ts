@@ -49,6 +49,8 @@ export interface VerificationResult {
   unverified_areas: string[];
   limitations: string[];
   simulated: boolean;
+  /** Where executing commands ran: on the host, or in the isolated container (image + digest recorded). */
+  verifier: { mode: "host" | "docker"; image: string | null; image_digest: string | null };
 }
 
 export function summarizeStatus(findings: Finding[]): VerificationResult["status"] {

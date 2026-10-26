@@ -33,14 +33,37 @@ and relies on Git worktrees plus the Codex sandbox for isolation. Use it on trus
   missing; implementer commands that reference protected artifacts are flagged for human review; a later
   `intentos verify` can revoke REVIEW_READY but never upgrade a state.
 
+## Container-isolated verification (`INTENTOS_VERIFIER=docker`)
+
+With `INTENTOS_VERIFIER=docker` every trusted command that *executes* candidate code (project suite, hidden task and
+invariant tests, counterexample probes) runs in the `intentos-verifier:0.1` image (`docker/verifier/Dockerfile`,
+built with `npm run verifier:image`): the verification snapshot is bind-mounted read-only at `/work/snapshot`, the
+attempt directory is mounted read-write at `/work/results` for JUnit output only, `--network none`, `--read-only`
+root filesystem with a 256 MB tmpfs `/tmp`, `--cpus` / `--memory` / `--pids-limit 256`, `--cap-drop ALL`,
+`--security-opt no-new-privileges`, and the policy `timeout_s` followed by `docker kill`. The host argv from the
+policy is translated to container paths (`{python}` → `python`, snapshot, hidden tests, JUnit) and the verifier refuses
+to run any command that still references a host path. Static builtins (scope check, architecture rules) keep running
+on the host because they do not execute candidate code. If the daemon or the image is unavailable the verifier
+**fails closed**: every blocking executing command gets a `VERIFIER-UNAVAILABLE` blocking finding, nothing runs on the
+host, and the run ends `FAILED`. `environment.json` and `verification.json` record `verifier: {mode, image,
+image_digest}`. Default mode stays `host`.
+
+What the container does **not** isolate: the host kernel is shared (only Docker's default seccomp/AppArmor profile
+applies); Docker Desktop on macOS runs containers in a Linux VM whose kernel lists unused tunnel devices in
+`/sys/class/net` (they carry no connectivity — the test suite checks link state and an outbound connect instead); and
+the results mount means candidate code can still write a forged JUnit file, so the hidden-test inventory cross-check
+and the `forbidden_names` rule remain the defence there.
+
 ## Known gaps (do not deploy without addressing)
 
-- No container/VM isolation: `pytest` executes the candidate's code and any `conftest.py` with host privileges. A
-  determined adversarial implementer could still forge results from inside the process (e.g. by enumerating hidden
-  test names); the checks above raise the bar, they do not close it.
+- No isolation by default: in `host` mode `pytest` executes the candidate's code and any `conftest.py` with host
+  privileges. A determined adversarial implementer could still forge results from inside the process (e.g. by
+  enumerating hidden test names); the checks above raise the bar, they do not close it. `INTENTOS_VERIFIER=docker`
+  (above) removes host execution but not the forged-report vector.
 - The Codex read-only sandbox allows reading the whole filesystem, so hidden tests and policies are *readable* by the
   live implementer (only detected, not prevented).
-- Network is not blocked during verification (only statically forbidden via architecture rules).
+- In `host` mode network is not blocked during verification (only statically forbidden via architecture rules);
+  `docker` mode runs commands with `--network none`.
 - The Codex sandbox (`workspace-write`, network disabled) is a control, not a guarantee; an escape would land in the
   host user's permissions.
 - Symlink escapes inside a worktree are not exhaustively checked when copying the snapshot.
@@ -52,7 +75,7 @@ and relies on Git worktrees plus the Codex sandbox for isolation. Use it on trus
 | Threat | Mitigation now | Production need |
 |---|---|---|
 | Prompt injection via repo text/docs | evidence is quoted as data; authority comes from trusted policy, not text | model-side hardening, content provenance labels |
-| Malicious tests/scripts in repo | fixture-only usage; protected hidden tests | ephemeral container per run, no secrets in runner |
+| Malicious tests/scripts in repo | fixture-only usage; protected hidden tests; optional container verifier (`INTENTOS_VERIFIER=docker`: read-only snapshot, no network, limits) | ephemeral container per run with gVisor/VM-grade isolation, no secrets in runner |
 | Model edits verifier/policy/tests to pass | protected paths, scope check, hash, hidden tests outside worktree | immutable storage, signed policies |
 | Stale organizational policy | `superseded`/`conflicted` statuses, conflict detector, human approval for decisions | policy ownership + review cadence |
 | Data exfiltration | network off in Codex threads, redaction | egress controls, audit retention |

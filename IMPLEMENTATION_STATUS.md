@@ -1,6 +1,6 @@
 # IntentOS — Implementation Status
 
-Last updated: 2026-10-25 (end of build session). Everything below was observed in this checkout; nothing is projected.
+Last updated: 2026-10-26 (container verifier landed). Everything below was observed in this checkout; nothing is projected.
 
 ## Summary
 
@@ -11,9 +11,9 @@ Last updated: 2026-10-25 (end of build session). Everything below was observed i
 | M3 Independent verification + repair + report (`verify`, `report`) | **functional** | hidden task/invariant tests outside the worktree, AST architecture rules (incl. anti-tampering `forbidden_names`), scope/frozen-path diff checks, hidden-test inventory cross-check, fail-closed invariants, counterexample probes, ≤2 repairs, revocable review state, report.md/json |
 | M4 Decisions, conflicts, feedback gate, `resume` | **functional (initial)** | policy decisions with SUPERSEDES edges, proposed→approved gate, feedback as proposed memory, integrity-checked resume; full re-index per HEAD (no diff-based invalidation yet) |
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
-| M6 Team deployment | **not started** | documented in docs/security.md |
+| M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 9 files, **58 passed**; `npm run test:python` → **7 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 11 files, **69 passed** (4 of them need a Docker daemon plus the `intentos-verifier:0.1` image and skip otherwise); `npm run test:python` → **7 passed**; `npm run typecheck` clean.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -84,9 +84,9 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 - `resume` after an interruption during IMPLEMENTING proceeds to verification of whatever is in the worktree (it does not re-prompt Codex to continue the thread).
 - Architectural-surprise triage (§7.5) is not implemented beyond frozen paths / forbidden imports & calls.
 - Baseline comparison: one live baseline run only; no statistical claim is made.
-- No container isolation; verification executes candidate code on the host (see docs/security.md).
+- Container isolation is opt-in (`INTENTOS_VERIFIER=docker`); the default `host` mode still executes candidate code on the host. In docker mode the results mount lets candidate code write files into the attempt directory, so forged-report defences stay in place (see docs/security.md).
 
-**Stubbed / not started:** M6 (GitHub App, tenant isolation, container runners). Embedding-based retrieval. Plots.
+**Stubbed / not started:** M6 GitHub App, tenant isolation, hosted runners. Embedding-based retrieval. Plots.
 
 ## Blockers hit and how they were handled
 1. Codex spend cap on the ChatGPT workspace rejected all requests for a period → built and tested everything offline first; retried later and completed live runs.
@@ -105,9 +105,28 @@ catch-all allowed paths from the offline planner, weak lexical ranking). Retriev
 scores constructor signatures. See docs/evaluation.md. Benchmark note: live runs executed while the laptop entered
 sleep states show inflated wall times and spurious Codex timeouts; such rows are excluded from any comparison.
 
+## Container-isolated verifier (2026-10-26)
+`INTENTOS_VERIFIER=docker` runs every executing trusted command (project suite, hidden task/invariant tests,
+counterexample probes) in `intentos-verifier:0.1` (`docker/verifier/Dockerfile`: python:3.12-slim-bookworm, git,
+pytest 9.1.1, unprivileged user) with the snapshot mounted read-only at `/work/snapshot`, the attempt directory at
+`/work/results` for JUnit output, `--network none`, read-only root FS + tmpfs `/tmp`, `--cpus 1 --memory 1g
+--pids-limit 256 --cap-drop ALL --security-opt no-new-privileges`, policy `timeout_s` then `docker kill`. Static
+builtins stay on the host. Unavailable daemon/image ⇒ `VERIFIER-UNAVAILABLE` blocking findings, no host fallback.
+Observed on this laptop (Docker Desktop 29.5.2, image `sha256:c1e55dda…`):
+- `tests/unit/sandbox.test.ts` (7): argv translation, no-host-path guard, flags, names, modes, settings.
+- `tests/integration/container_verifier.test.ts` (4): fail-closed with `INTENTOS_DOCKER_BIN=/nonexistent/docker`
+  (run `FAILED`, three `VERIFIER-UNAVAILABLE` findings, no pytest log on the host, static builtins still ran);
+  good patch `REVIEW_READY` with hidden tests executed in the container; bad patch `FAILED` with ARCH-001 + INV-001
+  exactly as on the host; inside the container only `lo` is up and an outbound connect raises `OSError`.
+- `benchmarks/evaluate.ts --offline` in both modes: identical outcomes for all five rows (A good REVIEW_READY 0
+  blocking; A bad FAILED 5 blocking / 2 repairs; B and C nopatch FAILED 3 and 1 blocking; D ABSTAINED). Wall time
+  roughly doubles in docker mode (0.9 s → 2.0 s for the good row; 2.1 s → 4.4 s for the bad row) from container start-up.
+- Docker Desktop's VM kernel lists unused tunnel devices in `/sys/class/net` under `--network none`; the test checks
+  link state and connectivity instead of the directory listing.
+
 ## Next steps
 1. Diff-based incremental re-index and assertion re-validation across revisions.
 2. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.
 3. Resume: re-enter the Codex implementer thread (`resumeThread`) with a "continue" prompt instead of verifying partial work.
-4. Container-isolated verification runner; symlink-escape checks on snapshot copy.
+4. Symlink-escape checks on snapshot copy; stronger-than-Docker isolation (gVisor/VM) for the container verifier.
 5. Architectural-surprise signals (new cross-module imports, duplicate helpers) as review findings.

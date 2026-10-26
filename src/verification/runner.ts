@@ -12,6 +12,7 @@ import { runArchitectureRules, runScopeCheck } from "./policy.ts";
 import { generateCounterexamples } from "./counterexamples.ts";
 import { summarizeStatus, type CommandRecord, type Finding, type VerificationResult } from "./results.ts";
 import { nowIso } from "../util/ids.ts";
+import { containerName, dockerClientEnv, dockerPreflight, dockerSettings, killContainer, planCommand, verifierMode, type DockerSettings, type VerifierMode } from "./sandbox.ts";
 
 export interface VerifyInput {
   runId: string;
@@ -91,10 +92,21 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
   const snapshot = ensureDir(path.join(attemptDir, "snapshot"));
   const findings: Finding[] = [];
   const commands: CommandRecord[] = [];
-  const limitations: string[] = [
-    "Verification runs the candidate code on the host (no container isolation); use only trusted fixture repositories.",
-    "Network access during verification is not technically blocked; architecture rules forbid network libraries statically.",
-  ];
+  // Executing commands run on the host or in the verifier container; static builtins always run on the host.
+  const mode = verifierMode();
+  const docker = mode === "docker" ? (() => { const settings = dockerSettings(); return { settings, preflight: dockerPreflight(settings) }; })() : null;
+  const unavailable = !!docker && !docker.preflight.ok;
+  const limitations: string[] = [];
+  if (!docker) {
+    limitations.push("Verification runs the candidate code on the host (no container isolation); use only trusted fixture repositories.");
+    limitations.push("Network access during verification is not technically blocked; architecture rules forbid network libraries statically.");
+  } else if (docker.preflight.ok) {
+    limitations.push(`verifier: mode docker, image ${docker.settings.image} (${docker.preflight.imageDigest ?? "digest unknown"}); executing commands ran in a container (snapshot read-only, no network, cpus ${docker.settings.cpus}, memory ${docker.settings.memory}, pids ${docker.settings.pidsLimit}); static builtins ran on the host. Docker's default seccomp profile applies and the host kernel is shared.`);
+  } else {
+    limitations.push(`verifier: mode docker but unavailable (${docker.preflight.reason}); executing commands were NOT run and blocking ones failed closed — no host fallback.`);
+  }
+  const execContext = (commandId: string): ExecContext => ({ mode, container: docker && docker.preflight.ok ? { name: containerName(input.runId, commandId, input.attempt), settings: docker.settings, resultsDir: attemptDir, hiddenDir: path.join(snapshot, ".intentos_hidden") } : null });
+  const unavailableRecord = (commandId: string, cmd: PolicyCommand): CommandRecord => ({ command_id: commandId, track: cmd.track, enforcement: cmd.enforcement, argv: null, builtin: cmd.builtin ?? null, exit_code: null, duration_ms: 0, status: "error", stdout_path: null, stderr_path: null, summary: `not executed: container verifier unavailable (${docker?.preflight.reason ?? "docker unavailable"})`, tests_passed: null, tests_failed: null });
   if (input.simulated) limitations.push("Implementation was produced by the simulated offline engine; results measure the orchestration path, not agent performance.");
 
   // Integrity: the worktree must still be at the base revision (implementer must not commit).
@@ -163,7 +175,12 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
         continue;
       }
       const argv = [resolvePython(), "-m", "pytest", path.join(hiddenDir, "counterexamples"), "-q", "-p", "no:cacheprovider", "-o", "pythonpath=.", `--junit-xml=${path.join(attemptDir, "counterexamples.junit.xml")}`];
-      const rec = execCommand(v.command_id, { ...cmd, enforcement: "advisory" }, argv, snapshot, attemptDir);
+      const cxCmd: PolicyCommand = { ...cmd, enforcement: "advisory" };
+      if (unavailable) {
+        commands.push(unavailableRecord(v.command_id, cxCmd)); // probes execute candidate code: never run them on the host in docker mode
+        continue;
+      }
+      const rec = execCommand(v.command_id, cxCmd, argv, snapshot, attemptDir, execContext(v.command_id));
       commands.push(rec);
       for (const c of parseJunitIfPresent(path.join(attemptDir, "counterexamples.junit.xml"))) {
         if (c.status !== "failed" && c.status !== "error") continue;
@@ -194,7 +211,15 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
     }
     const junit = path.join(attemptDir, `${v.command_id}.junit.xml`);
     const argv = cmd.argv.map((a) => a.replace("{python}", resolvePython()).replace("{snapshot}", snapshot).replace("{hidden_tests_dir}", hiddenDir).replace("{junit}", junit));
-    const rec = execCommand(v.command_id, cmd, argv, snapshot, attemptDir);
+    if (unavailable) {
+      // Fail closed: in docker mode nothing that executes candidate code may run on the host.
+      commands.push(unavailableRecord(v.command_id, cmd));
+      if (cmd.enforcement === "blocking") {
+        findings.push({ id: nextId("F-VERIFIER"), category: "process", severity: "blocking", rule_id: "VERIFIER-UNAVAILABLE", source_evidence_ids: [], test: null, expected: "trusted command executed inside the isolated verifier container", observed: docker?.preflight.reason ?? "docker unavailable", message: `${v.command_id}: container verifier unavailable (${docker?.preflight.reason ?? "docker unavailable"}); command not executed — failing closed`, location: null, log_path: null, authority: "deterministic" });
+      }
+      continue;
+    }
+    const rec = execCommand(v.command_id, cmd, argv, snapshot, attemptDir, execContext(v.command_id));
     commands.push(rec);
     const cases = parseJunitIfPresent(junit);
     rec.tests_passed = cases.filter((c) => c.status === "passed").length;
@@ -289,6 +314,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
     unverified_areas: unverified,
     limitations,
     simulated: input.simulated,
+    verifier: { mode, image: docker?.settings.image ?? null, image_digest: docker?.preflight.imageDigest ?? null },
   };
 }
 
@@ -301,19 +327,38 @@ function parseJunitIfPresent(file: string) {
   return fs.existsSync(file) ? parseJunit(fs.readFileSync(file, "utf8")) : [];
 }
 
-function execCommand(commandId: string, cmd: PolicyCommand, argv: string[], cwd: string, logDir: string): CommandRecord {
+interface ExecContext {
+  mode: VerifierMode;
+  /** Present only in docker mode with a passing preflight. */
+  container: { name: string; settings: DockerSettings; resultsDir: string; hiddenDir: string } | null;
+}
+
+function execCommand(commandId: string, cmd: PolicyCommand, argv: string[], cwd: string, logDir: string, exec: ExecContext = { mode: "host", container: null }): CommandRecord {
   const t0 = Date.now();
   const stdoutPath = path.join(logDir, `${commandId}.log`);
   const env: Record<string, string> = { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: process.env.HOME ?? "/", PYTHONDONTWRITEBYTECODE: "1", PYTHONHASHSEED: "0", LANG: "C.UTF-8" };
-  const res = spawnSync(argv[0]!, argv.slice(1), { cwd, env, encoding: "utf8", timeout: cmd.timeout_s * 1000, maxBuffer: 64 * 1024 * 1024 });
+  let spawnArgv = argv;
+  if (exec.mode === "docker") {
+    if (!exec.container) throw new Error("docker verifier mode requires a container context (preflight must pass before executing commands)");
+    try {
+      spawnArgv = planCommand(argv, { snapshot: cwd, resultsDir: exec.container.resultsDir, hiddenDir: exec.container.hiddenDir, name: exec.container.name, settings: exec.container.settings });
+    } catch (e) {
+      fs.writeFileSync(stdoutPath, `$ ${argv.join(" ")}\n(cwd ${cwd})\n\nrefused: ${(e as Error).message}\n`);
+      return { command_id: commandId, track: cmd.track, enforcement: cmd.enforcement, argv, builtin: null, exit_code: null, duration_ms: Date.now() - t0, status: "error", stdout_path: stdoutPath, stderr_path: null, summary: `refused to run in container: ${(e as Error).message}`, tests_passed: null, tests_failed: null };
+    }
+    Object.assign(env, dockerClientEnv());
+  }
+  const res = spawnSync(spawnArgv[0]!, spawnArgv.slice(1), { cwd, env, encoding: "utf8", timeout: cmd.timeout_s * 1000, maxBuffer: 64 * 1024 * 1024 });
   const duration = Date.now() - t0;
-  const out = `$ ${argv.join(" ")}\n(cwd ${cwd})\n\n${res.stdout ?? ""}\n${res.stderr ?? ""}`;
+  const timedOut = !!res.error && (res.error as NodeJS.ErrnoException).code === "ETIMEDOUT";
+  if (timedOut && exec.container) killContainer(exec.container.name, exec.container.settings);
+  const out = `$ ${argv.join(" ")}\n(cwd ${cwd})${exec.mode === "docker" ? `\n(container ${exec.container?.name}) $ ${spawnArgv.join(" ")}` : ""}\n\n${res.stdout ?? ""}\n${res.stderr ?? ""}`;
   fs.writeFileSync(stdoutPath, out);
   let status: CommandRecord["status"];
   let summary: string;
-  if (res.error && (res.error as NodeJS.ErrnoException).code === "ETIMEDOUT") {
+  if (timedOut) {
     status = "timeout";
-    summary = `timed out after ${cmd.timeout_s}s`;
+    summary = `timed out after ${cmd.timeout_s}s${exec.container ? " (container killed)" : ""}`;
   } else if (res.error) {
     status = "error";
     summary = `failed to start: ${res.error.message}`;

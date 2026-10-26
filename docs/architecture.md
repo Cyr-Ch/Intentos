@@ -67,7 +67,7 @@ list; a second rejection fails the run.
 |---|---|---|
 | Planner | Codex thread, `sandboxMode: read-only`, network off, cwd = repo | nothing |
 | Implementer | Codex thread, `workspace-write`, cwd = detached worktree at base SHA | the worktree (scope-checked afterwards) |
-| Verifier | orchestrator process; snapshot copy + hidden tests from `benchmarks/hidden_tests` | run dir only |
+| Verifier | orchestrator process; snapshot copy + hidden tests from `benchmarks/hidden_tests`; with `INTENTOS_VERIFIER=docker` the executing commands run in a container (read-only snapshot, no network, resource limits) and only JUnit files come back | run dir only |
 | Human | `approve`, `decision approve`, `feedback` | decisions table, approvals |
 
 ## Verification result
@@ -77,6 +77,8 @@ Findings carry `category` (functional / business_invariant / architecture / scop
 `authority` (trusted_policy / hidden_test / project_test / exploratory / deterministic). `REVIEW_READY` requires zero
 blocking findings; review findings route to `HUMAN_REVIEW`. A consistency guard turns any non-passing blocking command
 into a blocking finding even when no test case was parsed, and "passed with zero tests collected" is itself a finding.
+The result records `verifier: {mode, image, image_digest}`; in docker mode an unavailable daemon or image produces
+`VERIFIER-UNAVAILABLE` blocking findings instead of a silent fallback to the host (`src/verification/sandbox.ts`).
 
 ## Incremental indexing
 

@@ -10,6 +10,7 @@ import { buildImplementationPrompt, buildPlanningPrompt, buildRepairPrompt } fro
 import { codexAuthStatus, LiveCodexEngine, type CodingEngine, type ImplementResult, type Usage } from "../codex/adapter.ts";
 import { OfflineEngine, type OfflineOptions } from "../codex/offline.ts";
 import { verifyWorktree } from "../verification/runner.ts";
+import { describeVerifier } from "../verification/sandbox.ts";
 import type { VerificationResult } from "../verification/results.ts";
 import { RunStore, type TaskRecord } from "./store.ts";
 import { BudgetExceededError, RunBudget, defaultLimits, type RunLimits } from "./limits.ts";
@@ -98,6 +99,7 @@ function environmentInfo(opts: RunOptions) {
   }
   const auth = codexAuthStatus();
   const settings = codexSettings();
+  const verifier = describeVerifier();
   return {
     node: process.version,
     platform: `${process.platform}-${process.arch}`,
@@ -106,7 +108,8 @@ function environmentInfo(opts: RunOptions) {
     codex_auth: { available: auth.available, mode: auth.mode },
     codex_model: settings.model ?? "codex-default",
     mode: opts.mode,
-    isolation: "git worktree + Codex sandbox (no container); prototype is not production-safe for untrusted repositories",
+    verifier,
+    isolation: verifier.mode === "docker" ? "git worktree + Codex sandbox + container-isolated verifier (docker: read-only snapshot, no network, resource limits; host kernel shared)" : "git worktree + Codex sandbox (no container); prototype is not production-safe for untrusted repositories",
     recorded_at: nowIso(),
   };
 }
