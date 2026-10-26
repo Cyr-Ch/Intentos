@@ -1,6 +1,6 @@
 # IntentOS — Implementation Status
 
-Last updated: 2026-10-26 (`intentos onboard` landed after the M4–M6 features: container verifier, architectural-surprise signals, resume re-entry, incremental re-indexing). Everything below was observed in this checkout; nothing is projected.
+Last updated: 2026-10-26 (`intentos onboard` and `intentos suggest` landed after the M4–M6 features: container verifier, architectural-surprise signals, resume re-entry, incremental re-indexing). Everything below was observed in this checkout; nothing is projected.
 
 ## Summary
 
@@ -13,7 +13,7 @@ Last updated: 2026-10-26 (`intentos onboard` landed after the M4–M6 features: 
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 14 files, **87 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **21 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 15 files, **90 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **28 passed**; `npm run typecheck` clean.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -167,6 +167,29 @@ written outside `policies/`, `--force` guard and an honest `failed` smoke, the s
 `pythonpath=.`), interpreter precedence, a draft that parses without packaging metadata, declared testpaths with
 trailing slashes and doctest roots kept out of allowed paths, CLI `--json`); `python/tests/test_index_repo.py`
 src-layout module names; `tests/integration/incremental_index.test.ts` extractor-fingerprint invalidation.
+
+## Policy suggestions (2026-10-26)
+`intentos suggest <repo>` (also `onboard --suggest`) mines the repository for policy CANDIDATES and writes
+`policy-suggestions.md` (review document with evidence, paste-ready block and hidden-test draft per candidate),
+`policy-suggestions.yaml` (blocks grouped as the policy expects them, every one with `approved_by: TODO`) and, with
+`--write-adrs`, `docs/decisions/ADR-nnnn-*.md` drafts with `Status: Proposed` for candidates that have no document of
+their own. `python/policy_suggest.py` (read-only, stdlib) mines fix/revert/prohibition commits (housekeeping subjects
+filtered, same subjects merged, regression tests added in the commit linked), rule-like test names (negations rank
+higher; the function source becomes the hidden-test draft), must/never sentences per document section (contributor
+guides skipped), ADR fields (status + lineage), one-directional imports between sibling or parent/child package
+directories, frozen directories and changelog deprecations. `--with-codex` sends the candidates to one read-only
+planning thread with a strict JSON schema; ADRs citing candidate ids that were not offered are dropped. Nothing is
+read back as authority. Observed:
+- startup_billing fixture: the "Fix: cancelled contracts received volume discounts" commit merges into the
+  `test_cancelled_contract_gets_no_discount` candidate (high) with a hidden-test draft; ADR-001..003 become decisions
+  with the ADR-002→ADR-003 lineage; `app/domain must not import app/services` and the other two layering rules match
+  ARCH-002; `app/legacy` is proposed frozen (matches ARCH-004); `docs/business-policy.md#Locked contracts` keeps its
+  source heading (matches INV-001).
+- oemof/demandlib (real repository): 53 raw candidates before tightening, 28 after, incl. the holiday rules
+  (`test_weekdays_no_holidays`, `test_no_warning_with_empty_holidays`), `test_energy_demand_zero_sum`, two
+  parent/child layering rules, one changelog deprecation. Remaining noise is for the reviewer to delete, by design.
+- Tests: `python/tests/test_policy_suggest.py` (7), `tests/integration/suggest.test.ts` (3, incl. the Codex evidence
+  guard with an injected engine).
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

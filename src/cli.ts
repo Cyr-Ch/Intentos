@@ -10,6 +10,20 @@ import { buildEvidencePack } from "./knowledge/retrieval.ts";
 import { renderEvidencePack } from "./reports/explain.ts";
 import { registerRunCommands } from "./cli_run.ts";
 import { onboardRepository } from "./onboard.ts";
+import { suggestPolicy, type SuggestResult } from "./suggest.ts";
+
+function printSuggestions(result: SuggestResult): void {
+  console.log(`Suggestions for ${result.repo_path} (policy ${result.policy_id}, ${result.head.slice(0, 7)})`);
+  console.log(`  candidates:   ${result.candidates.length} (${Object.entries(result.counts).map(([k, v]) => `${k} ${v}`).join(", ")})`);
+  for (const c of result.candidates) console.log(`    ${c.id}  ${c.confidence.padEnd(6)} ${c.kind.padEnd(17)} ${c.title.slice(0, 70)}`);
+  console.log(`  review:       ${result.files.markdown}`);
+  console.log(`  paste-ready:  ${result.files.yaml}`);
+  if (result.adr_dir) console.log(`  ADR drafts:   ${result.adrs.length} in ${result.adr_dir} (Status: Proposed)`);
+  if (result.codex.used) console.log(`  codex:        ${result.codex.model ?? "codex"}; ${result.adrs.filter((a) => a.synthesized_by === "codex").length} ADR(s) synthesised${result.codex.dropped ? `, ${result.codex.dropped} dropped for citing unknown evidence` : ""}`);
+  for (const w of result.warnings) console.log(`  warning:      ${w}`);
+  console.log("  next:");
+  for (const n of result.next_steps) console.log(`    - ${n}`);
+}
 
 const program = new Command();
 program
@@ -102,15 +116,17 @@ program
   .option("--no-test", "do not run the project suite at the base revision")
   .option("--no-index", "do not index the repository")
   .option("--force", "overwrite an existing policy file", false)
-  .action((repo: string, opts: { policyId?: string; out?: string; python?: string; install: boolean; test: boolean; index: boolean; force: boolean }) => {
+  .option("--suggest", "also mine the repository for policy candidates (see `intentos suggest`)", false)
+  .action(async (repo: string, opts: { policyId?: string; out?: string; python?: string; install: boolean; test: boolean; index: boolean; force: boolean; suggest: boolean }) => {
     const store = openStore();
     const json = program.opts().json as boolean;
     try {
       const result = onboardRepository(store, repo, { policyId: opts.policyId, out: opts.out, python: opts.python, install: opts.install, test: opts.test, index: opts.index, force: opts.force }, (line) => {
         if (!json) console.error(`[onboard] ${line}`);
       });
+      const suggestions = opts.suggest ? await suggestPolicy(repo, { policyId: result.policy_id, writeAdrs: false, withCodex: false }, (line) => { if (!json) console.error(`[suggest] ${line}`); }) : null;
       if (json) {
-        console.log(JSON.stringify(result, null, 2));
+        console.log(JSON.stringify({ ...result, suggestions }, null, 2));
         return;
       }
       console.log(`Onboarded ${result.repo_path}`);
@@ -123,10 +139,40 @@ program
       for (const w of result.warnings) console.log(`  warning:      ${w}`);
       console.log("  next:");
       for (const n of result.next_steps) console.log(`    - ${n}`);
+      if (suggestions) {
+        console.log("");
+        printSuggestions(suggestions);
+      }
     } catch (err) {
       fail((err as Error).message);
     } finally {
       store.close();
+    }
+  });
+
+program
+  .command("suggest")
+  .description("Mine a repository for policy candidates (commits, rule-like tests, must/never sentences, ADRs, layer imports, frozen dirs, changelog) and write review files; nothing is approved")
+  .argument("<repo>", "path to the repository root (a Git checkout)")
+  .option("--policy-id <id>", "policy id used in the drafts (default: sanitised project name, else folder name)")
+  .option("--out <dir>", "directory for suggestions.json / policy-suggestions.md / policy-suggestions.yaml (default .intentos/onboard/<repo-id>)")
+  .option("--write-adrs", "write ADR drafts (Status: Proposed) into the repository", false)
+  .option("--adr-dir <dir>", "where ADR drafts go (default <repo>/docs/decisions)")
+  .option("--with-codex", "let Codex turn the mined evidence into ADR prose in a read-only thread (spends tokens; model text is validated against the evidence)", false)
+  .option("--max-commits <n>", "how many commits to scan", "500")
+  .option("--min-confidence <level>", "drop candidates below high|medium|low", "low")
+  .action(async (repo: string, opts: { policyId?: string; out?: string; writeAdrs: boolean; adrDir?: string; withCodex: boolean; maxCommits: string; minConfidence: string }) => {
+    const json = program.opts().json as boolean;
+    try {
+      const level = opts.minConfidence as "high" | "medium" | "low";
+      if (!["high", "medium", "low"].includes(level)) fail(`--min-confidence must be high, medium or low (got ${opts.minConfidence})`);
+      const result = await suggestPolicy(repo, { policyId: opts.policyId, outDir: opts.out, writeAdrs: opts.writeAdrs, adrDir: opts.adrDir, withCodex: opts.withCodex, maxCommits: Number(opts.maxCommits), minConfidence: level }, (line) => {
+        if (!json) console.error(`[suggest] ${line}`);
+      });
+      if (json) console.log(JSON.stringify(result, null, 2));
+      else printSuggestions(result);
+    } catch (err) {
+      fail((err as Error).message);
     }
   });
 

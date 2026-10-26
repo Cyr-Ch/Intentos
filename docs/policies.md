@@ -175,13 +175,22 @@ API layer); with empty path lists the third detector is simply inactive.
 
 1. Run `intentos onboard <repo>`: it drafts identity, paths, scope tags and commands, creates the venv, runs the
    suite once and indexes. The draft is explicit about being a draft.
-2. Decide what must never change and write it down as Markdown in the repository, one heading per rule (ADRs,
-   `docs/business-policy.md`). The indexer needs headings to bind.
-3. Turn each rule into an invariant or an architecture rule with `sources` pointing at those headings and
+2. Run `intentos suggest <repo> --write-adrs` to get candidates instead of a blank page. It mines commits whose
+   message records a fix or a prohibition, tests whose names read like rules (`test_subtraction_never_goes_negative`),
+   must/never/only sentences in documents with their heading, existing ADRs with their lineage, import relationships
+   that only ever go one way between layers (proposed as the rule that keeps it so), directories that look frozen,
+   and changelog deprecations. Each candidate carries its evidence, a confidence, a paste-ready block with
+   `approved_by: TODO`, and, for rule-like tests, a hidden-test draft lifted from the existing test. Candidates that
+   have no document of their own get an ADR draft with `Status: Proposed`; `--with-codex` lets Codex write the ADR
+   prose from the evidence in a read-only thread, and any ADR that cites evidence it was not given is dropped.
+   Nothing in these files has authority: you delete what is wrong, edit the rest, and approve by pasting.
+3. Decide what must never change and write it down as Markdown in the repository, one heading per rule (ADRs,
+   `docs/business-policy.md`). The indexer needs headings to bind. Accepted ADR drafts count: change their status.
+4. Turn each rule into an invariant or an architecture rule with `sources` pointing at those headings and
    `approved_by` naming a person. Write the hidden tests for invariants under
    `benchmarks/hidden_tests/<policy_id>/invariants/`; they are the only tests the implementer cannot edit.
-4. Run `intentos index <repo>` again and check that nothing is listed under `unresolved policy sources`.
-5. For benchmark-style tasks, add an entry to `benchmarks/tasks.json` with `hidden_tests` and select it with
+5. Run `intentos index <repo>` again and check that nothing is listed under `unresolved policy sources`.
+6. For benchmark-style tasks, add an entry to `benchmarks/tasks.json` with `hidden_tests` and select it with
    `run --task <id>`; that is what makes `REVIEW_READY` reachable.
 
 The division of labour is deliberate: IntentOS derives everything that can be derived from the repository, and

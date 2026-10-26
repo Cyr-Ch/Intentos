@@ -90,6 +90,20 @@ invariants/rules/decisions, runs the drafted `pytest_project` command once again
 the JUnit result, then indexes. `repoInterpreter()` (`src/knowledge/venv.ts`) makes the verifier, the counterexample
 probes and `environment.json` use the repository's venv when it exists; `INTENTOS_PYTHON` overrides it.
 
+## Policy suggestions (`intentos suggest`)
+
+`src/suggest.ts` runs the read-only miner `python/policy_suggest.py` and renders its candidates as a review
+document, paste-ready YAML and ADR drafts. The miner reads `git log` (fix/revert/never/must messages and the files
+they touched, with regression tests added in the same commit), test functions whose names contain rule tokens
+(negations rank higher; the function source becomes a hidden-test draft), Markdown/RST sections with modal sentences
+(one candidate per section, source = path + heading), ADR fields (`Status`, `Supersedes` → decision status and
+lineage), module-level internal imports aggregated per layer directory (an edge A→B with no B→A becomes
+"B must not import A"), directories whose name or history says frozen, and changelog deprecations. Candidates are
+ordered by confidence and every policy block carries `approved_by: TODO`. With `--with-codex` the candidates and
+their evidence go to one read-only planning thread with a strict JSON schema; an ADR whose `candidate_ids` include
+an id that was not offered is dropped, so the model cannot smuggle in rationale the repository does not support.
+Nothing the command writes is read back as authority.
+
 ## Architectural surprise (review signals)
 
 `architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists
