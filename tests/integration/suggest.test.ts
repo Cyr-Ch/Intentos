@@ -37,6 +37,10 @@ describe("intentos suggest", () => {
     expect(cancelled.evidence.map((e) => e.type)).toEqual(expect.arrayContaining(["test", "commit"]));
     expect(cancelled.evidence.some((e) => e.type === "commit" && /cancelled contracts received volume discounts/i.test(e.excerpt))).toBe(true);
     expect(cancelled.suggested_hidden_test!.source).toContain("def test_cancelled_contract_gets_no_discount");
+    expect(cancelled.suggested_hidden_test!.source).toMatch(/^from app\./m); // imports are part of the draft
+    expect(cancelled.suggested_hidden_test!.standalone).toBe(true);
+    expect(cancelled.applies_to_paths).toEqual(expect.arrayContaining(["app/services/discounts.py"]));
+    expect(cancelled.applies_to_paths!.some((p) => p.endsWith("__init__.py"))).toBe(false);
     expect(cancelled.policy_block).toMatchObject({ id: "INV-TODO", approved_by: "TODO", enforcement: "blocking" });
     expect((cancelled.policy_block.verified_by as string[])[0]).toMatch(/^benchmarks\/hidden_tests\/startup_billing\/invariants\/test_inv_TODO_/);
 
@@ -65,6 +69,8 @@ describe("intentos suggest", () => {
     expect(md).toContain("proposals with no authority");
     expect(md).toContain(`### ${cancelled.id} · invariant · Cancelled contract gets no discount`);
     expect(md).toContain("def test_cancelled_contract_gets_no_discount");
+    expect(md).toContain("self-contained: imports, fixtures and class setup included");
+    expect(r.candidates.every((c) => !(c.scope ?? []).includes("x"))).toBe(true);
     const yaml = YAML.parse(fs.readFileSync(r.files.yaml, "utf8")) as { invariants: Array<Record<string, unknown>>; architecture_rules: Array<Record<string, unknown>>; decisions: Array<Record<string, unknown>> };
     expect(yaml.invariants.length).toBe(r.counts.invariant);
     expect(yaml.architecture_rules.length).toBe(r.counts.architecture_rule! + r.counts.frozen_paths!);

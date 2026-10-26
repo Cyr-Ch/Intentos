@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 from collections import defaultdict
 from typing import Any
 
@@ -35,6 +36,7 @@ RULE_TOKENS = {"never", "no", "not", "cannot", "cant", "only", "must", "always",
 NEGATION_TOKENS = {"never", "no", "not", "cannot", "cant", "unchanged", "raises", "raise", "rejects", "reject", "refuses", "forbidden", "invalid", "without"}
 LAYER_VOCAB = {"api", "apis", "domain", "services", "service", "models", "model", "core", "infra", "infrastructure", "adapters", "adapter", "legacy", "cli", "web", "db", "storage", "repositories", "handlers", "controllers", "views", "use_cases", "usecases", "application", "ports"}
 FROZEN_NAME_RE = re.compile(r"(legacy|deprecated|obsolete|old|compat|v1)", re.I)
+SETUP_NAMES = {"setup_class", "setup_method", "setup", "setUp", "setUpClass", "teardown_class", "teardown_method", "teardown", "tearDown", "tearDownClass", "setup_function", "teardown_function"}
 CHANGELOG_RE = re.compile(r"\b(deprecat\w*|removed|remove|breaking|no longer|renamed|dropped|drop support|must now|is now required)\b", re.I)
 ADR_FIELD_RE = re.compile(r"^\*{0,2}(Status|Date|Supersedes|Superseded-by|Deciders|Owner)\*{0,2}\s*:\s*\*{0,2}(.+?)\*{0,2}\s*$", re.I)
 MD_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
@@ -83,6 +85,14 @@ def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "candidate"
 
 
+def node_source(source: str, node: ast.AST) -> str:
+    """Full source lines of a node including its decorators, dedented to column 0 (keeps relative indentation)."""
+    lines = source.splitlines()
+    start = min([getattr(node, "lineno", 1), *[d.lineno for d in getattr(node, "decorator_list", [])]])
+    end = getattr(node, "end_lineno", start) or start
+    return textwrap.dedent("\n".join(lines[start - 1 : end]))
+
+
 def sentences(text: str) -> list[str]:
     cleaned = " ".join(text.split())
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", cleaned) if s.strip()]
@@ -122,10 +132,15 @@ class Miner:
         return cand
 
     def scope_tags(self, paths: list[str]) -> list[str]:
+        """Tags from the directory a path lives in and its module name (globs like `pkg/**` contribute their directory)."""
         tags: list[str] = []
         for p in paths:
-            parts = [x for x in p.split("/")[:-1] if x not in ("src", "app", "lib") and x not in TEST_DIR_NAMES]
-            base = os.path.basename(p)[:-3] if p.endswith(".py") else os.path.basename(p)
+            clean = p.replace("/**", "")
+            parts = [x for x in clean.split("/")[:-1] if x not in ("src", "app", "lib") and x not in TEST_DIR_NAMES]
+            base = os.path.basename(clean)
+            base = base[:-3] if base.endswith(".py") else base
+            if not p.endswith(".py"):
+                parts, base = [*parts, base], ""
             for t in [*parts[-1:], base]:
                 t = t.lower()
                 if t and t != "__init__" and t not in tags:
@@ -153,7 +168,44 @@ class Miner:
                     target = ".".join([*base_parts, target]) if target else ".".join(base_parts)
                 if self._is_internal(target):
                     out.append((target, node.lineno))
+                for alias in node.names:
+                    candidate = f"{target}.{alias.name}" if target else alias.name
+                    if candidate in self.internal:
+                        out.append((candidate, node.lineno))
         return out
+
+    def paths_for_modules(self, modules: list[str]) -> list[str]:
+        """Repository paths (or `dir/**` for packages) for internal modules, most specific first, without duplicates."""
+        out: list[str] = []
+        for m in modules:
+            path = self.path_for_module(m)
+            if not path:
+                continue
+            entry = f"{os.path.dirname(path)}/**" if path.endswith("__init__.py") else path
+            if entry not in out:
+                out.append(entry)
+        specific = [p for p in out if not p.endswith("/**")]
+        packages = [p for p in out if p.endswith("/**") and not any(sp.startswith(p[:-3] + "/") for sp in specific)]
+        return [*specific, *packages]
+
+    def current_paths(self, paths: list[str]) -> tuple[list[str], list[str]]:
+        """Map historical paths to HEAD: keep existing ones, resolve moved files by unique basename, report the rest."""
+        kept: list[str] = []
+        lost: list[str] = []
+        tracked = set(self.files)
+        by_base: dict[str, list[str]] = defaultdict(list)
+        for f in self.py_files:
+            by_base[os.path.basename(f)].append(f)
+        for p in paths:
+            if p in tracked:
+                kept.append(p)
+                continue
+            same = by_base.get(os.path.basename(p), [])
+            if len(same) == 1:
+                kept.append(same[0])
+            else:
+                lost.append(p)
+        return kept, lost
 
     def _is_internal(self, target: str) -> bool:
         if target in self.internal:
@@ -201,16 +253,105 @@ class Miner:
                 diff = run_git(self.repo, "show", "--format=", "--unified=0", sha, "--", *test_files)
                 added_tests = [m.group(1) for m in re.finditer(r"^\+\s*(?:async\s+)?def\s+(test_\w+)", diff, re.M)]
             confidence = "high" if added_tests else "medium" if starts_like_fix else "low"
+            current, lost = self.current_paths(source_files[:6])
             evidence = [{"type": "commit", "ref": sha[:7], "excerpt": subject, "detail": body.strip()[:300], "date": date, "files": files[:12]}]
+            if lost:
+                evidence.append({"type": "history", "ref": sha[:7], "excerpt": f"touched files no longer at HEAD: {', '.join(lost)}"})
             for t in added_tests:
                 evidence.append({"type": "test", "ref": t, "excerpt": f"regression test added in {sha[:7]}", "path": next((f for f in test_files), None)})
             title = subject_clean[:1].upper() + subject_clean[1:]
-            seen_subjects[key] = self.add("invariant", title, f"Preserve the behaviour established by {sha[:7]}: {subject_clean[:1].lower()}{subject_clean[1:]}", confidence, evidence, applies_to_paths=source_files[:6], scope=self.scope_tags(source_files), related_tests=added_tests[:6])
+            seen_subjects[key] = self.add("invariant", title, f"Preserve the behaviour established by {sha[:7]}: {subject_clean[:1].lower()}{subject_clean[1:]}", confidence, evidence, applies_to_paths=current, scope=self.scope_tags(current or source_files), related_tests=added_tests[:6])
             seen += 1
             if seen >= 40:
                 break
 
     # ---------- 2. tests
+    def _is_fixture(self, node: ast.AST) -> bool:
+        for d in getattr(node, "decorator_list", []):
+            target = d.func if isinstance(d, ast.Call) else d
+            name = target.attr if isinstance(target, ast.Attribute) else target.id if isinstance(target, ast.Name) else ""
+            if name == "fixture":
+                return True
+        return False
+
+    def _fixture_sources(self, rel: str) -> dict[str, tuple[str, str]]:
+        """{fixture name: (source, defining file)} from the test file and the conftest.py files above it."""
+        out: dict[str, tuple[str, str]] = {}
+        candidates = [rel]
+        d = os.path.dirname(rel)
+        while True:
+            candidates.append(f"{d}/conftest.py" if d else "conftest.py")
+            if not d:
+                break
+            d = os.path.dirname(d)
+        for f in candidates:
+            if f not in self.files:
+                continue
+            tree = self.tree(f)
+            if tree is None:
+                continue
+            src = self._sources[f]
+            for n in getattr(tree, "body", []):
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and self._is_fixture(n) and n.name not in out:
+                    out[n.name] = (node_source(src, n), f)
+        return out
+
+    def _draft_hidden_test(self, rel: str, tree: ast.AST, source: str, node: ast.FunctionDef | ast.AsyncFunctionDef, cls: ast.ClassDef | None) -> dict[str, Any]:
+        """A hidden-test draft that can run on its own: imports, used constants, fixtures, class setup and the test."""
+        notes: list[str] = []
+        body = getattr(tree, "body", [])
+        import_lines = [ast.get_source_segment(source, n) or "" for n in body if isinstance(n, (ast.Import, ast.ImportFrom))]
+        fixtures = self._fixture_sources(rel)
+        pieces: list[str] = []
+        included_fixture_files: set[str] = set()
+
+        def needed_fixtures(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
+            return [a.arg for a in [*fn.args.posonlyargs, *fn.args.args, *fn.args.kwonlyargs] if a.arg not in ("self", "cls")]
+
+        resolved: dict[str, str] = {}
+        queue = needed_fixtures(node)
+        while queue:
+            name = queue.pop(0)
+            if name in resolved:
+                continue
+            if name in fixtures:
+                src, where = fixtures[name]
+                resolved[name] = src
+                included_fixture_files.add(where)
+                try:
+                    fn = ast.parse(src).body[0]
+                    if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        queue.extend(needed_fixtures(fn))
+                except SyntaxError:
+                    pass
+            elif name in ("request", "tmp_path", "tmp_path_factory", "monkeypatch", "capsys", "caplog", "recwarn"):
+                continue  # pytest built-ins
+            else:
+                notes.append(f"fixture `{name}` is not defined in {rel} or a conftest.py above it; define it in the draft")
+        for name, src in resolved.items():
+            pieces.append(src)
+        for f in sorted(included_fixture_files - {rel}):
+            ftree = self.tree(f)
+            if ftree is not None:
+                import_lines.extend(ast.get_source_segment(self._sources[f], n) or "" for n in getattr(ftree, "body", []) if isinstance(n, (ast.Import, ast.ImportFrom)))
+        if cls is not None:
+            members = [m for m in cls.body if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef)) and (m.name in SETUP_NAMES or m is node)]
+            header = f"class {cls.name}({', '.join(ast.unparse(b) for b in cls.bases)}):" if cls.bases else f"class {cls.name}:"
+            class_lines = [header]
+            for m in members:
+                class_lines.append(textwrap.indent(node_source(source, m), "    "))
+                class_lines.append("")
+            pieces.append("\n".join(class_lines).rstrip())
+            if not any(m.name in SETUP_NAMES for m in members) and any(isinstance(sub, ast.Attribute) and isinstance(sub.value, ast.Name) and sub.value.id == "self" for sub in ast.walk(node)):
+                notes.append(f"{cls.name} has no setup method in this file; `self.*` attributes used by the test must be defined in the draft")
+        else:
+            pieces.append(node_source(source, node))
+        combined = "\n\n".join(pieces)
+        constants = [n for n in body if isinstance(n, ast.Assign) and all(isinstance(t, ast.Name) for t in n.targets)]
+        const_lines = [ast.get_source_segment(source, n) or "" for n in constants if any(re.search(rf"\b{re.escape(t.id)}\b", combined) for t in n.targets if isinstance(t, ast.Name))]
+        draft = "\n\n".join(x for x in ["\n".join(dict.fromkeys(line for line in import_lines if line)), "\n".join(const_lines), combined] if x.strip())
+        return {"from": f"{rel}::{node.name}", "imports": "\n".join(dict.fromkeys(line for line in import_lines if line)), "source": draft, "notes": notes, "standalone": not notes}
+
     def mine_tests(self) -> None:
         for rel in self.py_files:
             if not is_test_path(rel) or os.path.basename(rel) == "conftest.py":
@@ -219,27 +360,32 @@ class Miner:
             if tree is None:
                 continue
             source = self._sources[rel]
-            import_lines = [ast.get_source_segment(source, n) or "" for n in getattr(tree, "body", []) if isinstance(n, (ast.Import, ast.ImportFrom))]
-            internal_paths = [p for p in (self.path_for_module(m) for m, _ in self.internal_imports(rel)) if p and not is_test_path(p)]
-            for node in ast.walk(tree):
-                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not node.name.startswith("test_"):
+            internal_paths = [p for p in self.paths_for_modules([m for m, _ in self.internal_imports(rel)]) if not is_test_path(p.replace("/**", ""))]
+            owners: list[tuple[ast.FunctionDef | ast.AsyncFunctionDef, ast.ClassDef | None]] = []
+            for n in getattr(tree, "body", []):
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    owners.append((n, None))
+                elif isinstance(n, ast.ClassDef):
+                    owners.extend((m, n) for m in n.body if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef)))
+            for node, cls in owners:
+                if not node.name.startswith("test_"):
                     continue
                 tokens = set(node.name.split("_"))
-                hits = tokens & RULE_TOKENS
-                if not hits:
+                if not (tokens & RULE_TOKENS):
                     continue
                 confidence = "high" if tokens & NEGATION_TOKENS else "medium"
                 segment = ast.get_source_segment(source, node) or ""
                 statement = humanize(node.name)
+                draft = self._draft_hidden_test(rel, tree, source, node, cls)
                 self.add(
                     "invariant",
                     statement,
                     statement + ".",
                     confidence,
-                    [{"type": "test", "ref": f"{rel}::{node.name}", "excerpt": segment.split("\n")[0], "path": rel, "line": node.lineno}],
+                    [{"type": "test", "ref": f"{rel}::{(cls.name + '::') if cls else ''}{node.name}", "excerpt": segment.split("\n")[0].strip(), "path": rel, "line": node.lineno}],
                     applies_to_paths=internal_paths[:6],
                     scope=self.scope_tags(internal_paths),
-                    suggested_hidden_test={"from": f"{rel}::{node.name}", "imports": "\n".join(import_lines), "source": segment},
+                    suggested_hidden_test=draft,
                 )
 
     # ---------- 3. documents
@@ -355,7 +501,7 @@ class Miner:
                 ev[:6],
                 rule={"kind": "forbidden_import", "paths": [f"{b}/**"], "forbidden_modules": [a_mod]},
                 applies_to_paths=[f"{b}/**"],
-                scope=self.scope_tags([b + "/x.py", a + "/x.py"]),
+                scope=self.scope_tags([f"{b}/**", f"{a}/**"]),
             )
             emitted += 1
             if emitted >= 12:
@@ -393,7 +539,7 @@ class Miner:
 
     # ---------- merge + blocks
     def merge_commits_into_tests(self) -> None:
-        tests = {c["suggested_hidden_test"]["from"].split("::")[1]: c for c in self.candidates if c.get("suggested_hidden_test")}
+        tests = {c["suggested_hidden_test"]["from"].split("::")[-1]: c for c in self.candidates if c.get("suggested_hidden_test")}
         drop: set[str] = set()
         for c in self.candidates:
             if c["kind"] != "invariant" or c["evidence"][0]["type"] != "commit":

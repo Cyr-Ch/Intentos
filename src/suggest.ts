@@ -36,7 +36,8 @@ export interface Candidate {
   evidence: CandidateEvidence[];
   applies_to_paths?: string[];
   scope?: string[];
-  suggested_hidden_test?: { from: string; imports: string; source: string } | null;
+  /** Draft lifted from the existing test: imports, constants, fixtures and class setup it needs; `notes` lists what could not be resolved. */
+  suggested_hidden_test?: { from: string; imports: string; source: string; notes: string[]; standalone: boolean } | null;
   rule?: Record<string, unknown>;
   status?: string;
   supersedes?: string | null;
@@ -139,11 +140,12 @@ export function renderSuggestionsMarkdown(out: MinerOutput, adrs: AdrDraft[]): s
       L.push(YAML.stringify(c.policy_block).trimEnd());
       L.push("```");
       if (c.suggested_hidden_test) {
+        const t = c.suggested_hidden_test;
         L.push("");
-        L.push(`Hidden-test draft from \`${c.suggested_hidden_test.from}\` (move it under \`benchmarks/hidden_tests/${out.policy_id}/invariants/\`; it must not depend on names only this change introduces):`);
+        L.push(`Hidden-test draft from \`${t.from}\`${t.standalone ? " (self-contained: imports, fixtures and class setup included)" : " (INCOMPLETE, see notes)"}; move it under \`benchmarks/hidden_tests/${out.policy_id}/invariants/\` and make sure it checks behaviour, not names only this change introduces:`);
+        for (const n of t.notes) L.push(`- note: ${n}`);
         L.push("```python");
-        if (c.suggested_hidden_test.imports.trim()) L.push(c.suggested_hidden_test.imports.trim(), "");
-        L.push(c.suggested_hidden_test.source.trimEnd());
+        L.push(t.source.trimEnd());
         L.push("```");
       }
     }

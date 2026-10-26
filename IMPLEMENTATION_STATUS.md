@@ -13,7 +13,7 @@ Last updated: 2026-10-26 (`intentos onboard` and `intentos suggest` landed after
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 15 files, **90 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **28 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 15 files, **90 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -188,7 +188,15 @@ read back as authority. Observed:
 - oemof/demandlib (real repository): 53 raw candidates before tightening, 28 after, incl. the holiday rules
   (`test_weekdays_no_holidays`, `test_no_warning_with_empty_holidays`), `test_energy_demand_zero_sum`, two
   parent/child layering rules, one changelog deprecation. Remaining noise is for the reviewer to delete, by design.
-- Tests: `python/tests/test_policy_suggest.py` (7), `tests/integration/suggest.test.ts` (3, incl. the Codex evidence
+- Review of the first real output (demandlib) fixed four defects: hidden-test drafts lifted from class-based tests
+  now include the class header, its setup methods and decorators, the pytest fixtures they use (from the file or any
+  conftest.py above it, recursively) and the module constants they reference, with notes for anything unresolved
+  (`standalone: false`), and every draft is checked to be valid Python; `from pkg import submodule` resolves to the
+  submodule so `applies_to_paths` names `tools.py` rather than the package `__init__`; commit-derived paths follow
+  files that moved since (unique basename), otherwise the loss is recorded as evidence; scope tags no longer contain a
+  stray `x`. Resolving re-exports also removed two false parent/child layering rules on demandlib (the package
+  `__init__` does import its subpackages).
+- Tests: `python/tests/test_policy_suggest.py` (9), `tests/integration/suggest.test.ts` (3, incl. the Codex evidence
   guard with an injected engine).
 
 ## Next steps

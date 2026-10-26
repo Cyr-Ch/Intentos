@@ -155,3 +155,57 @@ def test_src_layout_parent_child_layering_and_contributing_skipped(tmp_path: pat
     assert rules["src/pkg must not import src/pkg/bdew"]["rule"] == {"kind": "forbidden_import", "paths": ["src/pkg/**"], "forbidden_modules": ["pkg.bdew"]}
     assert "src/pkg/bdew must not import src/pkg/vdi" in rules  # siblings, one direction only
     assert not any("Contributing" in c["title"] for c in out["candidates"])
+
+
+def test_hidden_test_drafts_are_self_contained_and_submodule_imports_resolve(tmp_path: pathlib.Path):
+    repo = tmp_path / "t"
+    _write(repo, "pkg/__init__.py")
+    _write(repo, "pkg/tools.py", "def add_weekdays(df, holidays=None):\n    return df\n")
+    _write(repo, "pkg/bdew/__init__.py")
+    _write(repo, "pkg/bdew/elec.py", "def profile():\n    return 1\n")
+    _write(repo, "tests/conftest.py", "import pytest\n\n\n@pytest.fixture\ndef example_houses():\n    return [{'N_Pers': 2}]\n")
+    _write(repo, "tests/test_tools.py", "import pandas as pd\nimport pytest\nfrom pkg import tools\nfrom pkg.bdew import elec\n\nYEAR = 2017\n\n\n@pytest.fixture\ndef frame(example_houses):\n    return pd.DataFrame({'y': [YEAR]})\n\n\nclass TestWeekdays:\n    @classmethod\n    def setup_class(cls):\n        cls.df = pd.DataFrame({'x': [1]})\n\n    def test_weekdays_no_holidays(self):\n        dt = tools.add_weekdays(self.df)\n        assert dt is self.df\n\n    def helper(self):\n        return 1\n\n\ndef test_frame_never_empty(frame):\n    assert len(frame) == 1\n\n\ndef test_profile_never_none(missing_fixture):\n    assert elec.profile() is not None\n")
+    _git(repo, "init", "-q", "-b", "main")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "init")
+    out = ps.Miner(str(repo), 100).run("pkg")
+    by = {c["title"]: c for c in out["candidates"] if c.get("suggested_hidden_test")}
+    # class-based test: header + setup_class + the test method, helper left out, applies_to resolves `from pkg import tools`
+    weekdays = by["Weekdays no holidays"]
+    draft = weekdays["suggested_hidden_test"]
+    assert draft["standalone"] is True and draft["notes"] == []
+    assert "class TestWeekdays:" in draft["source"] and "def test_weekdays_no_holidays(self):" in draft["source"]
+    assert "    @classmethod\n    def setup_class(cls):\n        cls.df = " in draft["source"]  # decorator kept, body indented exactly one level deeper
+    assert "        dt = tools.add_weekdays(self.df)" in draft["source"]
+    assert "def helper" not in draft["source"]
+    compile(draft["source"], "draft", "exec")  # the draft is valid Python
+    assert "from pkg import tools" in draft["imports"]
+    assert weekdays["applies_to_paths"] == ["pkg/tools.py", "pkg/bdew/elec.py"]
+    assert weekdays["evidence"][0]["ref"] == "tests/test_tools.py::TestWeekdays::test_weekdays_no_holidays"
+    # module-level test: its fixture, the fixture's fixture from conftest, and the constant the fixture uses are included
+    frame = by["Frame never empty"]["suggested_hidden_test"]
+    assert "@pytest.fixture\ndef frame(example_houses):" in frame["source"] and "@pytest.fixture\ndef example_houses():" in frame["source"] and "YEAR = 2017" in frame["source"]
+    compile(frame["source"], "draft", "exec")
+    assert frame["standalone"] is True
+    # unknown fixture is reported, not silently dropped
+    missing = by["Profile never none"]["suggested_hidden_test"]
+    assert missing["standalone"] is False and "missing_fixture" in missing["notes"][0]
+    assert "x" not in weekdays["scope"]
+
+
+def test_commit_paths_follow_moved_files(tmp_path: pathlib.Path):
+    repo = tmp_path / "m"
+    _write(repo, "src/demandlib/__init__.py")
+    _write(repo, "src/demandlib/regions.py", "MINUTES = 525600\n")
+    _git(repo, "init", "-q", "-b", "main")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "init")
+    _write(repo, "src/demandlib/regions.py", "MINUTES = 527040 if leap else 525600\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "Fix hardcoded minutes per year to allow leap year")
+    _git(repo, "mv", "src/demandlib", "src/oemof_demand")
+    _git(repo, "commit", "-qm", "Move package to oemof namespace")
+    out = ps.Miner(str(repo), 100).run("d")
+    leap = next(c for c in out["candidates"] if "leap year" in c["title"].lower())
+    assert leap["applies_to_paths"] == ["src/oemof_demand/regions.py"]
+    assert not any(e["type"] == "history" for e in leap["evidence"])
