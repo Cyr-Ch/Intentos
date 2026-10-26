@@ -140,7 +140,7 @@ export function registerRunCommands(program: Command, ctx: CliContext): void {
       const store = ctx.openStore();
       try {
         const { rs, report } = checkRunIntegrity(store, runId);
-        if (!json()) for (const c of report.checks) console.error(`[integrity] ${c.ok ? "ok  " : "FAIL"} ${c.check}: ${c.detail}`);
+        if (!json()) for (const c of report.checks) console.error(`[integrity] ${c.ok ? "ok  " : c.informational ? "info" : "FAIL"} ${c.check}: ${c.detail}`);
         if (isTerminal(report.state)) {
           if (json()) console.log(JSON.stringify({ run_id: runId, state: report.state, resumed: false, reason: "terminal state" }, null, 2));
           else console.log(`run ${runId} is already in terminal state ${report.state}; nothing to resume. Use \`intentos report ${runId}\`.`);
@@ -176,7 +176,7 @@ export function registerRunCommands(program: Command, ctx: CliContext): void {
         const row = rs.row;
         if (!row.worktree_path || !fs.existsSync(row.worktree_path)) ctx.fail(`run ${runId} has no worktree to verify (state ${row.state})`);
         if (!row.contract_json || !row.contract_hash) ctx.fail(`run ${runId} has no validated contract`);
-        const bad = report.checks.filter((c) => !c.ok && c.check !== "base_revision_reachable");
+        const bad = report.checks.filter((c) => !c.ok && !c.informational && c.check !== "base_revision_reachable");
         if (bad.length) ctx.fail(`integrity check failed: ${bad.map((c) => `${c.check}: ${c.detail}`).join("; ")}`);
         const task = loadTask(rs);
         const repo = store.getRepository(row.repo_id)!;

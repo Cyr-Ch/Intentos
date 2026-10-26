@@ -40,7 +40,7 @@ INTENTOS_CODEX_MODEL=gpt-5.6-terra npm run intentos -- run  $FIX "Add a 15% prom
 
 npm run intentos -- verify <run-id>     # re-run independent checks on the run's worktree
 npm run intentos -- report <run-id>     # report.md / report.json
-npm run intentos -- resume <run-id>     # integrity-checked recovery
+npm run intentos -- resume <run-id>     # integrity-checked recovery; re-enters an interrupted Codex turn
 npm run intentos -- runs                # list runs
 ```
 
@@ -57,7 +57,7 @@ machine-readable output; every command exits non-zero on critical failure.
 | `run <repo> "<task>"` | the above plus a worktree in `.intentos/worktrees/<run-id>`, `implementation_prompt.txt`, `codex_events.jsonl`, `implementer_result.json`, `diff.patch`, `verification/attempt-N/*` (snapshot, logs, JUnit), `verification.json`, `metrics.json`, `report.md`, `report.json` |
 | `verify <run-id>` | a new `verification/attempt-N/` and refreshed `verification.json` + report |
 | `report <run-id>` | `report.md`, `report.json` |
-| `resume <run-id>` | integrity checks (`run_events`), then continues from the persisted state |
+| `resume <run-id>` | integrity checks (`run_events`), then continues from the persisted state; an interrupted IMPLEMENTING/REPAIRING turn is re-entered in its Codex thread (`continue_prompt.N.txt`, `resume.reentered` event, at most 2 per run) before verification |
 | `approve <run-id> --by <who>` | `APPROVED` transition with approver recorded (use `run --require-approval`) |
 | `decision propose/approve/supersede/list`, `feedback <run-id> "<text>"` | `decisions` rows; feedback is always *proposed* until approved |
 

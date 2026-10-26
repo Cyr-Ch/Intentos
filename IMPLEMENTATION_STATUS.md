@@ -9,11 +9,11 @@ Last updated: 2026-10-26 (container verifier and architectural-surprise signals 
 | M1 Index + evidence (`index`, `explain`) | **functional** | Python AST/git indexer, SQLite graph per revision, trusted-policy binding, lexical+graph retrieval with citations |
 | M2 Contract-guided Codex execution (`plan`, `run`) | **functional (live + offline)** | Zod contract + strict JSON schema, deterministic compiler, worktrees, SDK adapter (read-only planner / workspace-write implementer), durable states + events |
 | M3 Independent verification + repair + report (`verify`, `report`) | **functional** | hidden task/invariant tests outside the worktree, AST architecture rules (incl. anti-tampering `forbidden_names`), scope/frozen-path diff checks, hidden-test inventory cross-check, fail-closed invariants, counterexample probes, architectural-surprise review signals (§7.5), ≤2 repairs, revocable review state, report.md/json |
-| M4 Decisions, conflicts, feedback gate, `resume` | **functional (initial)** | policy decisions with SUPERSEDES edges, proposed→approved gate, feedback as proposed memory, integrity-checked resume; full re-index per HEAD (no diff-based invalidation yet) |
+| M4 Decisions, conflicts, feedback gate, `resume` | **functional (initial)** | policy decisions with SUPERSEDES edges, proposed→approved gate, feedback as proposed memory, integrity-checked resume that re-enters an interrupted Codex turn (thread id saved at `thread.started`, ≤2 re-entries, then verifies); full re-index per HEAD (no diff-based invalidation yet) |
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 11 files, **71 passed** (4 of them need a Docker daemon plus the `intentos-verifier:0.1` image and skip otherwise); `npm run test:python` → **14 passed**; `npm run typecheck` clean.
+Tests: `npm test` → 12 files, **76 passed** (4 of them need a Docker daemon plus the `intentos-verifier:0.1` image and skip otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard); `npm run test:python` → **14 passed**; `npm run typecheck` clean.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -81,7 +81,7 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 - Full re-index at each HEAD; no `git diff`-based invalidation (spec §6.4 "next stage").
 - Retrieval is lexical + 1-hop import graph; `CALLS` edges are name-matched (confidence 0.4). No embeddings/reranking.
 - Counterexamples are policy-template grids, not generated hypotheses; exploratory unless marked authoritative.
-- `resume` after an interruption during IMPLEMENTING proceeds to verification of whatever is in the worktree (it does not re-prompt Codex to continue the thread).
+- `resume` re-entry of an interrupted Codex turn is exercised with an injected stand-in engine only (`tests/integration/resume.test.ts`); no live `resumeThread` continuation has been observed yet. Offline runs and runs without a recorded thread id still verify the worktree as is.
 - Architectural-surprise triage covers three detectors (new internal import, duplicate helper by name or normalised body, domain construction in the API layer) on Python files only; it is review-only by design and does not analyse test files for duplicates.
 - Baseline comparison: one live baseline run only; no statistical claim is made.
 - Container isolation is opt-in (`INTENTOS_VERIFIER=docker`); the default `host` mode still executes candidate code on the host. In docker mode the results mount lets candidate code write files into the attempt directory, so forged-report defences stay in place (see docs/security.md).
@@ -144,5 +144,5 @@ rule ids `SURPRISE-NEW-DEPENDENCY` / `SURPRISE-DUPLICATE-HELPER` / `SURPRISE-API
 ## Next steps
 1. Diff-based incremental re-index and assertion re-validation across revisions.
 2. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.
-3. Resume: re-enter the Codex implementer thread (`resumeThread`) with a "continue" prompt instead of verifying partial work.
+3. Resume re-entry: done with a stand-in engine (2026-10-26); still to do: observe one real `resumeThread` continuation with live credentials.
 4. Symlink-escape checks on snapshot copy; stronger-than-Docker isolation (gVisor/VM) for the container verifier.

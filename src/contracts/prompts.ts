@@ -104,6 +104,39 @@ export function buildImplementationPrompt(contract: ChangeContract, pack: Eviden
   return lines.join("\n");
 }
 
+/**
+ * Continuation prompt sent to the *same* Codex thread when `resume` re-enters an implementation or repair
+ * turn that was interrupted before it finished. The worktree already holds the partial work.
+ */
+export function buildContinuePrompt(contract: ChangeContract, phase: "implement" | "repair", findings: Finding[]): string {
+  const lines: string[] = [];
+  lines.push(`Your previous ${phase === "repair" ? "repair" : "implementation"} turn was interrupted before it finished.`);
+  lines.push("The worktree already contains your partial changes: inspect `git status` and `git diff` first, then continue from where you stopped. Do not start over and do not revert work that already satisfies the contract.");
+  lines.push("Hard rules (unchanged):");
+  lines.push(`- Edit ONLY files matching these allowed paths: ${contract.allowed_paths.join(", ")}.`);
+  lines.push(`- NEVER create, modify or delete anything matching: ${contract.protected_paths.join(", ")}. Do not weaken, delete or skip existing tests.`);
+  lines.push("- Do not commit, do not touch Git configuration, do not access the network.");
+  lines.push("- Run python -m pytest -q before finishing. Your own success claims are not trusted: an independent verifier re-runs tests and hidden checks afterwards.");
+  lines.push("- Finish with a short summary of files changed and how each business invariant is preserved.");
+  lines.push("");
+  lines.push(`## Goal\n${contract.goal}`);
+  lines.push("## Requirements");
+  for (const r of contract.requirements) lines.push(`- ${r.id} (${r.certainty}): ${r.statement}`);
+  lines.push("## Business invariants (blocking: verified independently by hidden tests)");
+  for (const inv of contract.business_invariants) lines.push(`- ${inv.id} [${inv.enforcement}]`);
+  lines.push("## Architecture constraints (blocking: checked by deterministic AST rules)");
+  for (const a of contract.architecture_constraints) lines.push(`- ${a.id} [${a.enforcement}]`);
+  if (phase === "repair") {
+    const blocking = findings.filter((x) => x.severity === "blocking");
+    lines.push("## Blocking findings from the last verification (the interrupted repair was addressing these)");
+    if (!blocking.length) lines.push("- (no blocking findings recorded)");
+    for (const f of blocking) {
+      lines.push(`- ${f.id} [${f.category}${f.rule_id ? ` ${f.rule_id}` : ""}] ${f.message}${f.test ? ` (test: ${f.test})` : ""}${f.expected ? ` expected=${f.expected}` : ""}${f.observed ? ` observed=${f.observed}` : ""}${f.location ? ` at ${f.location}` : ""}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 export function buildRepairPrompt(contract: ChangeContract, findings: Finding[], attempt: number): string {
   const lines: string[] = [];
   lines.push(`Repair attempt ${attempt}: the independent verifier rejected the current working tree. Fix the code so the checks below pass WITHOUT changing the contract, tests you did not write, or any protected path.`);

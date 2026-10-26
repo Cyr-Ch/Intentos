@@ -6,10 +6,18 @@ import { contractHash } from "../contracts/compiler.ts";
 import type { ChangeContract } from "../contracts/schemas.ts";
 import { TERMINAL_STATES, isRunState, type RunState } from "./workflow.ts";
 
+export interface IntegrityCheck {
+  check: string;
+  ok: boolean;
+  detail: string;
+  /** Informational checks are reported but never fail integrity. */
+  informational?: boolean;
+}
+
 export interface IntegrityReport {
   ok: boolean;
   state: RunState;
-  checks: Array<{ check: string; ok: boolean; detail: string }>;
+  checks: IntegrityCheck[];
 }
 
 /** Validate persisted run state before resuming; never continue from an inconsistent state. */
@@ -51,7 +59,17 @@ export function checkRunIntegrity(store: KnowledgeStore, runId: string): { rs: R
   } else if (["IMPLEMENTING", "VERIFYING", "REPAIRING"].includes(row.state)) {
     add("worktree_exists", false, "state requires a worktree but none is recorded");
   }
-  const ok = checks.every((c) => c.ok);
+  if (row.codex_thread_id || ["IMPLEMENTING", "VERIFYING", "REPAIRING"].includes(row.state)) {
+    // Informational: tells the operator whether `resume` can re-enter the Codex thread. Never fails integrity.
+    const known = !!row.codex_thread_id || row.mode === "offline";
+    checks.push({
+      check: "codex_thread_known",
+      ok: known,
+      informational: true,
+      detail: row.codex_thread_id ? `thread ${row.codex_thread_id}` : row.mode === "offline" ? "offline mode: no Codex thread (resume verifies the worktree as is)" : "no thread id recorded; resume will verify the current worktree without re-entering Codex",
+    });
+  }
+  const ok = checks.every((c) => c.ok || c.informational);
   return { rs, report: { ok, state: row.state as RunState, checks } };
 }
 

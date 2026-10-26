@@ -94,6 +94,18 @@ sources are read with one `git cat-file --batch`; test files are not analysed fo
 triage, not proof of bad design: a run with only these findings ends in `HUMAN_REVIEW`, and the report lists them
 under "Architectural surprise (review signals)".
 
+## Resume and thread re-entry
+
+`intentos resume <run-id>` first runs the integrity checks (run dir, contract hash, worktree at base SHA; plus the
+informational `codex_thread_known`). A run interrupted during IMPLEMENTING or REPAIRING is then re-entered rather
+than merely verified: the implementer thread id is persisted the moment the SDK emits `thread.started` (not only
+when a turn completes), and the orchestrator sends a continuation prompt to that same thread
+(`continue_prompt.N.txt`, "your previous turn was interrupted; inspect `git status`/`git diff`, do not start over"),
+records the turn like any other implementation turn, and only then verifies. Re-entry requires a live engine, a
+known thread id and a worktree still at the base SHA, and happens at most twice per run (counted from
+`resume.reentered` events); otherwise a `resume` event states why and verification runs on the worktree as is.
+Nothing the re-entered turn claims is trusted: verification decides, exactly as for a first turn.
+
 ## Incremental indexing
 
 Currently the repository is re-indexed in full at each new HEAD (fast for fixture-sized repos). Diff-based

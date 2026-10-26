@@ -6,7 +6,7 @@ import { loadIndexedRepo, type IndexedRepo } from "../knowledge/repo.ts";
 import { buildEvidencePack, type EvidencePack } from "../knowledge/retrieval.ts";
 import { changeContractJsonSchema, type ChangeContract } from "../contracts/schemas.ts";
 import { compileContract, type CompiledContract } from "../contracts/compiler.ts";
-import { buildImplementationPrompt, buildPlanningPrompt, buildRepairPrompt } from "../contracts/prompts.ts";
+import { buildContinuePrompt, buildImplementationPrompt, buildPlanningPrompt, buildRepairPrompt } from "../contracts/prompts.ts";
 import { codexAuthStatus, LiveCodexEngine, type CodingEngine, type ImplementResult, type Usage } from "../codex/adapter.ts";
 import { OfflineEngine, type OfflineOptions } from "../codex/offline.ts";
 import { verifyWorktree } from "../verification/runner.ts";
@@ -248,16 +248,13 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       const prompt = buildImplementationPrompt(contract, pack, task.task);
       rs.writeText("implementationPrompt", prompt);
       log(`implementing in ${worktree} with ${engine.name}…`);
-      const result = await engine.implement({ cwd: worktree, prompt, onEvent: (e) => rs.appendEventLine({ phase: "implement", ...e }) });
+      const result = await engine.implement({ cwd: worktree, prompt, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: "implement", ...e }) });
       recordImplementation(rs, result, "implement", 0);
       rs.transition("VERIFYING", { attempt: 1, reported_changes: result.reportedChanges.length });
-    } else if (rs.state === "IMPLEMENTING") {
-      // Resumed mid-implementation: do not trust partial work blindly; verification decides.
-      rs.event("resume", { note: "run was interrupted during implementation; proceeding to verification of the current worktree" });
-      rs.transition("VERIFYING", { attempt: previousAttempts(rs) + 1, resumed: true });
-    } else if (rs.state === "REPAIRING") {
-      rs.event("resume", { note: "run was interrupted during repair; re-verifying the current worktree" });
-      rs.transition("VERIFYING", { attempt: previousAttempts(rs) + 1, resumed: true });
+    } else if (rs.state === "IMPLEMENTING" || rs.state === "REPAIRING") {
+      // Resumed mid-turn: re-enter the recorded Codex thread when that is safe, otherwise let verification
+      // judge the partial work. Either way nothing in the worktree is trusted without verification.
+      await reenterIfPossible(store, rs, engine, contract, rs.state === "IMPLEMENTING" ? "implement" : "repair", budget, log);
     }
 
     // ---- verification + bounded repair
@@ -312,7 +309,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       const prompt = buildRepairPrompt(contract, verification.findings, repairsDone + 1);
       rs.writeText(`repair_prompt.attempt-${repairsDone + 1}.txt`, prompt);
       log(`repair attempt ${repairsDone + 1} with ${engine.name}…`);
-      const result = await engine.implement({ cwd: worktree, prompt, threadId: rs.row.codex_thread_id, onEvent: (e) => rs.appendEventLine({ phase: `repair-${repairsDone + 1}`, ...e }) });
+      const result = await engine.implement({ cwd: worktree, prompt, threadId: rs.row.codex_thread_id, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: `repair-${repairsDone + 1}`, ...e }) });
       recordImplementation(rs, result, "repair", repairsDone + 1);
       rs.transition("VERIFYING", { attempt: attempt + 1 });
     }
@@ -329,6 +326,60 @@ function previousAttempts(rs: RunStore): number {
   const dir = path.join(rs.runDir, "verification");
   if (!fs.existsSync(dir)) return 0;
   return fs.readdirSync(dir).filter((d) => d.startsWith("attempt-")).length;
+}
+
+/** Maximum number of times `resume` re-enters an interrupted Codex turn for one run. */
+export const MAX_RESUME_REENTRIES = 2;
+
+/** Persist the implementer thread id the moment the SDK reports it, so an interrupted turn can be re-entered. */
+function threadStarted(rs: RunStore): (threadId: string) => void {
+  return (id) => {
+    rs.update({ codex_thread_id: id });
+    rs.event("implementer.thread_started", { id });
+  };
+}
+
+/**
+ * Resume from IMPLEMENTING / REPAIRING: re-enter the recorded Codex thread with a continuation prompt when the
+ * engine is live, a thread id is known, the worktree still sits at the base sha and the re-entry budget
+ * (`MAX_RESUME_REENTRIES`, counted from `resume.reentered` events) is not exhausted. Otherwise verify as is.
+ * Both branches end in VERIFYING; verification alone decides what the partial work is worth.
+ */
+async function reenterIfPossible(store: KnowledgeStore, rs: RunStore, engine: CodingEngine, contract: ChangeContract, phase: "implement" | "repair", budget: RunBudget, log: (line: string) => void): Promise<void> {
+  const reentries = store.events(rs.runId).filter((e) => e.event_type === "resume.reentered").length;
+  const worktree = rs.row.worktree_path;
+  const threadId = rs.row.codex_thread_id;
+  let reason: string | null = null;
+  if (engine.simulated) reason = "engine is simulated (offline mode); there is no Codex thread to re-enter";
+  else if (!threadId) reason = "no Codex thread id was recorded before the interruption";
+  else if (reentries >= MAX_RESUME_REENTRIES) reason = `re-entry limit reached (${reentries} of ${MAX_RESUME_REENTRIES} re-entries used)`;
+  else if (!worktree || !fs.existsSync(worktree)) reason = "worktree is missing";
+  else {
+    let wtHead: string | null = null;
+    try {
+      wtHead = headSha(worktree);
+    } catch {
+      /* unreadable worktree */
+    }
+    if (wtHead !== rs.row.base_sha) reason = `worktree HEAD ${wtHead?.slice(0, 10) ?? "unavailable"} is not the run base ${rs.row.base_sha.slice(0, 10)}`;
+  }
+  if (reason !== null || !worktree || !threadId) {
+    rs.event("resume", { phase, note: "verifying current worktree without re-entering a thread", reason: reason ?? "unknown" });
+    log(`resume: ${reason ?? "unknown"}; verifying the current worktree as is`);
+    rs.transition("VERIFYING", { attempt: previousAttempts(rs) + 1, resumed: true });
+    return;
+  }
+  budget.check("resume re-entry");
+  const attempt = reentries + 1;
+  const lastFindings = rs.readJson<VerificationResult>("verification")?.findings ?? [];
+  const prompt = buildContinuePrompt(contract, phase, lastFindings);
+  rs.writeText(`continue_prompt.${attempt}.txt`, prompt);
+  // Recorded before the turn starts so a second interruption still counts against the budget.
+  rs.event("resume.reentered", { phase, thread_id: threadId, attempt });
+  log(`resume: re-entering Codex thread ${threadId} to continue the interrupted ${phase} (re-entry ${attempt} of ${MAX_RESUME_REENTRIES})…`);
+  const result = await engine.implement({ cwd: worktree, prompt, threadId, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: `resume-${phase}-${attempt}`, ...e }) });
+  recordImplementation(rs, result, phase, previousAttempts(rs));
+  rs.transition("VERIFYING", { attempt: previousAttempts(rs) + 1, resumed: true, reentered: attempt });
 }
 
 function recordImplementation(rs: RunStore, result: ImplementResult, phase: "implement" | "repair", attempt: number): void {

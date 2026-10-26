@@ -29,6 +29,8 @@ export interface PlanRequest {
   outputSchema: Record<string, unknown>;
   signal?: AbortSignal;
   onEvent?: (e: EngineEvent) => void;
+  /** Called as soon as the SDK reports the thread id (`thread.started`), before the turn completes. */
+  onThreadStarted?: (threadId: string) => void;
 }
 export interface PlanResult {
   text: string;
@@ -42,10 +44,15 @@ export interface PlanResult {
 export interface ImplementRequest {
   cwd: string;
   prompt: string;
-  /** Resume an existing implementer thread (repairs). */
+  /** Resume an existing implementer thread (repairs, or re-entry after an interruption). */
   threadId?: string | null;
   signal?: AbortSignal;
   onEvent?: (e: EngineEvent) => void;
+  /**
+   * Called as soon as the SDK reports the thread id (`thread.started`), before the turn completes,
+   * so an interrupted turn can be re-entered later.
+   */
+  onThreadStarted?: (threadId: string) => void;
 }
 export interface ImplementResult {
   finalResponse: string;
@@ -143,7 +150,8 @@ export class LiveCodexEngine implements CodingEngine {
       const items: unknown[] = [];
       for await (const ev of streamed.events) {
         req.onEvent?.({ timestamp: new Date().toISOString(), type: ev.type, payload: ev });
-        if (ev.type === "item.completed") {
+        if (ev.type === "thread.started") req.onThreadStarted?.(ev.thread_id);
+        else if (ev.type === "item.completed") {
           items.push(ev.item);
           if (ev.item.type === "agent_message") finalText = ev.item.text;
         } else if (ev.type === "turn.completed") {
@@ -174,7 +182,8 @@ export class LiveCodexEngine implements CodingEngine {
       const reportedChanges = new Set<string>();
       for await (const ev of streamed.events) {
         req.onEvent?.({ timestamp: new Date().toISOString(), type: ev.type, payload: ev });
-        if (ev.type === "item.completed") {
+        if (ev.type === "thread.started") req.onThreadStarted?.(ev.thread_id);
+        else if (ev.type === "item.completed") {
           items.push(ev.item);
           if (ev.item.type === "agent_message") finalResponse = ev.item.text;
           if (ev.item.type === "file_change") for (const c of ev.item.changes) reportedChanges.add(c.path);
