@@ -13,7 +13,7 @@ Last updated: 2026-10-26 (`intentos onboard` and `intentos suggest` landed after
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 17 files, **103 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean. Suggestion-ranking benchmark on the fixture (`tests/integration/suggest_rank.test.ts`): precision@10 = 0.90, no unit-test/preamble noise in the top 10, mean score of policy material 0.64 vs 0.46 for noise.
+Tests: `npm test` → 18 files, **107 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean. Suggestion-ranking benchmark on the fixture (`tests/integration/suggest_rank.test.ts`): precision@10 = 0.90, no unit-test/preamble noise in the top 10, mean score of policy material 0.64 vs 0.46 for noise.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -247,6 +247,34 @@ file-based `supersedes` is dropped with a warning); duplicate approvals, unknown
 the two entitlement candidates fold into INV-003 with two hidden tests and one entry; Finish reports 5 approved, 1
 folded, 1 rejected, 1 skipped, writes feedback with the accepted terms, re-indexes with zero unresolved sources, and
 the server stops. The page is a single file with no external resources (works offline, light and dark).
+
+## MCP server and review widget (2026-10-27)
+`intentos mcp` runs IntentOS as an MCP server on stdio (SDK v2 `@modelcontextprotocol/server`, apps extension
+`@modelcontextprotocol/ext-apps`). Model-visible tools: `explain` (evidence pack, text + structured), `policy`
+(approved invariants/rules/decisions with sources), `review_start` (loads the last `suggest` run; `_meta.ui.resourceUri`
+= `ui://intentos/review.html`). App-only tools (`_meta.ui.visibility: ["app"]`): `review_session`, `review_state`,
+`review_decide`, `review_finish`, all requiring the session's widget token that only `review_session` returns, so a
+model-initiated approval is refused even by a host that ignores visibility. The widget is the review page in `widget`
+mode: the apps browser bundle (`app-with-deps.js`, ~410 KB) is inlined as a classic script exposing
+`globalThis.__mcpApps`; the page connects to the host over `PostMessageTransport` and routes its three API calls to
+the app-only tools. A client without the UI extension gets the token-protected local URL from `review_start`
+instead. `.intentos/mcp.log` records the client's declared capabilities. `codex mcp add intentos -- node
+~/intentos/bin/intentos.js mcp` registers it (printed by `intentos mcp --print-codex-config`).
+Observed: `tests/integration/mcp.test.ts` (4): tool visibility and the resource (bundle + page compile as classic
+scripts); UI-capable client → `ui: "widget"`, no token in the model-visible result, approvals without or with a wrong
+token refused and the policy untouched, approval via the session token lands INV-001 with its hidden test, finish;
+client without the extension → `ui: "link"` with a working token-protected page; CLI registration command. The real
+stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
+- Headless Codex (`codex exec --approve-for-me`, Codex CLI 0.154.0, model gpt-5.6-terra) against the real stdio server
+  on demandlib: the client identified as `codex-mcp-client` and declared `elicitation: {form, url}` plus an
+  experimental `codex/auth-change` capability — **no MCP Apps UI extension**, so Codex does not render the widget today.
+  It listed exactly `explain`, `policy`, `review_start` (the app-only tools were not offered to the model), `explain`
+  returned the evidence pack (15 symbols; first three `BDEW25Profile`, `ElecSlp.create_bdew_load_profiles`,
+  `IndustrialLoadProfile`), `review_start` took the fallback path and returned `ui: "link"` with the token-protected
+  URL, and when asked to approve a candidate itself the model reported that `review_decide` was not visible. A first
+  run without `--approve-for-me` had every tool call blocked by `codex exec`'s approval policy before it reached the
+  server. Next step suggested by what Codex declared: drive approvals through MCP elicitation (`form`), so the
+  reviewer answers in Codex's own prompt and the model never composes the decision.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

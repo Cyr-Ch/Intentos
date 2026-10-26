@@ -127,6 +127,19 @@ with a header stating its origin and any TODOs, and a candidate without a Markdo
 `docs/intentos-policy.md` of the repository (created on first use) so the policy can bind it by heading. Rejections
 and skips are persisted in `review-decisions.json`; Finish records feedback, re-indexes and stops the server.
 
+## MCP server (`intentos mcp`)
+
+`src/mcp.ts` builds an `McpServer` (SDK v2) with the MCP Apps extension. Model-visible tools: `explain` (evidence
+pack), `policy` (approved rules with sources), `review_start` (loads the last `suggest` run into a review session;
+`_meta.ui.resourceUri` points at `ui://intentos/review.html`). App-only tools (`_meta.ui.visibility: ["app"]`):
+`review_session`, `review_state`, `review_decide`, `review_finish`; they also require the session's widget token, which
+only `review_session` returns, so a model-initiated approval is refused even by a host that ignores visibility. The
+widget resource is the same review page in `widget` mode: the apps browser bundle is inlined as a classic script that
+leaves its exports on `globalThis.__mcpApps`, the page connects to the host over `PostMessageTransport` and routes
+its three API calls to the app-only tools. When the client does not declare the UI extension (`getUiCapability`),
+`review_start` starts the local HTTP review server and returns its token-protected URL. Client capabilities and tool
+calls are logged to `.intentos/mcp.log`.
+
 ## Architectural surprise (review signals)
 
 `architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists

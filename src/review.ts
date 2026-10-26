@@ -439,7 +439,24 @@ export function defaultReviewer(): string {
   return os.userInfo().username;
 }
 
-function reviewPage(token: string): string {
+/** The MCP Apps browser bundle as a classic script that leaves its exports on `globalThis.__mcpApps` (no module imports in a sandboxed view). */
+export function mcpAppsBundleScript(): string {
+  const file = path.join(PROJECT_ROOT, "node_modules", "@modelcontextprotocol", "ext-apps", "dist", "src", "app-with-deps.js");
+  const src = fs.readFileSync(file, "utf8");
+  const m = src.match(/export\s*\{([^}]*)\}\s*;?\s*$/);
+  if (!m) throw new Error(`cannot find the export clause of ${file}`);
+  const pairs = m[1]!.split(",").map((e) => e.trim()).filter(Boolean).map((e) => {
+    const parts = e.split(/\s+as\s+/);
+    return parts.length === 2 ? `${JSON.stringify(parts[1]!.trim())}:${parts[0]!.trim()}` : `${JSON.stringify(e)}:${e}`;
+  });
+  return `${src.slice(0, m.index)}\nglobalThis.__mcpApps={${pairs.join(",")}};\n`;
+}
+
+export type ReviewPageMode = "http" | "widget";
+
+/** The review page. `http`: talks to the local server with the token; `widget`: runs inside an MCP Apps host and calls the app-only tools. */
+export function reviewPage(token: string | null, mode: ReviewPageMode = "http"): string {
+  const bundle = mode === "widget" ? `<script>${mcpAppsBundleScript()}</script>` : "";
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>IntentOS policy review</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -480,9 +497,25 @@ function reviewPage(token: string): string {
 <body>
 <header><h1>IntentOS policy review</h1><div class="meta" id="meta"></div><div class="progress"><i id="bar"></i></div><div class="meta" id="count"></div></header>
 <main><aside id="list"></aside><section id="card" class="card"><div class="empty">Loading…</div></section></main>
+${bundle}
 <script>
+const MODE = ${JSON.stringify(mode)};
 const TOKEN = ${JSON.stringify(token)};
-const api = (p, opts={}) => fetch(p, { ...opts, headers: { 'x-review-token': TOKEN, 'content-type': 'application/json', ...(opts.headers||{}) } }).then(async r => { const j = await r.json().catch(()=>({})); if (!r.ok) throw new Error(j.error || r.statusText); return j; });
+let app = null, WIDGET_TOKEN = null;
+const httpApi = (p, opts={}) => fetch(p, { ...opts, headers: { 'x-review-token': TOKEN, 'content-type': 'application/json', ...(opts.headers||{}) } }).then(async r => { const j = await r.json().catch(()=>({})); if (!r.ok) throw new Error(j.error || r.statusText); return j; });
+async function callTool(name, args) {
+  const r = await app.callServerTool({ name, arguments: args });
+  if (r.isError) throw new Error((r.content || []).map(c => c.text || '').join(' ') || ('tool ' + name + ' failed'));
+  return r.structuredContent || {};
+}
+const api = async (p, opts={}) => {
+  if (MODE === 'http') return httpApi(p, opts);
+  const body = opts.body ? JSON.parse(opts.body) : {};
+  if (p === '/api/state') return callTool('review_state', { token: WIDGET_TOKEN });
+  if (p === '/api/decide') return callTool('review_decide', { token: WIDGET_TOKEN, ...body });
+  if (p === '/api/finish') return callTool('review_finish', { token: WIDGET_TOKEN });
+  throw new Error('unknown api ' + p);
+};
 let state = null, current = null, lastResult = null;
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const decisionOf = id => (state.decisions||[]).find(d => d.id === id);
@@ -544,6 +577,16 @@ function finishedHtml(f) { return '<div class="done"><h2>Review finished</h2><ul
   + (f.index ? '<li>repository re-indexed (' + esc(f.index.mode) + ', policy ' + esc(f.index.policy_id) + ')' + (f.index.unresolved_sources.length ? '<span class="warnline"> — unresolved policy sources: ' + esc(f.index.unresolved_sources.map(u => u.owner + ' ' + u.path + (u.heading?'#'+u.heading:'')).join('; ')) + '</span>' : '') + '</li>' : (f.index_error ? '<li class="warnline">index: ' + esc(f.index_error) + '</li>' : ''))
   + '</ul><p class="row">Commit the policy, the hidden tests and any new section in the repository. You can close this tab; the local server has stopped.</p></div>'; }
 document.addEventListener('keydown', e => { if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return; const k = e.key.toLowerCase(); if (k==='a') act('accept'); else if (k==='r') act('reject'); else if (k==='s') act('skip'); });
-load().catch(e => { document.getElementById('card').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
+async function boot() {
+  if (MODE === 'widget') {
+    // Inside an MCP Apps host: connect to the host over postMessage, then fetch the widget token from an app-only tool.
+    app = new globalThis.__mcpApps.App({ name: 'intentos-review', version: '0.1.0' });
+    await app.connect(new globalThis.__mcpApps.PostMessageTransport(window.parent, window.parent));
+    const session = await callTool('review_session', {});
+    WIDGET_TOKEN = session.token;
+  }
+  await load();
+}
+boot().catch(e => { document.getElementById('card').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
 </script></body></html>`;
 }

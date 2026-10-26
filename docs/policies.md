@@ -194,8 +194,10 @@ API layer); with empty path lists the third detector is simply inactive.
    candidates one by one: approving writes the block into the policy with a real id and your name, writes the hidden
    test file, and adds a section to `docs/intentos-policy.md` in the repository when nothing else can be cited;
    rejecting records why. Finishing derives accept and reject terms from your decisions and the next run ranks with
-   them. Nothing in the suggestion files has authority: the review page is where a person turns a candidate into
-   policy, and the policy file is still the only thing that binds.
+   them. The same review runs inside an MCP host as a widget (`intentos mcp`, tool `review_start`); the approval
+   tools are hidden from the model and need a token only the widget receives. Nothing in the suggestion files has
+   authority: the review page is where a person turns a candidate into policy, and the policy file is still the only
+   thing that binds.
 3. Decide what must never change and write it down as Markdown in the repository, one heading per rule (ADRs,
    `docs/business-policy.md`). The indexer needs headings to bind. Accepted ADR drafts count: change their status.
 4. Turn each rule into an invariant or an architecture rule with `sources` pointing at those headings and

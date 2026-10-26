@@ -12,6 +12,7 @@ import { registerRunCommands } from "./cli_run.ts";
 import { onboardRepository } from "./onboard.ts";
 import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./suggest.ts";
 import { defaultReviewer, loadReviewState, startReviewServer } from "./review.ts";
+import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 
 function printSuggestions(result: SuggestResult): void {
@@ -233,6 +234,30 @@ program
       if (result.index) console.log(`  re-indexed (${result.index.mode}, policy ${result.index.policy_id})${result.index.unresolved_sources.length ? `; unresolved policy sources: ${result.index.unresolved_sources.map((u) => `${u.owner} ${u.path}${u.heading ? `#${u.heading}` : ""}`).join("; ")}` : ""}`);
       if (result.index_error) console.log(`  index failed: ${result.index_error}`);
       console.log("  commit the policy, the hidden tests and any new section in the repository");
+    } catch (err) {
+      fail((err as Error).message);
+    } finally {
+      store.close();
+    }
+  });
+
+program
+  .command("mcp")
+  .description("Run IntentOS as an MCP server on stdio (tools: explain, policy, review_start; the review renders as an MCP Apps widget in hosts that support it)")
+  .option("--log <file>", "log file for client info and tool calls (default .intentos/mcp.log)")
+  .option("--print-codex-config", "print the command that registers this server with Codex and exit", false)
+  .action(async (opts: { log?: string; printCodexConfig: boolean }) => {
+    if (opts.printCodexConfig) {
+      console.log(codexRegistrationCommand(PROJECT_ROOT));
+      return;
+    }
+    const store = openStore();
+    try {
+      await serveStdio({ store, logFile: opts.log ?? defaultMcpLogFile(), log: (line) => console.error(`[intentos mcp] ${line}`) });
+      await new Promise<void>((resolve) => {
+        process.stdin.on("end", resolve);
+        process.stdin.on("close", resolve);
+      });
     } catch (err) {
       fail((err as Error).message);
     } finally {

@@ -4,8 +4,12 @@
   "description": "IntentOS — engineering-intent intelligence and verification layer for Codex coding agents",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.6" },
-  "bin": { "intentos": "./bin/intentos.js" },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "bin": {
+    "intentos": "./bin/intentos.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -20,6 +24,11 @@
     "demo": "bash scripts/demo.sh"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@modelcontextprotocol/core": "^2.4.0",
+    "@modelcontextprotocol/ext-apps": "^2.0.3",
+    "@modelcontextprotocol/node": "^2.1.2",
+    "@modelcontextprotocol/server": "^2.4.0",
     "@openai/codex-sdk": "^0.164.0",
     "commander": "^14.0.0",
     "yaml": "^2.8.0",
