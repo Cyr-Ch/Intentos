@@ -94,6 +94,12 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 3. Node strip-only TS mode forbids parameter properties → avoided (bin runs sources directly, no build step required).
 4. Verifier initially reported `passed` when pytest failed to start (no JUnit cases) → fixed with explicit non-pass findings, zero-tests-collected findings and a consistency guard; regression test added.
 
+## External-repository validation (2026-10-26)
+Indexed and queried `encode/httpx` with the fallback policy; three defects found and fixed (duplicate node ids,
+catch-all allowed paths from the offline planner, weak lexical ranking). Retrieval now uses corpus IDF weighting and
+scores constructor signatures. See docs/evaluation.md. Benchmark note: live runs executed while the laptop entered
+sleep states show inflated wall times and spurious Codex timeouts; such rows are excluded from any comparison.
+
 ## Next steps
 1. Diff-based incremental re-index and assertion re-validation across revisions.
 2. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.
