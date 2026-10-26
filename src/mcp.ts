@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
+import { McpServer, acceptedContent, inputRequired, inputResponse, type CallToolResult, type ElicitRequestFormParams, type InputRequiredResult, type PrimitiveSchemaDefinition, type ServerContext } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
@@ -10,7 +10,8 @@ import { loadIndexedRepo } from "./knowledge/repo.ts";
 import { buildEvidencePack } from "./knowledge/retrieval.ts";
 import { fallbackPolicy, policyForRepo } from "./knowledge/policy.ts";
 import { renderEvidencePack } from "./reports/explain.ts";
-import { decide, defaultReviewer, finishReview, loadReviewState, publicState, reviewPage, startReviewServer, type ReviewServer, type ReviewState } from "./review.ts";
+import { decide, defaultReviewer, finishReview, loadReviewState, publicState, reviewPage, startReviewServer, type Decision, type ReviewServer, type ReviewState } from "./review.ts";
+import type { Candidate } from "./suggest.ts";
 import { nowIso } from "./util/ids.ts";
 import crypto from "node:crypto";
 
@@ -23,6 +24,10 @@ import crypto from "node:crypto";
  * so hosts do not offer them to the model, and they additionally require a widget token that only the view receives.
  * A model-initiated approval is refused twice over. Hosts without the UI extension get the token-protected local URL
  * instead, and the approval still happens in a browser the model does not control.
+ *
+ * Hosts that support elicitation (Codex does) get a third path: `review_next` asks the host to show the reviewer a
+ * form for one candidate (approve / reject / skip, editable statement, fold related tests). The answer travels
+ * host → server; the model only sees the outcome. `review_close` confirms finishing the same way.
  */
 
 export const REVIEW_RESOURCE_URI = "ui://intentos/review.html";
@@ -70,8 +75,15 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     return session;
   };
 
-  // What the host declared on connect (UI extension or not) is the first thing a test run needs to know.
-  server.server.oninitialized = () => log(`initialized: ${describeClient()} clientInfo=${JSON.stringify(server.server.getClientVersion?.() ?? null)}`);
+  // What the host declared on connect (UI extension, elicitation, protocol era) is the first thing a test run needs to know.
+  server.server.oninitialized = () => log(`initialized: ${describeClient()} protocol=${server.server.getNegotiatedProtocolVersion?.() ?? "?"} clientInfo=${JSON.stringify(server.server.getClientVersion?.() ?? null)}`);
+  const elicitationModes = () => {
+    const caps = server.server.getClientCapabilities() as { elicitation?: { form?: unknown; url?: unknown } } | undefined;
+    const e = caps?.elicitation;
+    return { form: !!e && (e.form !== undefined || Object.keys(e).length === 0), url: !!e?.url };
+  };
+  /** 2026-07-28 and later use the multi-round-trip `input_required` result; earlier hosts take the push-style request. */
+  const modernEra = () => (server.server.getNegotiatedProtocolVersion?.() ?? "") >= "2026-07-28";
 
   registerAppResource(server, "IntentOS policy review", REVIEW_RESOURCE_URI, { description: "Approve or reject mined policy candidates one by one; approvals land in the policy file, the hidden tests and the repository's policy notes." }, async () => ({
     contents: [{ uri: REVIEW_RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: reviewPage(null, "widget") }],
@@ -144,6 +156,140 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       } catch (e) {
         return fail((e as Error).message);
       }
+    },
+  );
+
+  // ---- Elicitation path: the host shows the reviewer a form; the model only sees the outcome.
+  const DECISION_SCHEMA = z.object({ decision: z.enum(["approve", "reject", "skip"]), statement: z.string().optional(), reason: z.string().optional(), fold_related: z.boolean().optional() });
+  const CONFIRM_SCHEMA = z.object({ finish: z.boolean() });
+
+  const nextPending = (state: ReviewState, id?: string): Candidate | null => {
+    if (id) return state.candidates.find((c) => c.id === id) ?? null;
+    return state.candidates.find((c) => !state.decisions.some((d) => d.id === c.id)) ?? null;
+  };
+  const relatedFoldable = (state: ReviewState, c: Candidate): Candidate[] => (c.cluster_members ?? []).map((m) => state.candidates.find((x) => x.id === m)).filter((m): m is Candidate => !!m && m.kind === "invariant" && c.kind === "invariant" && !!m.suggested_hidden_test && !state.decisions.some((d) => d.id === m.id));
+
+  const decisionForm = (state: ReviewState, c: Candidate) => {
+    const proposed = (c.classification?.rule ?? c.statement).slice(0, 400);
+    const related = relatedFoldable(state, c);
+    const pending = state.candidates.filter((x) => !state.decisions.some((d) => d.id === x.id)).length;
+    const lines = [
+      `IntentOS policy review — ${c.id} (${pending} pending) · ${c.kind.replace("_", " ")} · score ${c.score.toFixed(2)} (${c.relevance})`,
+      `${c.title}`,
+      c.classification ? `classifier: ${c.classification.category.replace("_", " ")}, ${c.classification.keep ? "keep" : "set aside"} — ${c.classification.reason}` : "",
+      "Evidence:",
+      ...c.evidence.slice(0, 4).map((e) => `- ${e.type} ${e.ref}: ${e.excerpt}`.slice(0, 200)),
+      c.applies_to_paths?.length ? `applies to: ${c.applies_to_paths.join(", ")}` : "",
+      c.sources?.length ? `source: ${c.sources.map((s) => `${s.path}${s.heading ? `#${s.heading}` : ""}`).join(", ")}` : `no document source: approving adds a section to ${state.doc_file}`,
+      c.suggested_hidden_test ? `hidden test: lifted from ${c.suggested_hidden_test.from}${c.suggested_hidden_test.standalone ? "" : " (needs attention after approval)"}` : c.kind === "invariant" ? "no hidden test: the verifier cannot execute this invariant" : "",
+      related.length ? `related candidates with tests that can be folded into this rule: ${related.map((r) => `${r.id} ${r.title}`).join("; ")}` : "",
+      "",
+      "Approving writes the policy entry with your name, the hidden test and the policy-notes section. Edit the statement if needed.",
+    ].filter(Boolean);
+    const properties: Record<string, PrimitiveSchemaDefinition> = {
+      decision: { type: "string", title: "Decision", oneOf: [{ const: "approve", title: "Approve: add to the policy" }, { const: "reject", title: "Reject" }, { const: "skip", title: "Skip for now" }], default: "skip" },
+      statement: { type: "string", title: "Rule statement", description: "One sentence that must hold; edit before approving", default: proposed, maxLength: 400 },
+      reason: { type: "string", title: "Reason (for rejections, optional)", maxLength: 300 },
+    };
+    if (related.length) properties.fold_related = { type: "boolean", title: `Fold the ${related.length} related candidate(s) into this rule as extra hidden tests`, default: true };
+    const form: Omit<ElicitRequestFormParams, "mode"> = { message: lines.join("\n"), requestedSchema: { type: "object", properties, required: ["decision"] } };
+    return form;
+  };
+
+  const applyDecision = (state: ReviewState, c: Candidate, content: z.infer<typeof DECISION_SCHEMA>): Decision => {
+    const merge_ids = content.fold_related ? relatedFoldable(state, c).map((r) => r.id) : [];
+    return decide(state, { id: c.id, action: content.decision === "approve" ? "accept" : content.decision, statement: content.statement, reason: content.reason, merge_ids });
+  };
+
+  const decisionText = (state: ReviewState, d: Decision): string => {
+    const pending = state.candidates.filter((x) => !state.decisions.some((dd) => dd.id === x.id)).length;
+    const next = nextPending(state);
+    const tail = next ? ` ${pending} pending; next: ${next.id} ${next.title}. Call review_next again to continue.` : " No candidates pending; call review_close to finish (feedback + re-index).";
+    if (d.action === "accept") return `${d.id} approved as ${d.result!.assigned_id}${d.merged_ids?.length ? ` (folded ${d.merged_ids.join(", ")})` : ""}; policy ${d.result!.policy_file}${d.result!.hidden_test ? `; hidden test ${d.result!.hidden_test}` : ""}${d.result!.warnings.length ? `; note: ${d.result!.warnings.join(" | ")}` : ""}.${tail}`;
+    return `${d.id} ${d.action === "reject" ? `rejected${d.reason ? ` (${d.reason})` : ""}` : "skipped"}.${tail}`;
+  };
+
+  server.registerTool(
+    "review_next",
+    {
+      description: "Present the next pending policy candidate (or a given id) to the reviewer through the host's own prompt and apply their decision (approve / reject / skip, editable statement). The decision comes from the reviewer via elicitation, never from the model; the result reports what they chose. Call review_start first; call again for the next candidate.",
+      inputSchema: z.object({ id: z.string().optional().describe("candidate id; default: next pending") }),
+    },
+    async ({ id }, ctx: ServerContext): Promise<CallToolResult | InputRequiredResult> => {
+      if (!session) return fail("no review in progress; call review_start first");
+      const state = session.state;
+      if (state.finished) return fail("this review is finished; call review_start to begin a new one");
+      const c = nextPending(state, id);
+      if (!c) return text("No candidates pending; call review_close to finish the review.", { pending: 0 });
+      if (state.decisions.some((d) => d.id === c.id && (d.action === "accept" || d.action === "merge"))) return fail(`${c.id} was already decided`);
+      const modes = elicitationModes();
+      if (!modes.form) return fail(`this host does not support form elicitation; ask the reviewer to open the review page instead (${session.http?.url ?? "call review_start for the link"})`);
+      const form = decisionForm(state, c);
+      // Modern hosts: multi-round-trip. A retry arrives with the reviewer's answer under `decision`.
+      if (modernEra()) {
+        const responses = ctx.mcpReq.inputResponses;
+        if (!responses) return inputRequired({ inputRequests: { decision: inputRequired.elicit(form) } });
+        const content = acceptedContent(responses, "decision", DECISION_SCHEMA);
+        if (!content) {
+          const view = inputResponse(responses, "decision");
+          const what = view.kind === "elicit" ? view.action : "gave no usable answer";
+          log(`review_next ${c.id}: reviewer ${what}`);
+          return text(`${c.id} left undecided (reviewer ${what}). Call review_next again to retry or pass another id.`, { pending: true });
+        }
+        try {
+          const d = applyDecision(state, c, content);
+          log(`review_next ${c.id} ${d.action}${d.result ? ` -> ${d.result.assigned_id}` : ""} (elicitation, modern)`);
+          return text(decisionText(state, d), { decision: d });
+        } catch (e) {
+          return fail((e as Error).message);
+        }
+      }
+      // Legacy hosts: push-style request; the handler waits for the reviewer.
+      try {
+        const result = await ctx.mcpReq.elicitInput({ mode: "form", ...form });
+        if (result.action !== "accept" || !result.content) {
+          log(`review_next ${c.id}: reviewer ${result.action}`);
+          return text(`${c.id} left undecided (reviewer ${result.action}). Call review_next again to retry or pass another id.`, { pending: true });
+        }
+        const parsed = DECISION_SCHEMA.safeParse(result.content);
+        if (!parsed.success) return fail(`the reviewer's answer did not match the form: ${parsed.error.message}`);
+        const d = applyDecision(state, c, parsed.data);
+        log(`review_next ${c.id} ${d.action}${d.result ? ` -> ${d.result.assigned_id}` : ""} (elicitation, legacy)`);
+        return text(decisionText(state, d), { decision: d });
+      } catch (e) {
+        return fail(`elicitation failed: ${(e as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "review_close",
+    { description: "Ask the reviewer (through the host's own prompt) to confirm finishing the policy review; on confirmation records feedback for the next suggest run and re-indexes. The confirmation comes from the reviewer, not the model.", inputSchema: z.object({}) },
+    async (_args, ctx: ServerContext): Promise<CallToolResult | InputRequiredResult> => {
+      if (!session) return fail("no review in progress");
+      const state = session.state;
+      if (state.finished) return text("already finished", { finished: state.finished });
+      const pending = state.candidates.filter((x) => !state.decisions.some((d) => d.id === x.id)).length;
+      const finishField: PrimitiveSchemaDefinition = { type: "boolean", title: "Finish now", default: true };
+      const form: Omit<ElicitRequestFormParams, "mode"> = { message: `Finish the IntentOS policy review for ${state.policy_id}? ${state.decisions.filter((d) => d.action === "accept").length} approved, ${state.decisions.filter((d) => d.action === "reject").length} rejected, ${pending} still pending. Finishing records feedback for the next run and re-indexes the repository.`, requestedSchema: { type: "object", properties: { finish: finishField }, required: ["finish"] } };
+      let confirmed: boolean | null = null;
+      if (modernEra()) {
+        const responses = ctx.mcpReq.inputResponses;
+        if (!responses) return inputRequired({ inputRequests: { confirm: inputRequired.elicit(form) } });
+        confirmed = acceptedContent(responses, "confirm", CONFIRM_SCHEMA)?.finish ?? null;
+      } else {
+        try {
+          const r = await ctx.mcpReq.elicitInput({ mode: "form", ...form });
+          confirmed = r.action === "accept" ? (CONFIRM_SCHEMA.safeParse(r.content).data?.finish ?? null) : null;
+        } catch (e) {
+          return fail(`elicitation failed: ${(e as Error).message}`);
+        }
+      }
+      if (!confirmed) return text("review left open (reviewer did not confirm)", { finished: null });
+      const finished = finishReview(state);
+      if (session.http) await session.http.close().catch(() => {});
+      log(`review_close: approved ${finished.accepted}, merged ${finished.merged}, rejected ${finished.rejected}`);
+      return text(`Review finished: approved ${finished.accepted}${finished.assigned.length ? ` (${finished.assigned.join("; ")})` : ""}, folded ${finished.merged}, rejected ${finished.rejected}, skipped ${finished.skipped}, pending ${finished.pending}.${finished.feedback ? ` Feedback recorded (${finished.feedback.accept_tokens.length} accept / ${finished.feedback.reject_tokens.length} reject terms).` : ""}${finished.index ? ` Re-indexed (${finished.index.mode}).` : ""} Commit the policy, the hidden tests and any new policy-notes section.`, { finished });
     },
   );
 

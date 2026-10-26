@@ -56,10 +56,10 @@ describe("intentos mcp", () => {
     try {
       const tools = (await client.listTools()).tools;
       const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-      expect(Object.keys(byName).sort()).toEqual(["explain", "policy", "review_decide", "review_finish", "review_session", "review_start", "review_state"]);
+      expect(Object.keys(byName).sort()).toEqual(["explain", "policy", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state"]);
       expect((byName.review_start!._meta as any).ui.resourceUri).toBe(REVIEW_RESOURCE_URI);
       for (const name of ["review_session", "review_state", "review_decide", "review_finish"]) expect((byName[name]!._meta as any).ui.visibility, name).toEqual(["app"]);
-      for (const name of ["explain", "policy", "review_start"]) expect((byName[name]!._meta as any)?.ui?.visibility, name).toBeUndefined();
+      for (const name of ["explain", "policy", "review_start", "review_next", "review_close"]) expect((byName[name]!._meta as any)?.ui?.visibility, name).toBeUndefined();
 
       const res = await client.readResource({ uri: REVIEW_RESOURCE_URI });
       const page = res.contents[0]!;
@@ -85,6 +85,7 @@ describe("intentos mcp", () => {
   });
 
   it("renders the review inline for a UI-capable host and refuses approvals that do not come from the widget", async () => {
+    fs.rmSync(path.join(env.home, "suggest-out", "review-decisions.json"), { force: true });
     const { client, built } = await connect(UI_CAPS);
     try {
       const start = await client.callTool({ name: "review_start", arguments: { repo: env.repo, out_dir: path.join(env.home, "suggest-out"), policy_file: policyFile, hidden_tests_root: path.join(env.home, "hidden"), by: "tester" } });
@@ -150,5 +151,93 @@ describe("intentos mcp", () => {
     const res = spawnSync("node", ["--disable-warning=ExperimentalWarning", path.join(PROJECT_ROOT, "bin", "intentos.js"), "mcp", "--print-codex-config"], { encoding: "utf8", env: { ...process.env, INTENTOS_HOME: env.home } });
     expect(res.status, res.stderr).toBe(0);
     expect(res.stdout.trim()).toBe(`codex mcp add intentos -- node --disable-warning=ExperimentalWarning ${path.join(PROJECT_ROOT, "bin", "intentos.js")} mcp`);
+  });
+});
+
+describe("intentos mcp — elicitation (the host asks the reviewer, not the model)", () => {
+  it("review_next presents one candidate through the host prompt and applies the reviewer's answer; review_close confirms", async () => {
+    fs.writeFileSync(policyFile, MINIMAL_POLICY);
+    fs.rmSync(path.join(env.home, "suggest-out", "review-decisions.json"), { force: true });
+    const built = createIntentosMcpServer({ store: env.store, logFile: path.join(env.home, "mcp-elicit.log") });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await built.server.connect(serverTransport);
+    const client = new Client({ name: "elicit-host", version: "1.0.0" }, { capabilities: { elicitation: { form: {} } } as never });
+    const prompts: Array<{ message: string; schema: Record<string, any> }> = [];
+    let answer: (schema: Record<string, any>) => { action: "accept" | "decline" | "cancel"; content?: Record<string, unknown> } = () => ({ action: "decline" });
+    client.setRequestHandler("elicitation/create", async (request) => {
+      const params = request.params as { message: string; requestedSchema: Record<string, any> };
+      prompts.push({ message: params.message, schema: params.requestedSchema });
+      return answer(params.requestedSchema) as never;
+    });
+    await client.connect(clientTransport);
+    try {
+      const tools = (await client.listTools()).tools.map((t) => t.name);
+      expect(tools).toEqual(expect.arrayContaining(["review_next", "review_close"]));
+      const noSession = await client.callTool({ name: "review_next", arguments: {} });
+      expect(noSession.isError).toBe(true);
+
+      await client.callTool({ name: "review_start", arguments: { repo: env.repo, out_dir: path.join(env.home, "suggest-out"), policy_file: policyFile, hidden_tests_root: path.join(env.home, "hidden-elicit"), by: "tester" } });
+      const first = structured(await client.callTool({ name: "review_state", arguments: { token: built.current()!.token } })).candidates[0];
+
+      // 1. the reviewer approves with an edited statement: the form carried the candidate's evidence and a decision enum
+      answer = (schema) => ({ action: "accept", content: { decision: "approve", statement: "Edited by the reviewer in the host prompt.", fold_related: !!schema.properties.fold_related } });
+      const approved = await client.callTool({ name: "review_next", arguments: {} });
+      expect(approved.isError, textOf(approved as never)).toBeFalsy();
+      expect(prompts).toHaveLength(1);
+      expect(prompts[0]!.message).toContain(first.title);
+      expect(prompts[0]!.message).toMatch(/Evidence:/);
+      expect(prompts[0]!.schema.properties.decision.oneOf.map((o: { const: string }) => o.const)).toEqual(["approve", "reject", "skip"]);
+      expect(prompts[0]!.schema.properties.decision.default).toBe("skip");
+      expect(prompts[0]!.schema.properties.statement.default).toBe(first.classification?.rule ?? first.statement);
+      expect(textOf(approved as never)).toMatch(new RegExp(`${first.id} approved as INV-001`));
+      const policy = loadPolicyFile(policyFile);
+      expect(policy.invariants.length).toBe(1);
+      expect(policy.invariants[0]).toMatchObject({ id: "INV-001", statement: "Edited by the reviewer in the host prompt.", approved_by: "tester" });
+      const folded = structured(approved).decision.merged_ids as string[];
+      expect(policy.invariants[0]!.verified_by.length).toBe(1 + folded.length);
+
+      // 2. the reviewer declines the prompt: nothing is recorded, the candidate stays pending
+      answer = () => ({ action: "decline" });
+      const declined = await client.callTool({ name: "review_next", arguments: {} });
+      expect(textOf(declined as never)).toMatch(/left undecided \(reviewer decline\)/);
+      const state = structured(await client.callTool({ name: "review_state", arguments: { token: built.current()!.token } }));
+      expect(state.decisions.filter((d: { action: string }) => d.action === "reject")).toHaveLength(0);
+
+      // 3. the reviewer rejects a specific candidate with a reason
+      const currency = state.candidates.find((c: { title: string }) => /currency mismatch raises/i.test(c.title));
+      answer = () => ({ action: "accept", content: { decision: "reject", reason: "value-object validation" } });
+      const rejected = await client.callTool({ name: "review_next", arguments: { id: currency.id } });
+      expect(textOf(rejected as never)).toMatch(new RegExp(`${currency.id} rejected \\(value-object validation\\)`));
+
+      // 4. closing asks for confirmation; declining leaves the review open, confirming finishes it
+      answer = () => ({ action: "accept", content: { finish: false } });
+      expect(textOf((await client.callTool({ name: "review_close", arguments: {} })) as never)).toMatch(/left open/);
+      answer = () => ({ action: "accept", content: { finish: true } });
+      const closed = await client.callTool({ name: "review_close", arguments: {} });
+      expect(textOf(closed as never)).toMatch(/Review finished: approved 1/);
+      expect(structured(closed).finished.rejected).toBe(1);
+      expect(fs.existsSync(path.join(env.home, "suggest-out", "feedback.json"))).toBe(true);
+      const log = fs.readFileSync(path.join(env.home, "mcp-elicit.log"), "utf8");
+      expect(log).toMatch(/initialized: .*protocol=\d{4}-\d{2}-\d{2}/);
+      expect(log).toMatch(/review_next CAND-\d+ accept -> INV-001 \(elicitation, (modern|legacy)\)/);
+    } finally {
+      await client.close();
+      await built.close();
+    }
+  });
+
+  it("without elicitation support review_next points at the review page instead", async () => {
+    fs.writeFileSync(policyFile, MINIMAL_POLICY);
+    fs.rmSync(path.join(env.home, "suggest-out", "review-decisions.json"), { force: true });
+    const { client, built } = await connect();
+    try {
+      await client.callTool({ name: "review_start", arguments: { repo: env.repo, out_dir: path.join(env.home, "suggest-out"), policy_file: policyFile, hidden_tests_root: path.join(env.home, "hidden-noelicit"), by: "tester" } });
+      const res = await client.callTool({ name: "review_next", arguments: {} });
+      expect(res.isError).toBe(true);
+      expect(textOf(res as never)).toMatch(/does not support form elicitation.*http:\/\/127\.0\.0\.1/);
+    } finally {
+      await client.close();
+      await built.close();
+    }
   });
 });

@@ -137,8 +137,13 @@ only `review_session` returns, so a model-initiated approval is refused even by 
 widget resource is the same review page in `widget` mode: the apps browser bundle is inlined as a classic script that
 leaves its exports on `globalThis.__mcpApps`, the page connects to the host over `PostMessageTransport` and routes
 its three API calls to the app-only tools. When the client does not declare the UI extension (`getUiCapability`),
-`review_start` starts the local HTTP review server and returns its token-protected URL. Client capabilities and tool
-calls are logged to `.intentos/mcp.log`.
+`review_start` starts the local HTTP review server and returns its token-protected URL. For hosts that declare
+elicitation, `review_next` builds a form (decision enum defaulting to skip, editable statement prefilled with the
+classifier's rewrite, optional reason, fold-related toggle) and obtains the reviewer's answer through the host: on
+2026-07-28-era clients by returning an `input_required` result that the client fulfils and retries
+(`acceptedContent` on the retry), on earlier clients through the push-style `elicitInput` request. `review_close`
+confirms finishing the same way. Client capabilities, negotiated protocol version and tool calls are logged to
+`.intentos/mcp.log`.
 
 ## Architectural surprise (review signals)
 

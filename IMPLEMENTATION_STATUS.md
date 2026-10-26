@@ -273,8 +273,20 @@ stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
   `IndustrialLoadProfile`), `review_start` took the fallback path and returned `ui: "link"` with the token-protected
   URL, and when asked to approve a candidate itself the model reported that `review_decide` was not visible. A first
   run without `--approve-for-me` had every tool call blocked by `codex exec`'s approval policy before it reached the
-  server. Next step suggested by what Codex declared: drive approvals through MCP elicitation (`form`), so the
-  reviewer answers in Codex's own prompt and the model never composes the decision.
+  server.
+- Elicitation path (same day): `review_next` presents one candidate through the host's own prompt (form: decision
+  enum defaulting to skip, editable statement prefilled with the classifier's rewrite, optional reason, fold-related
+  toggle) and applies the reviewer's answer; `review_close` confirms finishing. Both support the 2026-07-28
+  multi-round-trip (`input_required` + retry, `acceptedContent`) and the earlier push-style `elicitInput`, chosen by
+  the negotiated protocol version. Tests with an in-memory host that answers the prompts: approval with an edited
+  statement lands INV-001 (plus folded tests), a declined prompt records nothing, a rejection with reason is recorded,
+  `review_close` honours a declined confirmation and finishes on a confirmed one; a host without elicitation is
+  pointed at the review page.
+- Headless Codex (0.154.0) with the elicitation tools: Codex negotiated protocol 2025-06-18 (legacy era), so the
+  server used the push-style `elicitInput`; Codex relayed the form request and, having no human in `codex exec`,
+  answered `cancel`; the server reported "CAND-001 left undecided (reviewer cancel)" and recorded nothing. The round
+  trip server → Codex → reviewer → server is proven; in the interactive Codex app or CLI the same request is shown to
+  the reviewer as a form.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.
