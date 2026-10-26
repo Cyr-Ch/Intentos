@@ -27,6 +27,12 @@ function fail(message: string, code = 1): never {
   process.exit(code);
 }
 
+export function requireTask(task: string): string {
+  const t = task.trim();
+  if (t.length < 8) throw new Error("task description is empty or too short; describe the requested change in a sentence");
+  return t;
+}
+
 program
   .command("index")
   .description("Index a Git repository at HEAD: symbols, imports, tests, docs, trusted policy bindings -> .intentos/intentos.db")
@@ -67,7 +73,7 @@ program
     const store = openStore();
     try {
       const indexed = loadIndexedRepo(store, repo);
-      const pack = buildEvidencePack(store, indexed, task);
+      const pack = buildEvidencePack(store, indexed, requireTask(task));
       if (opts.out) fs.writeFileSync(opts.out, JSON.stringify(pack, null, 2));
       if (program.opts().json) console.log(JSON.stringify(pack, null, 2));
       else console.log(renderEvidencePack(pack));

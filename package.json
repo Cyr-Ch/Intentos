@@ -4,7 +4,7 @@
   "description": "IntentOS — engineering-intent intelligence and verification layer for Codex coding agents",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.5" },
+  "engines": { "node": ">=22.6" },
   "bin": { "intentos": "./bin/intentos.js" },
   "scripts": {
     "build": "tsc -p tsconfig.json",

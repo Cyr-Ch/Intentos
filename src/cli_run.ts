@@ -13,6 +13,7 @@ import type { ChangeContract } from "./contracts/schemas.ts";
 import type { EvidencePack } from "./knowledge/retrieval.ts";
 import { fallbackPolicy, policyForRepo } from "./knowledge/policy.ts";
 import { registerDecisionCommands } from "./cli_decisions.ts";
+import { requireTask } from "./cli.ts";
 
 export interface CliContext {
   openStore: () => KnowledgeStore;
@@ -67,7 +68,7 @@ export function registerRunCommands(program: Command, ctx: CliContext): void {
     const store = ctx.openStore();
     try {
       const indexed = loadIndexedRepo(store, repo);
-      const rs = createRun(store, indexed, task, { ...runOptions(o, log), planOnly: true });
+      const rs = createRun(store, indexed, requireTask(task), { ...runOptions(o, log), planOnly: true });
       const outcome = await executeRun(store, rs, { ...runOptions(o, log), planOnly: true });
       const contract = rs.readJson<ChangeContract>("contract");
       const validation = rs.readJson<Record<string, unknown>>("contractValidation");
@@ -97,7 +98,7 @@ export function registerRunCommands(program: Command, ctx: CliContext): void {
     const store = ctx.openStore();
     try {
       const indexed = loadIndexedRepo(store, repo);
-      const rs = createRun(store, indexed, task, runOptions(o, log));
+      const rs = createRun(store, indexed, requireTask(task), runOptions(o, log));
       log(`run ${rs.runId} created (${rs.runDir})`);
       const outcome = await executeRun(store, rs, runOptions(o, log));
       printOutcome(rs, outcome.state, outcome.reason, json());
