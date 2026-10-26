@@ -24,22 +24,34 @@ the checkout API), ARCH-001 (API layer imports `decimal`) and the hidden task te
 quote level). The "good" patch, which extends `DiscountPolicy.applicable_discounts`, passes all 20 project tests,
 4 hidden task tests, 11 invariant tests, 24 counterexample probes and 5 architecture rules.
 
-### Live Codex (model `gpt-5.6-terra`, ChatGPT session, 2026-10-25)
+### Live Codex (model `gpt-5.6-terra`, ChatGPT session, 2026-10-25/26)
 
-All five live runs below are real `@openai/codex-sdk` threads; metrics come from `metrics.json` / `verification.json`.
+All rows are real `@openai/codex-sdk` threads; metrics come from `metrics.json` / `verification.json`. "Full" is the
+IntentOS pipeline (evidence pack → planner → compiled contract → implementer → verifier). "Baseline" is vanilla Codex:
+no planner, no evidence, task text only, but the same worktree, allowed paths, repair budget and verifier. Rows
+recorded while the laptop slept (one Task B full attempt aborted by a Codex timeout after 2 h) are excluded.
+n = 1 per cell; this is a demonstration, not a measurement.
 
-| run | result | repairs | verifier | tokens in (cached) / out |
-|---|---|---|---|---|
-| Task A `plan` only (`run-…212923-469f41`) | contract valid, 0 compiler errors, 3 narrowed allowed paths, `DiscountPolicy`/`PricingService` must_reuse | – | – | 35,390 (16,128) / 1,791 |
-| Task A full IntentOS (`run-…213112-d5363e`) | **REVIEW_READY** | 0 | project 18/18, hidden 4/4, invariants 11/11, probes 24/24, AST clean, scope clean | 264,214 (207,104) / 9,339 |
-| Task A baseline, task text only, same verifier (`run-…214229-f38688`) | REVIEW_READY | 1 | attempt 1 blocked: SCOPE-PROTECTED (edited `docs/business-policy.md`); attempt 2 all gates pass; code equivalent to guided run | 536,354 (446,208) / 10,157 |
-| Task B full (`run-…214228-7982b7`) | **REVIEW_READY** | 1 | attempt 1: 3 hidden task tests failed (entry point not discoverable by name); repair in the same thread added `upgrade_immediately`; INV-002 held in both attempts | 556,162 (455,680) / 15,959 |
-| Task C full (`run-…213638-144636`) | CLARIFICATION_REQUIRED | – | planner bound work to `InvoiceExportService`, flagged DEC-002 superseded, asked which format; no worktree | 34,334 (16,128) / 1,683 |
-| Task D full (`run-…213638-75c91c`) | ABSTAINED | – | cited policy section, `eligible_for_discounts` and the regression test; no code changed | 56,413 (35,328) / 1,389 |
+| task | variant | outcome | repairs | first-attempt blocker | tokens in (cached) / out |
+|---|---|---|---|---|---|
+| A promo | full | **REVIEW_READY** | 0 | – | 264,214 (207,104) / 9,339 |
+| A promo | baseline | REVIEW_READY | 1 | SCOPE-PROTECTED: edited `docs/business-policy.md` | 536,354 (446,208) / 10,157 |
+| B immediate upgrade | full | **REVIEW_READY** | 0 | – (re-pointed the API at the existing payment-confirmed flow; 2 files) | 209,221 (168,448) / 6,917 |
+| B immediate upgrade | baseline | REVIEW_READY | 1 | SCOPE-PROTECTED: edited `docs/business-policy.md` (3 files, 77 insertions) | 945,200 / 17,295 |
+| C export mode | full | **CLARIFICATION_REQUIRED** (which format?) bound to `InvoiceExportService`, DEC-002 flagged superseded | – | – | 34,334 (16,128) / 1,683 |
+| C export mode | baseline | REVIEW_READY: added XML to `InvoiceExportService` (not the legacy adapter) | 1 | SCOPE-PROTECTED: edited `docs/adr-003-invoice-export-service.md` | 477,575 / 10,040 |
+| D already fixed | full | **ABSTAINED** with cited policy, code and regression test | – | – | 56,413 (35,328) / 1,389 |
+| D already fixed | baseline | HUMAN_REVIEW: made no changes (NO-CHANGES review finding) | 0 | – | 264,928 (225,024) / 3,312 |
 
-What this does and does not show: the gates worked on real model output (a protected-doc edit by the baseline was caught and repaired; a naming mismatch on Task B was repaired through machine-readable findings); the planner produced evidence-grounded contracts and chose clarify/abstain where appropriate. It does **not** show that IntentOS beats vanilla Codex: on Task A the baseline's business code was equivalent, and n=1 per variant. The baseline that succeeded is disclosed as-is.
-
-Blockers encountered: the ChatGPT workspace spend cap rejected all requests for ~10 minutes early in the session; the CLI default model `gpt-6.1-sol` is unsupported for ChatGPT accounts; one SDK stream emitted a transient `Reconnecting… 2/5` error event (adapter now treats only a missing `turn.completed` as fatal).
+What this shows: on every implementation task the vanilla baseline produced acceptable business code but **also
+rewrote protected policy/ADR documents** to match its change (3 of 3), which the scope gate blocked and one repair
+removed; the guided runs touched only contract-scoped files and needed no repairs. On C the baseline picked the
+correct module without being told, so the stale-ADR hazard did not bite in this sample. On D vanilla Codex recognised
+the bug was already fixed and changed nothing; IntentOS turned the same judgement into an evidence-backed abstention.
+The earlier Task B full run (2026-10-25) needed one repair only because the first version of the hidden test
+discovered the entry point by name; the test is now behaviour-driven (see its docstring) and both worktrees pass it.
+Guided runs used 2–4× fewer tokens than baselines in this sample, mostly because the baseline's repair round re-sent
+the repository context.
 
 ### Validation on a real external repository (2026-10-26)
 
