@@ -322,8 +322,9 @@ function mergePhase(args: Args, state: State, store: KnowledgeStore, outDir: str
           row.merged_verification = out.merged_verification?.status ?? null;
         } catch (e) {
           row.attempted = true;
-          row.how = "intentos merge error";
-          row.blocked_by = [(e as Error).message.slice(0, 300)];
+          const message = (e as Error).message;
+          row.how = /does not merge cleanly/.test(message) ? "merge conflict" : "intentos merge error";
+          row.blocked_by = [message.slice(0, 300)];
         }
       } else {
         const rs = new RunStore(store, run.run_id, store.getRun(run.run_id)!.run_dir);
