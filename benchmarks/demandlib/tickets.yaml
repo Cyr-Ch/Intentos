@@ -1,0 +1,272 @@
+# Fresh tickets for the demandlib (oemof-demand) comparison: Codex alone versus Codex under IntentOS.
+#
+# Written 2026-10-27 against oemof/demandlib at 6757f4f (PR #100 merged), before any run. None of them is a resolved
+# ticket of the repository, so the precedents IntentOS loads cannot contain their answer. The `issue` text is what the
+# agents see, phrased as a user would file it. `expected_route`, `invariants` and `acceptance` are for the benchmark
+# only and never reach an agent: the acceptance tests are written from `acceptance` into
+# benchmarks/hidden_tests/oemof_demand/tasks/<id>/ before the first run.
+#
+# Mix: 10 implement, 1 clarify (vague), 2 abstain (already fixed; the repository's own history is the proof), and
+# 2 whose closest precedent is a merged PR, to see whether precedents help on fresh work (T07 ~ #17/#20, T13 ~ #100).
+
+- id: T01
+  title: Industrial profile: model a lunch break with night factors
+  labels: [enhancement]
+  kind: feature
+  expected_route: implement
+  invariants: [INV-011, INV-013, INV-027, INV-028]
+  issue: |
+    Our plants stop between 12:00 and 13:00. `IndustrialLoadProfile.simple_profile` only knows a workday from `am`
+    to `pm`, so the break hour gets the "day" factor and the profile is too high around noon.
+
+    Could `simple_profile` take an optional break window (start and end time, like `am`/`pm`) during which the
+    "night" factors apply on workdays? Nothing should change when no break is given, and the result should still
+    integrate to the `annual_demand` I pass in, as it does today.
+  acceptance: |
+    - Without a break the profile is identical to today's (regression against the current output for a fixed index).
+    - With a break 12:00–13:00 on a workday, every step inside the window carries the night factor and steps at
+      11:45 and 13:15 carry the day factor.
+    - The profile still sums (integrates) to annual_demand at hourly and quarter-hourly resolution with a break set.
+    - A break outside the workday has no effect; start >= end raises ValueError.
+
+- id: T02
+  title: Scale a BDEW 2025 profile to a given annual energy
+  labels: [enhancement]
+  kind: feature
+  expected_route: implement
+  invariants: [INV-010, INV-021, INV-026]
+  issue: |
+    The new `G25`/`H25`/... profiles come normalised to 1 GWh per year in kW. Every user has to do the scaling by hand
+    and it is easy to get the factor wrong for non-quarter-hourly indexes.
+
+    Please add a way to get a 2025 profile scaled so that it integrates to an annual energy I specify (in kWh),
+    for any constant-step index the class already accepts. The unscaled behaviour must stay exactly as it is.
+  acceptance: |
+    - Scaled profile for a full year integrates to the requested energy within 0.1% at 15 min, 1 h and 1 min steps.
+    - The unscaled profile is unchanged (regression on a fixed index) and still integrates to about 1 GWh.
+    - Scaling a sub-year excerpt uses the annual energy as the yearly total, not the excerpt's total.
+    - A negative energy raises ValueError.
+
+- id: T03
+  title: Holidays given as datetimes with a time of day are not applied
+  labels: [bug]
+  kind: bug
+  expected_route: implement
+  invariants: [INV-009, INV-023]
+  issue: |
+    I build my holiday list from a calendar library that returns `datetime.datetime` objects at noon. Passing that
+    list as `holidays` to `add_weekdays2df` (or any of the profile classes) silently applies nothing: every holiday
+    keeps its ordinary weekday number and no warning is given.
+
+    Example: `holidays=[datetime.datetime(2024, 1, 1, 12, 0)]` on a 2024 index leaves 1 January as weekday 1.
+    Passing `datetime.date(2024, 1, 1)` works. Holidays should match by date regardless of the time component,
+    for lists and for dicts.
+  acceptance: |
+    - A datetime holiday with a non-midnight time marks the whole day as weekday 0 (list and dict forms).
+    - Midnight datetimes and dates keep working; mixed lists work.
+    - holiday_is_sunday still maps those days to 7.
+    - A date that is not in the index is ignored without error.
+
+- id: T04
+  title: add_weekdays2df modifies the DataFrame it is given
+  labels: [bug]
+  kind: behaviour
+  expected_route: implement
+  invariants: [INV-001, INV-009, INV-023]
+  issue: |
+    `tools.add_weekdays2df(df, ...)` adds the `weekday` and `date` columns to the DataFrame I pass in, not only to
+    the one it returns. I reuse one frame for several scenarios with different holiday calendars and the columns
+    leak between them.
+
+    I would expect the input to be left alone and the result to be a new frame, or at least a documented way to
+    opt out of the in-place change. Existing callers inside the package must keep working.
+  acceptance: |
+    - After the call the caller's frame has no new columns and the returned frame has weekday and date.
+    - Two calls with different holiday calendars on the same input frame give independent results.
+    - IndustrialLoadProfile, ElecSlp and the 2025 profiles produce the same output as before (regression).
+
+- id: T05
+  title: Support regional holidays
+  labels: [enhancement]
+  kind: vague
+  expected_route: clarify
+  invariants: []
+  issue: |
+    Holidays differ by region (German states, for example) and the profiles should take that into account.
+    Please add support for regional holidays.
+  acceptance: |
+    - No implementation is expected. The right outcome is a clarification asking which calendar source or
+      input format is wanted (the package has no holiday data and currently accepts any list or dict of dates),
+      and whether the request is about input validation, bundled calendars, or documentation.
+    - An implementation that bundles a specific calendar library or hard-codes holiday tables counts as a miss.
+
+- id: T06
+  title: FutureWarning on ElecSlp instantiation with pandas 2.2
+  labels: [bug]
+  kind: already-fixed
+  expected_route: abstain
+  invariants: [INV-023]
+  issue: |
+    Creating `ElecSlp(2024)` with pandas 2.2 prints a FutureWarning about an incompatible dtype assignment and, in
+    environments that escalate warnings to errors, the constructor fails. Please fix the dtype handling.
+  acceptance: |
+    - No change is expected: this was fixed in PRs #57, #72 and #90, and `ElecSlp(2024)` emits no FutureWarning at
+      the current revision (the hidden test asserts exactly that at HEAD).
+    - The right outcome cites the fix (commit or test) and changes nothing. A diff that "fixes" it again counts as a miss.
+
+- id: T07
+  title: DeprecationWarning from DatetimeIndex.weekday when building profiles
+  labels: [bug]
+  kind: maintenance
+  expected_route: implement
+  invariants: [INV-001, INV-009, INV-023]
+  issue: |
+    With the current pandas, building any profile prints
+    `DatetimeIndex.weekday is deprecated and will be removed in a future version`, coming from the weekday
+    assignment in `tools.add_weekdays2df`. Our CI runs with warnings as errors, so this breaks the build.
+
+    Please use the supported accessor. Weekday numbering (1 = Monday ... 7 = Sunday, 0 = holiday) must not change.
+  acceptance: |
+    - add_weekdays2df and simple_profile emit no DeprecationWarning/FutureWarning under warnings-as-errors.
+    - Weekday numbers for a known week and holiday handling are unchanged (regression against fixed values).
+    - The missing-holidays UserWarning still appears when holidays are omitted.
+
+- id: T08
+  title: Daily heat demand from HeatBuilding
+  labels: [enhancement]
+  kind: feature
+  expected_route: implement
+  invariants: [INV-014, INV-030, INV-031]
+  issue: |
+    For reporting I need the BDEW heat profile aggregated per day. Today I call `get_bdew_profile()` and resample
+    myself, and colleagues keep doing it differently (sum vs mean).
+
+    Please add a daily accessor on `HeatBuilding` that returns one value per calendar day, in the same unit as the
+    hourly profile, so the daily values add up to the annual heat demand.
+  acceptance: |
+    - Daily values sum to annual_heat_demand within 1e-6 relative.
+    - Index is one entry per calendar day of the input index; length matches the number of days.
+    - Works for the warm-water-only case (ww_incl / space heating suppressed) and for non-residential buildings
+      with building_class 0; building_class != 0 for non-residential still raises ValueError.
+
+- id: T09
+  title: Validate HeatBuilding inputs when the object is created
+  labels: [enhancement]
+  kind: validation
+  expected_route: implement
+  invariants: [INV-014, INV-031]
+  issue: |
+    A typo in `shlp_type` (say "EFG") or a `wind_class` of 2 only blows up much later inside the sigmoid/weekday
+    parameter lookups with a KeyError or an empty-selection message that does not name the parameter.
+
+    Please check `shlp_type`, `wind_class` and `building_class` when `HeatBuilding` is constructed and raise a
+    ValueError that names the offending parameter and the accepted values. The existing rule that non-residential
+    types must use building class 0 must stay.
+  acceptance: |
+    - Unknown shlp_type raises ValueError at construction naming shlp_type.
+    - wind_class outside the supported set raises ValueError at construction naming wind_class.
+    - Non-residential with building_class != 0 still raises ValueError; residential with class 1..11 is accepted.
+    - Valid inputs produce the same profile as before (regression).
+
+- id: T10
+  title: Region.add_houses should reject duplicate house names
+  labels: [bug]
+  kind: validation
+  expected_route: implement
+  invariants: [INV-005, INV-039]
+  issue: |
+    The VDI 4655 `Region.add_houses` docs say the house name is a unique identifier, but adding two houses with the
+    same name is accepted and one of them silently disappears from the results, which took me a while to notice.
+
+    Please raise a ValueError naming the duplicate when a house list contains a repeated name, or when a name is
+    already present in the region.
+  acceptance: |
+    - Duplicate names within one add_houses call raise ValueError that contains the name.
+    - A name already added earlier raises the same error on a second call.
+    - Unique names behave as before; the EFH/MFH house_type check is unchanged.
+
+- id: T11
+  title: Load VDI climate data from a user-supplied DWD TRY file
+  labels: [enhancement]
+  kind: feature
+  expected_route: implement
+  invariants: [INV-017, INV-020, INV-036]
+  issue: |
+    `Climate.from_try_data(try_region)` only loads the TRY files shipped with the package. We have newer TRY 2045
+    files from the DWD in the same format and want to use them.
+
+    Please allow passing a path to a DWD TRY file instead of a region number. The existing header check and the
+    region-number validation should keep behaving the same when a number is given.
+  acceptance: |
+    - A valid file path loads and produces a Climate whose check_attributes passes.
+    - A file without the DWD header marker raises TypeError naming the header, as today.
+    - Region numbers outside 1–15 still raise ValueError; a region number still loads the bundled data.
+    - A missing file raises FileNotFoundError.
+
+- id: T12
+  title: Industrial profile accepts overlapping day categories silently
+  labels: [bug]
+  kind: validation
+  expected_route: implement
+  invariants: [INV-011, INV-012, INV-027, INV-028]
+  issue: |
+    Calling `simple_profile` with `week=[1,2,3,4,5,6]` and `weekend=[6,7]` is accepted. Saturday then gets whichever
+    factor the implementation happens to apply last, and the documentation says nothing about it.
+
+    Please raise a ValueError when `week`, `weekend` and `holiday` overlap, and when a weekday number outside 0..7 is
+    given. The default categories must keep working unchanged.
+  acceptance: |
+    - Overlapping categories raise ValueError naming the day number.
+    - A day outside 0..7 raises ValueError.
+    - Defaults and disjoint custom categories give the same profile as before and still integrate to annual_demand.
+    - The existing missing-factor ValueErrors are unchanged.
+
+- id: T13
+  title: Warn when an industrial profile is created with zero or negative annual demand
+  labels: [enhancement]
+  kind: precedent-like
+  expected_route: implement
+  invariants: [INV-011, INV-027]
+  issue: |
+    A unit mix-up gave us `annual_demand=0` and the industrial profile came back all zeros without a word; a
+    negative value produces a negative profile just as quietly.
+
+    In the spirit of the recent holidays warning, please emit a UserWarning for zero demand and raise a ValueError
+    for negative demand in `simple_profile`. Positive demand must behave exactly as before.
+  acceptance: |
+    - annual_demand=0 warns (UserWarning mentioning the demand) and returns an all-zero series.
+    - Negative annual_demand raises ValueError.
+    - Positive demand: identical output to the current implementation and integrates to annual_demand.
+
+- id: T14
+  title: Derive the power conversion factor from the index resolution in ElecSlp
+  labels: [enhancement]
+  kind: feature
+  expected_route: implement
+  invariants: [INV-007, INV-008, INV-024, INV-025]
+  issue: |
+    `get_scaled_power_profiles` multiplies by a conversion factor that defaults to 4, which is only right for
+    quarter-hour data. When I resample to hourly first and forget the argument, the power is four times too high.
+
+    Please derive the factor from the profile's index frequency when it is not given explicitly (1 h → 1,
+    15 min → 4, 1 min → 60). Passing the factor explicitly must keep overriding it, and the quarter-hourly default
+    behaviour must not change.
+  acceptance: |
+    - Quarter-hourly profiles without an explicit factor: output identical to today (factor 4).
+    - An explicit factor still wins.
+    - For an hourly index the power profile integrates to the requested annual energy with factor 1.
+    - Energy profiles per sector still sum to the requested annual demand; the leap-year interval count is unchanged.
+
+- id: T15
+  title: No warning when holidays are omitted
+  labels: [enhancement]
+  kind: already-fixed
+  expected_route: abstain
+  invariants: [INV-001, INV-023]
+  issue: |
+    When I forget to pass `holidays`, public holidays are silently treated as normal weekdays. A warning telling me
+    that no holidays were given would have saved me a wrong annual result. An empty list should stay silent.
+  acceptance: |
+    - No change is expected: PR #100 added exactly this (UserWarning "No holidays given", silent for an empty list)
+      and the hidden test asserts the behaviour at HEAD.
+    - The right outcome cites the existing warning and changes nothing. Adding a second warning counts as a miss.
