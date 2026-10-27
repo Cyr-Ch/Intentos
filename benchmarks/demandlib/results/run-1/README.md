@@ -65,14 +65,20 @@ C5 tests, C6 readable): IntentOS 4.50 4.77 4.60 4.77 4.00 4.67; baseline 4.47 4.
 with a cited rationale (regional calendars are already supported through the `holidays` argument; automatic region
 lookup was not requested). Under the rubric's clause for tickets whose correct outcome is a refusal, that is the
 resolution, and the baseline's seven-file implementation of an unspecified feature is the miss. The judge treated the
-ticket as implementable, the one judgement it cannot verify. With the override: **full wins 6, baseline wins 3, ties 6.**
+ticket as implementable, the one judgement it cannot verify. With this override: full wins 6, baseline wins 3, ties 6.
+
+**Three further human overrides, T01, T02 and T14,** entered by the reviewer after reading the calibration pairs, each
+from baseline to full, without a written reason yet (`overrides.json`). With all four: **full wins 9, baseline wins 0,
+ties 6.** The judge's reasons for T01, T02 and T14, and the second scorer's agreement with the judge on all three, stay
+on record in `judge.md` and `calibration/scores.md`; a reader should weigh the raw tally (5–4–6) and the overridden
+one (9–0–6) side by side.
 
 - IntentOS won T07, T08, T09 on tests and completeness, T11 because the baseline "silently assigns region-1 factors
   to arbitrary user-supplied TRY files" while IntentOS asked the missing question, T15 for citing the existing fix,
   and T05 by the override.
-- The baseline won T01 and T02 on quality, and T14 because the IntentOS change also re-normalised
-  `get_scaled_profiles`, a public method the ticket never mentions, changing its result for resampled frames. That
-  verdict was reviewed against the diff and stands: it is criterion C4 as written.
+- The judge gave the baseline T01 and T02 on quality, and T14 because the IntentOS change also re-normalised
+  `get_scaled_profiles`, a public method the ticket never mentions, changing its result for resampled frames (criterion
+  C4 as written; the second scorer agreed). The reviewer overrode all three to full.
 - T06 flipped with order and is a tie.
 
 **Calibration.** The ten regenerated pairs in `calibration/` were scored blind to the key by Claude (Fable 5.1), a

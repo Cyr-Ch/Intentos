@@ -4,5 +4,23 @@
     "human_verdict": "full",
     "by": "Cyrine Chaabani (user), 2026-10-27",
     "reason": "The ticket is deliberately underspecified (expected route: clarify). IntentOS abstained with a cited rationale: regional calendars are already supported through the holidays argument and automatic region lookup was not requested. Under the rubric's clause for tickets whose correct outcome is a refusal, that is the resolution; the baseline's seven-file implementation of an unspecified feature is the miss. The judge treated the ticket as implementable, the one judgement it cannot verify."
+  },
+  "T01": {
+    "judge_verdict": "baseline",
+    "human_verdict": "full",
+    "by": "Cyrine Chaabani (user), 2026-10-27, after reading the calibration pair",
+    "reason": "Reviewer's judgement; no written reason given yet."
+  },
+  "T02": {
+    "judge_verdict": "baseline",
+    "human_verdict": "full",
+    "by": "Cyrine Chaabani (user), 2026-10-27, after reading the calibration pair",
+    "reason": "Reviewer's judgement; no written reason given yet."
+  },
+  "T14": {
+    "judge_verdict": "baseline",
+    "human_verdict": "full",
+    "by": "Cyrine Chaabani (user), 2026-10-27, after reading the calibration pair",
+    "reason": "Reviewer's judgement; no written reason given yet. The judge's and the second scorer's C4 objection (re-normalisation inside get_scaled_profiles) is on record in judge.md and calibration/scores.md."
   }
 }
