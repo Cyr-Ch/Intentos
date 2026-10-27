@@ -1,0 +1,2181 @@
+{
+  "model": "gpt-5.6-sol",
+  "rubric": "benchmarks/demandlib/rubric.md",
+  "results": [
+    {
+      "ticket": "T01",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:03:31.978Z",
+      "verdict": "baseline",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 3,
+                "reason": "The main break behavior and annual normalization are implemented, but `break_filter &= (self.dataframe.index.time != am) & ... != pm` contradicts the ticket’s requirement that the break be inclusive at both ends when it overlaps `am` or `pm`."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to the relevant profile method, its public documentation, and focused tests for the new option."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The change preserves the kwargs-based public API and uses the existing pandas time-index machinery, though silently ignoring a lone `break_start` or `break_end` at `if break_start is not None and break_end is not None` is a weak fit for a two-ended window."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The break logic is guarded by both values being non-`None`, and `pd.testing.assert_series_equal(baseline, unchanged)` explicitly checks unchanged default behavior."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "The tests cover normalization, multiple frequencies, holidays, weekends, reuse, and no-break behavior, but `test_industrial_break_preserves_workday_boundaries` codifies behavior contrary to the requested inclusive break semantics."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The implementation and docstring are generally clear, but the special statement that `am` and `pm` retain day factors adds a surprising rule not present in the ticket."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The inclusive mask created by `indexer_between_time(... include_start=True, include_end=True)` applies workday night factors during the requested window while preserving normalization and no-break behavior."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Only the relevant implementation, API documentation, and narrowly targeted tests are changed."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation retains the existing kwargs API, follows the method’s filter-based structure, and gives a clear `ValueError` when only one endpoint is supplied."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Existing calls remain unchanged because the new filtering is guarded by `if break_start is not None`, while the tests compare the baseline with an explicit `None`/`None` call."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests verify inclusive noon endpoints, workday-only application, holiday and weekend preservation, both holiday modes, annual-demand conservation, unchanged no-break output, and rejection of either incomplete endpoint combination."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "Names such as `week_day_filter` and `break_mask`, the concise validation, and the expanded public docstring make the behavior immediately understandable."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "B should be merged because it honors the ticket’s inclusive break window even when it meets other time boundaries, whereas A introduces an unrequested exception for `am` and `pm`."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The `week_day_filter.iloc[break_mask] = False` change applies night factors throughout the inclusive break on workdays, while the tests verify both endpoints, unchanged no-break behavior, and annual-demand conservation."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to the relevant profile implementation and focused tests, with every added line supporting the optional break window."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation preserves the existing kwargs-based public API and reuses the existing `indexer_between_time` and pandas-filter pattern already used for `am` and `pm`."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The guard `if break_start is not None:` leaves the original day filter unchanged when no break is supplied, and the baseline equality test confirms compatibility."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`test_simple_profile_break` covers workday-only application, inclusive 12:00 and 13:00 endpoints, holidays/weekends, normalization to 1234, and no-break equivalence, while the parametrized incomplete-window test covers invalid partial input."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "Names such as `week_day_filter` and `break_mask`, the concise validation, and the expanded public docstring make the change straightforward to understand."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 3,
+                "reason": "Although the main lunch-break case and normalization work, `break_filter &= (self.dataframe.index.time != am) & (self.dataframe.index.time != pm)` contradicts the ticket's requirement that both break endpoints be inclusive whenever they coincide with `am` or `pm`."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "All changes are limited to the relevant method, its documentation, and targeted behavioral tests."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The implementation follows the existing pandas-filter approach and retains the kwargs API, but introduces an unsupported special rule for workday boundaries."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "With neither break endpoint supplied, `workday_day_filter` remains a copy of `day_filter`, and the tests explicitly verify both immediate and later restoration of baseline output."
+              },
+              "C5": {
+                "score": 3,
+                "reason": "The tests broadly cover two frequencies, conservation, no-break behavior, workdays, holidays, and weekends, but `test_industrial_break_preserves_workday_boundaries` deliberately asserts behavior contrary to the named inclusive-endpoint requirement and partial endpoint input is untested."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The added filters, comments, docstring, and test names clearly communicate the behavior implemented, including the boundary exception."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "A should be merged because it honors inclusive break endpoints as requested, whereas B explicitly exempts `am` and `pm` from the break and codifies that mismatch in its tests."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 3,
+          "C2": 5,
+          "C3": 4,
+          "C4": 5,
+          "C5": 3.5,
+          "C6": 4.5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T02",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:04:14.352Z",
+      "verdict": "baseline",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `annual_energy` parameter and `annual_energy / (self.sum() * timestep_hours)` factor correctly scale every listed 2025 profile for arbitrary constant-step frequencies."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff only changes `_profiles25.py` and adds focused coverage in `tests/test_elec_slp.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The shared `_scale_to_energy` helper is placed on `BDEW25Profile`, while dynamic profiles apply it after `dynamisation_function`, fitting the existing inheritance structure."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The guard `if annual_energy is not None` preserves existing output, and the test compares omitted and explicit-`None` results with `check_exact=True`."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parametrized test covers all five public classes, non-quarter-hourly `1min` and `1h` indexes, zero energy, default preservation, index preservation, and proportional scaling."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The implementation is easy to follow and documented, though `Requested energy in kWh over the supplied index` is slightly at odds with the subsequent phrase `annual profile` for partial indexes."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The new keyword scales the final, dynamically adjusted profile using `annual_energy / (self.sum() * step_hours)`, correctly handling every accepted constant-step index."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Changes are confined to the profile implementation and directly relevant tests."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The solution centralizes scaling in `BDEW25Profile._scale_to_energy` and deliberately defers it until after dynamisation in `DynamicBDEW25Profile`."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "`if annual_energy is not None` leaves unscaled construction unchanged, with an explicit regression assertion against `annual_energy=None`."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "Tests cover every profile class, minute through daily frequencies, leap and non-leap years, partial indexes, zero energy, shape preservation, and unchanged defaults."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The public docstring precisely explains that energy equals the sum times step duration, applies to the supplied index, remains in kW, and leaves values unchanged for `None`."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C5",
+          "reason": "Diff B should be merged because its broader C5 coverage adds daily and 30-minute steps, leap years, and partial-index scaling while retaining the same correct implementation scope."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `annual_energy` keyword is propagated through every G25/H25/L25/P25/S25 class, and `_scale_to_energy` uses `self.sum() * step_hours`, correctly handling constant-step indexes beyond quarter-hourly data."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only `_profiles25.py` and its existing electrical-profile test module, with all edits directly supporting scaling or verification."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation centralizes scaling in `BDEW25Profile._scale_to_energy` and invokes it after `dynamisation_function` for dynamic profiles, fitting the existing inheritance design."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The `if annual_energy is not None` guard preserves unscaled behavior, and the test explicitly compares the original profile with `annual_energy=None`."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover all five public profile classes, zero and nonzero energy, leap and non-leap years, excerpts, and frequencies from `1min` through `1D`, including the named non-quarter-hourly edge case."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The public docstring clearly states that energy is in kWh over the supplied index and the concise `step_hours` scaling formula is immediately understandable."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The new keyword reaches all five profile classes, while `_scale_to_energy` normalizes using the actual `timestep_hours` and dynamic profiles scale only after dynamisation."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Only the profile implementation and its directly corresponding tests are touched, without unrelated changes."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The shared `_scale_to_energy` method reuses the existing base-class hierarchy and retains the established subclass constructors and public API shape."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Scaling is conditional on `annual_energy is not None`, and `pd.testing.assert_series_equal(default, explicit_default, check_exact=True)` verifies exact preservation of default behavior."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "The test covers every profile class, zero and nonzero targets, and `1min`, `15min`, and `1h` indexes, but omits other accepted constant steps such as `30min` and leap-year coverage."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The helper docstring, `timestep_hours` name, and explicit documentation that scaling occurs after resampling and dynamisation make the change easy to review."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C5",
+          "reason": "A should be merged because its tests more completely exercise the ticket’s any-constant-step requirement, especially 30-minute and daily indexes, while both implementations otherwise solve the request cleanly."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 4.5,
+          "C6": 4.5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T03",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:06:21.373Z",
+      "verdict": "tie",
+      "flipped": true,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The replacement `pd.Index(time_df.index.date).isin(pd.to_datetime(holidays).date)` matches both list values and dictionary keys by calendar date while ignoring their time component."
+              },
+              "C2": {
+                "score": 4,
+                "reason": "The implementation and parameterized regression test are tightly scoped, though the added ordinary-weekday assertions in the two pre-existing no-holiday tests are not needed for this ticket."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change stays inside the existing `set_holidays_in_df` helper and preserves the public API while adapting its established pandas-based matching logic."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The unchanged `other=0` behavior and explicit assertions that nonholiday rows retain `index.weekday + 1` preserve existing numbering, defaults, and warnings."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`test_holidays_match_calendar_date` covers date and noon-datetime inputs, lists and dictionaries, both `holiday_is_sunday` modes, all intraday rows, and unaffected neighboring dates."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The concise matching expression and docstring sentence `Time components are ignored when matching holidays by calendar date` make the behavior immediately clear."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "Normalizing `pd.to_datetime(holidays)` before membership testing makes datetime holidays match the corresponding index date for both lists and dictionaries."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only the holiday comparison and its documentation and adds one focused regression test in the existing tools test module."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The patch retains the existing helper, pandas conversion flow, function signature, and masking mechanism, adding only the idiomatic `.normalize()` operation."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The existing mask target and `other=0` assignment remain unchanged, while the test confirms ordinary Sunday and Tuesday values remain 7 and 2."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`test_holidays_with_time_of_day` covers timed datetimes in lists and dictionaries, both holiday numbering modes, equality with date input, and unaffected adjacent dates."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The single `.normalize()` addition and the docstring statement that time components are ignored are direct and easy to understand."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C2",
+          "reason": "Both diffs fully solve and test the named cases, but B is the more minimal resolution because it avoids A's additional changes to unrelated pre-existing no-holiday tests."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The change normalizes every parsed holiday with `pd.to_datetime(holidays).normalize()`, so time-of-day is ignored for both lists and dictionary keys."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only the holiday-matching expression, its public docstring, and focused tests in `tests/test_tools.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation preserves the existing `set_holidays_in_df` flow and pandas-based matching, changing only the holiday side of the existing `.isin(...)` expression."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The assertions for `2023-12-31` and `2024-01-02` confirm that `result.loc[...]` retains ordinary weekday numbering outside the holiday."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parametrized `test_holidays_with_time_of_day` covers list and dict inputs plus both `holiday_is_sunday` settings and explicitly verifies all rows on January 1."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The docstring statement `Time components of holiday datetimes are ignored` and the single `.normalize()` call make the behavior immediately clear."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "Comparing `pd.Index(time_df.index.date)` with `pd.to_datetime(holidays).date` directly implements calendar-date matching for both date and datetime inputs."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "All changes remain confined to the holiday helper documentation, matching expression, and behavior-preservation tests in the existing test module."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change retains the existing helper, dictionary-key handling, public API, and pandas `.isin` pattern while expressing the comparison in date-domain values."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The assertion `dt.loc[~holiday_rows, \"weekday\"] == index[~holiday_rows].weekday + 1` explicitly verifies that nonholiday behavior remains unchanged."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The three parametrizations cover date and noon-datetime values, list and dict forms, and both holiday numbering modes, while also checking all 96 intraday rows and neighboring dates."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The docstring says matching is by calendar date, and `pd.Index(time_df.index.date).isin(pd.to_datetime(holidays).date)` closely mirrors that description."
+              }
+            }
+          },
+          "verdict": "tie",
+          "deciding": "C5",
+          "reason": "Both diffs fully solve list and dict datetime matching and provide equally comprehensive behavioral tests for the named cases, so C5 does not distinguish them."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 4.5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T04",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:07:17.211Z",
+      "verdict": "tie",
+      "flipped": true,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `time_df = time_df.copy()` directly prevents `weekday` and `date` assignments from mutating the caller’s frame, including when that frame is reused."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only `add_weekdays2df` and its focused tests, with the sole production change being the necessary copy."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The line `time_df = time_df.copy()` preserves the public signature and existing holiday-processing path through `set_holidays_in_df`."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The existing annotation and holiday logic remains unchanged after the copy, and the tests verify the returned weekday values for both `holiday_is_sunday` settings."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parametrized `test_annotations_preserve_input` covers existing annotation columns, list and dict calendars, both holiday modes, repeated reuse, result independence, and ordinary no-holiday behavior."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The revised docstring clearly says `The input, including any existing annotation columns, is unchanged`, and the implementation is immediately understandable."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `time_df = time_df.copy()` leaves the supplied frame untouched while returning a separately annotated result, exactly addressing scenario reuse."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to the affected function’s documentation, its one-line implementation fix, and directly relevant tests."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The unchanged function signature and continued use of the existing annotation and holiday logic preserve the codebase’s established API and mechanisms."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The copy is inserted before the original assignments, so returned values, warnings, holiday handling, and defaults remain otherwise unchanged."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`test_input_is_preserved` covers pre-existing columns and copy independence, while `test_reusing_input_with_different_calendars` explicitly verifies the ticket’s multi-calendar scenario."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The docstring explicitly explains that existing `weekday` and `date` columns are replaced only in the copy, and the two narrowly named tests are easy to follow."
+              }
+            }
+          },
+          "verdict": "tie",
+          "deciding": "C1",
+          "reason": "Both diffs equally satisfy the decisive C1 requirement and provide equally complete C5 coverage, with no substantive quality difference warranting preference."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `time_df = time_df.copy()` directly prevents mutation while preserving the returned annotations and holiday behavior."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only `add_weekdays2df` documentation and focused tests for input preservation and calendar reuse."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation retains the public signature and existing `set_holidays_in_df` flow, adding only a conventional DataFrame copy."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The existing weekday, date, holiday, and `holiday_is_sunday` operations remain unchanged after the new copy boundary."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover existing annotation columns, both holiday modes, reuse with different calendars, input identity, and independence by mutating `result` after the call."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The docstring clearly states that the input is not modified and that existing annotation columns are replaced only in the returned copy."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `time_df = time_df.copy()` ensures callers receive a new annotated frame without modifying the supplied frame."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Only the affected function documentation and its directly relevant test class are changed."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The patch preserves the function signature and existing holiday helper rather than introducing a parallel mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "All annotation and holiday calculations remain intact, with only the ticket-requested mutation behavior changed."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parameterized test covers existing annotations, list and dictionary calendars, both holiday modes, repeated reuse, and preservation of earlier results."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The updated parameter and return documentation makes the copy semantics immediately understandable."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C5",
+          "reason": "A is the marginally stronger merge because its tests additionally prove that mutating ordinary data in the returned frame cannot leak back into the input."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T05",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:08:10.951Z",
+      "verdict": "baseline",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The diff is explicitly “(empty: no change),” so it provides no regional-holiday support."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The “(empty: no change)” diff introduces no unrelated or out-of-scope modifications."
+              },
+              "C3": {
+                "score": 1,
+                "reason": "Because the diff is “(empty: no change),” it makes no use of the codebase’s existing holiday helpers or profile APIs."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The “(empty: no change)” diff preserves all existing behavior."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The “(empty: no change)” diff adds no tests for regional holidays."
+              },
+              "C6": {
+                "score": 1,
+                "reason": "There is no implementation to understand or public documentation describing regional-holiday behavior in the “(empty: no change)” diff."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The new `holidays.partition(\"-\")` and `country_holidays(..., subdiv=...)` logic directly supports country and regional codes such as `\"DE-BY\"` across profiles using the shared helper."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The changes are confined to the shared holiday helper, affected public type hints and documentation, and focused tests for the requested feature."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation extends the existing `set_holidays_in_df` helper and therefore propagates support through established profile classes without creating a parallel holiday mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The new behavior is guarded by `if isinstance(holidays, str)`, leaving existing dictionary, list, and `None` handling unchanged."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "Tests cover country and state codes, multiple years, timezone-aware indices, missing dependency behavior, Sunday mapping, and observable differences between Bavarian and Berlin industrial profiles."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "Names and errors such as `country`, `subdivision`, and `Use a holiday code such as 'DE' or 'DE-BY'` are clear, though the repeated docstring wording ending in `Alternatively:` is slightly awkward."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "Diff B should be merged because it implements regional calendar selection throughout the existing holiday-processing path, while Diff A does not address the ticket."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The new string branch in `set_holidays_in_df` parses codes such as `DE-BY` and calls `country_holidays(..., subdiv=...)`, directly supporting state-specific calendars."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff confines implementation to the shared holiday helper, updates affected public docstrings/type hints, and adds focused tests."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change extends the existing `set_holidays_in_df` pathway at `if isinstance(holidays, str):`, so all profiles continue to use the codebase's established holiday mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Existing dictionary, list, and `None` behavior remains behind the new string-only branch, including the established warning and `holiday_is_sunday` handling."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The added tests cover country and subdivision parsing, multiple years, timezone-aware indices, missing dependency behavior, Sunday mapping, and observable Bavaria-versus-Berlin profile behavior."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "Names and errors such as `country`, `subdivision`, and `Use a holiday code such as 'DE' or 'DE-BY'` make the implementation clear, though the repeated docstring phrase `Alternatively:` reads awkwardly before the existing sentence."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The empty diff adds no regional-holiday support."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "The empty diff neither conflicts with nor extends the codebase's existing holiday helpers, but provides no implementation whose fit can be demonstrated."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The empty diff preserves all existing behavior unchanged."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The empty diff adds no tests for regional holidays."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The empty diff contains no code whose readability could be impaired."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "A should be merged because it implements the requested regional-calendar behavior and tests German state differences, while B makes no change."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 1,
+          "C2": 5,
+          "C3": 2,
+          "C4": 5,
+          "C5": 1,
+          "C6": 3
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 4
+        }
+      }
+    },
+    {
+      "ticket": "T06",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:08:49.752Z",
+      "verdict": "baseline",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The `(empty: no change)` diff leaves the pandas 2.2 FutureWarning and warning-as-error constructor failure unresolved."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The `(empty: no change)` diff introduces no unrelated or out-of-scope modifications."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The `(empty: no change)` diff does not disturb existing APIs or codebase conventions."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The `(empty: no change)` diff preserves all existing behavior, although that includes the reported defect."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The `(empty: no change)` diff adds no regression test for pandas 2.2 or FutureWarning escalation."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The `(empty: no change)` diff is immediately understandable as making no modification."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "Changing `pd.DataFrame(data=0, ...)` to `pd.DataFrame(data=0.0, ...)` gives profile columns a compatible float dtype before profile values are assigned, directly preventing the reported warning."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The implementation changes only the initial dtype and removes the now-redundant `new_df[profile_columns].map(float)`, while adding one focused regression test."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The line `new_df = pd.DataFrame(data=0.0, index=dt_index, columns=slp_types)` retains the existing construction flow and public API without introducing a parallel mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The test assertions `assert not profiles.isna().any().any()` and normalized totals near `1.0` support that profile behavior remains intact beyond the dtype correction."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The test uses `@pytest.mark.filterwarnings(\"error::FutureWarning\")`, covers both ordinary and leap years via `[2023, 2024]`, and verifies float dtypes, completeness, and normalization."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The `data=0.0` change clearly expresses the intended float allocation, and deleting the subsequent conversion makes the data flow easier to understand."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "Diff B should be merged because it directly fixes the incompatible dtype assignment and adds a warning-as-error regression test, whereas Diff A leaves the ticket entirely unresolved."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The change initializes profile columns as floats at `new_df = pd.DataFrame(data=0.0, ...)`, directly preventing pandas 2.2's incompatible-dtype assignment warning."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only the problematic DataFrame initialization, removes the now-redundant `.map(float)`, and adds a focused regression test."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "Using `0.0` in the existing DataFrame construction preserves the current implementation structure and public `ElecSlp` API."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The test's normalization and missing-value assertions after `get_profiles()` demonstrate that the dtype-only adjustment preserves profile results."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`@pytest.mark.filterwarnings(\"error::FutureWarning\")` with years 2023 and 2024 directly verifies the named warning-as-error case while also checking float dtypes and profile integrity."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The one-character initialization change to `data=0.0` makes the dtype intent immediately clear, and removing the redundant conversion keeps the flow simple."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The `(empty: no change)` diff leaves the pandas 2.2 FutureWarning and warning-as-error constructor failure unresolved."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The `(empty: no change)` diff introduces no unrelated or out-of-scope modifications."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "Although `(empty: no change)` cannot violate codebase conventions, it supplies no codebase-fitting resolution to assess."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The `(empty: no change)` diff preserves all existing behavior, including the unwanted warning."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The `(empty: no change)` diff adds no regression test for pandas 2.2 or warnings escalated to errors."
+              },
+              "C6": {
+                "score": 1,
+                "reason": "The `(empty: no change)` diff communicates no implementation or resolution for a reviewer to understand."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "A should be merged because it directly fixes the incompatible dtype initialization and verifies the warning-as-error scenario, whereas B does not address the ticket."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 1,
+          "C2": 5,
+          "C3": 4,
+          "C4": 5,
+          "C5": 1,
+          "C6": 3
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T07",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:09:19.395Z",
+      "verdict": "full",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The line `time_df[\"weekday\"] = time_df.index.day_of_week + 1` replaces the deprecated accessor while retaining the required one-based numbering, and the holiday-category tests verify 0 or 7 as configured."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only the weekday accessor in `tools.py` and adds focused regression coverage in the existing `tests/test_tools.py` module."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation preserves the existing `add_weekdays2df` flow and continues to delegate holiday handling to `set_holidays_in_df(time_df, holidays)`."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The assertion `dt[\"weekday\"].tolist() == [1, 2, 3, 4, 5, 6, 7]` and the parameterized holiday-category assertion demonstrate that existing numbering and holiday behavior remain unchanged."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`test_all_weekday_numbers_without_warnings` makes warnings errors and checks all seven weekday values, while `test_holiday_calendar_categories` covers list/dict holidays and both 0 and 7 holiday conventions."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The one-line production change and clearly named tests such as `test_all_weekday_numbers_without_warnings` make the intent immediately understandable."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The line `time_df[\"weekday\"] = time_df.index.day_of_week + 1` uses the supported pandas accessor and preserves Monday-through-Sunday numbering as 1 through 7."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is a single, precisely scoped replacement in the function identified by the ticket."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change retains the existing function signature, mutation pattern, and downstream holiday helper without introducing a parallel mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Keeping the existing `+ 1` expression while changing only `.weekday` to `.day_of_week` preserves ordinary weekday values and leaves holiday processing untouched."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The diff adds no test covering warnings-as-errors, weekday numbering, or holiday values."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The direct accessor substitution is self-explanatory and easy to review."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C5",
+          "reason": "A should be merged because both diffs implement the same correct fix, but A adds comprehensive regression tests for the warning, weekday numbering, and named holiday edge cases."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The replacement `time_df[\"weekday\"] = time_df.index.day_of_week + 1` uses the supported accessor while preserving Monday-to-Sunday numbering as 1 through 7."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only the deprecated accessor on the single weekday-assignment line in `tools.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The changed line retains the existing `add_weekdays2df` implementation structure and public API, merely substituting pandas' supported equivalent accessor."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The unchanged `+ 1` and subsequent `set_holidays_in_df(time_df, holidays)` call preserve ordinary weekday and holiday category behavior."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The diff adds no test demonstrating warning-free execution or preservation of the required weekday and holiday numbering."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The one-line substitution from `.weekday` to `.day_of_week` is immediately understandable and directly matches the ticket."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The line `time_df[\"weekday\"] = time_df.index.day_of_week + 1` removes use of the deprecated accessor while preserving the specified 1-to-7 numbering."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The only production change is the necessary accessor substitution, accompanied solely by focused tests in the existing `tests/test_tools.py` module."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change preserves the existing helper, signature, and holiday-processing path, while the tests follow the existing `TestWeekdays` layout and pytest conventions."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The assertion `dt[\"weekday\"].tolist() == [1, 2, 3, 4, 5, 6, 7]` and the holiday-category assertion verify that established numbering remains unchanged."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The new warning-as-error test covers all weekday numbers, and `test_holiday_calendar_categories` covers list and dictionary holidays with both `0` and Sunday-category `7` behavior."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The production change is self-explanatory, and test names such as `test_all_weekday_numbers_without_warnings` clearly state the behavior being protected."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C5",
+          "reason": "A maintainer should merge B because it makes the same correct minimal fix as A while C5 is decisively stronger through regression tests for warnings, weekday numbering, and holiday categories."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 1,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T08",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:10:15.786Z",
+      "verdict": "full",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `return self.get_bdew_profile().resample(\"D\").sum()` produces one summed value per calendar day, while `return heat_profile / heat_profile.sum()` ensures those values add up to the requested annual demand."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff only adds the requested accessor, adjusts the directly relevant normalization, and adds focused coverage in the existing profile test module."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The accessor delegates to the established `get_bdew_profile()` method and uses idiomatic pandas `resample(\"D\").sum()` rather than introducing a parallel calculation."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The only existing behavior adjustment is the targeted final normalization at `return heat_profile / heat_profile.sum()`, which preserves the profile shape while enforcing the ticket's annual-total contract."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parametrized test covers ordinary and leap years, constant and varying temperatures, all combinations of `ww_incl` and `ww_only`, calendar-day aggregation, and annual-demand conservation."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The implementation is immediately understandable and the public docstring explains summation and annual conservation, though its statement that the retained unit is specifically `kWh` is narrower than the ticket's unit-agnostic wording."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `return self.get_bdew_profile().resample(\"D\").sum()` implements calendar-day totals, and dividing the normalized profile by its sum makes the resulting daily series conserve annual demand."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "All changes are confined to the heat-profile implementation and a focused new test file for the requested behavior."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change composes the existing hourly public method with pandas resampling and retains the existing `HeatBuilding` API conventions."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The adjustment `return heat_profile_normalized / heat_profile_normalized.sum()` only corrects the existing profile's small normalization error while leaving its relative shape and all public defaults intact."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "The test covers ordinary and leap years, constant and varying temperatures, daily boundaries, hourly equivalence, and annual conservation, but does not exercise the existing warm-water configuration options."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The NumPy-style return documentation clearly states the index labeling, aggregation, unit relationship, and conservation guarantee, while the normalization comment concisely explains the change."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C5",
+          "reason": "A should be merged because its tests cover the warm-water option combinations in addition to all of B's central daily aggregation and annual-conservation cases."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `return self.get_bdew_profile().resample(\"D\").sum()` produces calendar-day sums, while final normalization ensures those values sum to the requested annual demand."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is narrowly limited to the accessor, the normalization needed for its annual-total contract, and focused tests in `tests/test_heat_building.py`."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The accessor appropriately reuses `get_bdew_profile()`, though placing the tests in a new `test_heat_building.py` file departs from the existing heat-profile test location used elsewhere."
+              },
+              "C4": {
+                "score": 4,
+                "reason": "The line `return heat_profile_normalized / heat_profile_normalized.sum()` slightly adjusts existing hourly results, but only to enforce the ticket’s required annual-energy conservation."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "The parametrized test covers ordinary and leap years plus constant and varying temperatures, but does not exercise configured warm-water modes."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The name `get_daily_profile` and docstring phrase `Daily totals with a DatetimeIndex labelled at midnight` make the public behavior immediately clear."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The line `return self.get_bdew_profile().resample(\"D\").sum()` directly implements one value per calendar day, and the normalized hourly profile makes the daily total equal annual demand."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Only the heat-profile implementation and its established test module are touched, with every changed line supporting the requested accessor or its energy-total guarantee."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change reuses `get_bdew_profile()` and adds `test_daily_heat_profile` alongside the existing particular-profile tests, matching the repository’s existing organization."
+              },
+              "C4": {
+                "score": 4,
+                "reason": "Replacing the prior `kw` calculation with `return heat_profile / heat_profile.sum()` can slightly alter existing hourly values, but preserves their shape while enforcing the newly required total."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The test parametrizes normal and leap years, constant and varying temperatures, and all shown `ww_incl`/`ww_only` combinations while asserting daily aggregation and annual conservation."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The concise accessor and comment `Normalize after applying the rounded hourly factors` clearly explain both the API and the otherwise non-obvious normalization change."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C5",
+          "reason": "B should be merged because its tests more thoroughly establish the required annual-total behavior across leap years, temperature shapes, and configured heating and warm-water modes."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 4.5,
+          "C5": 5,
+          "C6": 4.5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 4.5,
+          "C4": 4.5,
+          "C5": 4,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T09",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:11:25.974Z",
+      "verdict": "full",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The constructor validates all three requested parameters immediately, including the named \"EFG\" and wind class 2 cases, while preserving the non-residential class-zero rule in `if (self.shlp_type not in [\"EFH\", \"MFH\"])`."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to constructor validation in `heat_building.py` and focused behavioral tests added to the existing `test_particular_profiles.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change retains the existing keyword-only constructor shape and case normalization, and its `Integral` check matches the documented integer nature of `building_class`."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Existing valid lowercase profile types, wind classes 0 and 1, residential classes 1–11, and the default non-residential class 0 remain supported, as demonstrated by `test_heat_building_valid_residential_inputs` and `test_heat_building_non_residential_class_zero`."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover invalid and valid profile types, wind classes, residential classes, and the retained non-residential rule, including the ticket’s explicit `\"EFG\"` and `2` examples."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "Names such as `supported_types` and direct messages like `\"wind_class must be one of: 0, 1\"` make the validation easy to understand."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 4,
+                "reason": "The requested early errors are implemented, but `if self.building_class not in accepted_classes` accepts values such as `1.0` and `True` as integer building classes because Python membership uses equality."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Only the affected constructor and a dedicated test module are changed, with no unrelated edits."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The public API and normalization conventions are preserved, but tuple membership does not fully enforce the documented `building_class : int` contract."
+              },
+              "C4": {
+                "score": 4,
+                "reason": "Normal valid inputs and the non-residential class-zero rule are preserved, though previously failing residential values such as `1.0` can now pass constructor validation and reach later lookups."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "The new tests thoroughly cover the named failures and valid ranges, but `test_invalid_constructor_parameter` omits boolean and integer-equivalent float building classes that expose the implementation’s type-validation gap."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The `residential` and `accepted_classes` variables clearly express the validation branches, and every error directly identifies the parameter and accepted values."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C1",
+          "reason": "A should be merged because its explicit integer validation solves the building-class requirement more completely, reinforced by stronger edge-case tests under C5."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 4,
+                "reason": "The added checks validate all three parameters and preserve the non-residential rule, but `self.building_class not in accepted_classes` also accepts equality-compatible values such as `True` and `1.0` for residential classes despite the documented integer input."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to constructor validation in `heat_building.py` and a focused new `tests/test_heat_building.py` file."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The validation follows the existing constructor style and preserves lowercase normalization, though `accepted_types` duplicates the profile-type list already represented by the module's data and documentation."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The existing lowercase handling and default `building_class=0` remain intact, while the original non-residential error rule is retained and made more informative."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "The new tests cover invalid and valid values for every requested parameter, but the residential cases only reject `1.5` and therefore miss the accepted `1.0` and `True` loopholes in tuple membership."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "Names such as `residential` and `accepted_classes`, together with messages like `invalid building_class ... accepted values`, make the change immediately understandable."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The constructor validates `shlp_type`, `wind_class`, and `building_class` immediately, and the `Integral` check correctly constrains residential classes to integer values 1 through 11 while retaining class 0 for non-residential types."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The change adds only the required constructor checks, one supporting standard-library import, and focused tests in the existing heat-profile test module."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "Using `numbers.Integral` supports native and NumPy integer inputs, as demonstrated by the added `np.int64(5)` case, while keeping the public constructor shape and existing normalization behavior."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The original default class 0, case-insensitive profile types, and non-residential restriction remain unchanged for valid callers, with only invalid inputs now rejected early."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover the named typo and wind-class edge case, all accepted profile types and wind classes, residential boundaries and invalid types including `True` and `1.0`, and the non-residential class-zero rule."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The checks and messages—such as `building_class must be an integer from 1 to 11 for EFH/MFH`—are concise and easy to review."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C5",
+          "reason": "Diff B should be merged because its tests expose and its implementation closes residential type-validation loopholes that Diff A leaves untested and accepted."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        },
+        "baseline": {
+          "C1": 4,
+          "C2": 5,
+          "C3": 4,
+          "C4": 4.5,
+          "C5": 4,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T10",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:12:10.939Z",
+      "verdict": "tie",
+      "flipped": true,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The `if name in names:` check rejects duplicates both against `self.houses` and earlier entries in `houses`, and the error `Duplicate house name: {name!r}` names the duplicate."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to `Region.add_houses` and focused tests in `tests/test_vdi4655.py`, with the distinct-house test serving as a relevant regression check."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The validation is added before the existing `self.houses.extend(houses)` call without changing the public API or introducing a parallel mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Validation occurs before mutation, and assertions such as `assert region.houses == [example_houses[0]]` and the preserved `temperature_limits` verify unchanged state on failure."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "Separate tests cover a repeated name within one list and a name already present in the region, while `test_add_distinct_houses` verifies successful behavior remains intact."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The compact `names` loop and explicit error are immediately understandable, but the changed public method's docstring is not updated to document the new `ValueError`."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The `if name in names:` guard catches both duplicates in the incoming list and names already in `self.houses`, raising a `ValueError` that includes `name!r`."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Only the relevant method and its tests are changed, and the added constructor coverage is in scope because construction delegates house addition to this behavior."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change preserves the existing API and validation flow while documenting the new error in the method's conventional `Raises` section."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The duplicate scan completes before `self.houses.extend(houses)`, and the test explicitly checks both `region.houses` and `region.temperature_limits` remain equal to their originals."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parametrized `test_duplicate_house_names` covers incoming-list and already-present duplicates, the constructor path is covered separately, and unique and empty additions are regression-tested."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The validation loop, exact error message, and new `Raises` text—`If a house type is unsupported or a house name is repeated`—make the behavior clear in one reading."
+              }
+            }
+          },
+          "verdict": "tie",
+          "deciding": "C5",
+          "reason": "Both diffs equally solve both named cases with strong behavioral tests, so B's docstring advantage under C6 does not outweigh their parity on the higher-priority C1 and C5."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The loop beginning `names = {house[\"name\"] for house in self.houses}` rejects both names already in the region and repetitions within the incoming list, and the error names the duplicate."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to `Region.add_houses`, its public documentation, and focused tests for duplicate and unique names."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The validation is added directly to the existing `add_houses` validation flow and preserves the public API and local `ValueError` style."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Because `self.houses.extend(houses)` remains after the complete validation loop, invalid additions leave both houses and temperature limits unchanged while valid additions retain prior behavior."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`test_duplicate_house_names` covers incoming-list and already-present duplicates, `test_duplicate_house_names_in_constructor` covers constructor delegation, and `test_add_houses_with_unique_names` protects valid and empty additions."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The new `Raises` section explicitly documents repeated names, and `raise ValueError(f\"Duplicate house name: {name!r}\")` makes the failure immediately clear."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The loop beginning `names = {house[\"name\"] for house in self.houses}` detects both forms of duplication requested and reports the offending name."
+              },
+              "C2": {
+                "score": 4,
+                "reason": "The duplicate-name tests are focused, but `test_add_distinct_houses` additionally exercises full load-curve generation across two resampling rules, which is broader than needed for this validation ticket."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change integrates a straightforward uniqueness check into the existing validation path without changing the method signature or introducing a parallel mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Validation completes before `self.houses.extend(houses)`, so failures are atomic and the existing successful-addition behavior remains intact."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`test_duplicate_house_names_in_list` and `test_duplicate_house_name_already_in_region` directly cover both named edge cases and assert that rejected calls do not mutate region state."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The implementation and error text are clear, but unlike Diff A it leaves the changed public method's docstring without a `Raises` entry for duplicate names."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C2",
+          "reason": "A should be merged because both diffs fully solve and test the ticket, while A is more tightly scoped and documents the new public error behavior without B's broader load-curve regression test."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 4.5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 4
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T11",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:12:54.844Z",
+      "verdict": "baseline",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The empty diff makes no change to `Climate.from_try_data`, so a user-supplied path remains unsupported."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
+              },
+              "C3": {
+                "score": 1,
+                "reason": "The empty diff provides no implementation that can fit or reuse the codebase's existing TRY-loading mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The empty diff necessarily preserves all existing behavior."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The empty diff adds no tests for path-based loading, header validation, or numeric-region validation."
+              },
+              "C6": {
+                "score": 1,
+                "reason": "The empty diff contains no readable implementation or updated public-function documentation to review."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The `from_path = isinstance(try_region, (str, os.PathLike))` branch accepts both string and path-like files while the numeric branch retains the existing `ValueError` validation."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The changes are confined to TRY loading and focused tests, with `os.fspath(weather_file_path)` being necessary to keep the existing header error compatible with path-like inputs."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The diff reuses `dwd_try.read_dwd_weather_file(fn_weather)` and the existing weather-processing and energy-factor-loading paths rather than introducing a parallel loader."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The original numbered-region path construction and validation remain in the `else` branch, preserving behavior for existing numeric calls."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The added tests cover `str` and `Path` inputs, successful loading, missing headers, missing files, and continued rejection of invalid region numbers."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The expanded docstring clearly describes the new accepted types and the explicit `from_path` branches make the behavior straightforward to follow."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "Diff B should be merged because it implements the requested path-based loading while preserving numeric-region behavior, whereas Diff A does not address the ticket."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The `from_path = isinstance(try_region, (str, os.PathLike))` branch accepts both string and PathLike DWD TRY paths while retaining the numeric-region validation in the `else` branch."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to TRY loading, its path-compatible error message, and focused tests in `tests/test_vdi4655.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation continues to use `dwd_try.read_dwd_weather_file(fn_weather)` and the existing climate-processing and energy-factor machinery rather than introducing a parallel loader."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Numeric calls still execute `if try_region not in list(range(1, 16))` and construct the same packaged `TRY2010_{:02d}_Jahr.dat` path, preserving existing validation and behavior."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The added tests cover string and Path inputs, successful parsing, retained/default energy factors, missing headers, missing files, and invalid numeric regions through `test_try_from_path`, `test_try_path_missing_header`, `test_try_path_missing_file`, and `test_try_invalid_region`."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The new public docstring clearly describes `try_region : int, str or os.PathLike`, and the compact `from_path` branches make the behavior straightforward to follow."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The empty diff adds no path-handling branch to `Climate.from_try_data`, so user-supplied DWD TRY files remain unsupported."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "Although the empty diff does not violate codebase conventions, it also provides no implementation that can demonstrate a fit with the existing TRY-loading design."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The empty diff preserves all existing behavior because it changes no lines."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The empty diff adds no tests for file paths, header checking, or continued numeric-region validation."
+              },
+              "C6": {
+                "score": 3,
+                "reason": "There is no changed code to assess for clarity and no updated public docstring explaining the requested path behavior."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "A should be merged because it implements the requested path-based loading while preserving the explicitly named numeric validation and header behavior, whereas B does not address the ticket."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 1,
+          "C2": 5,
+          "C3": 2,
+          "C4": 5,
+          "C5": 1,
+          "C6": 2
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T12",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:13:41.327Z",
+      "verdict": "tie",
+      "flipped": true,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The validation at `if any(day < 0 or day > 7 for day in days)` and `if seen_days.intersection(days)` rejects both requested invalid ranges and cross-category overlaps while retaining the stated 0..7 convention."
+              },
+              "C2": {
+                "score": 4,
+                "reason": "All changes are relevant, though the 16-case matrix introduced by `@pytest.mark.parametrize(\"holiday_dict\", [False, True])` and related decorators is broader than necessary for this focused validation ticket."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The local `categories = {\"week\": week, \"weekend\": weekend, \"holiday\": holiday}` validation preserves the existing API and follows the module's straightforward `ValueError` style."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Validation occurs after the unchanged defaults `week=[1, 2, 3, 4, 5]`, `weekend=[6, 7]`, and `holiday=[0]` are selected, and `test_simple_profile_valid_categories` explicitly checks default and custom behavior."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover every pairwise overlap via cases such as `{\"week\": [0, 1], \"holiday\": [0]}`, both invalid boundaries for all three categories, defaults, custom categories, holiday modes, and multiple frequencies."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The `seen_days` loop is easy to follow and the public docstring records the new errors, although the phrase `including default categories` is slightly awkward and the generic overlap error omits the conflicting category names."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The `issubset(range(8))` check rejects values outside 0..7, and the three explicit category pairs ensure every possible cross-category overlap raises `ValueError`."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is tightly limited to validation, its public documentation, and focused behavioral tests in the existing source and test files."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change keeps the public call shape intact, uses local sets for category comparison, and raises conventional, informative `ValueError` messages such as `Day categories '{first}' and '{second}' overlap.`"
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The validation wraps the existing values obtained from `kwargs.get`, leaving the disjoint default categories and all downstream profile calculation behavior unchanged."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The overlap cases include week/weekend, week/holiday, and weekend/holiday conflicts, while `[-1, 8]` is tested for each of `week`, `weekend`, and `holiday` without weakening existing tests."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The introductory contract `0 denotes holidays and 1..7 denotes Monday through Sunday`, explicit pair names, and precise error messages make the change immediately understandable."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C2",
+          "reason": "Both diffs fully solve and test the ticket, but B is the better merge because it achieves the same C1 and C5 coverage with a more focused, minimal test addition."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The added `if not days.issubset(range(8))` and pairwise `categories[first] & categories[second]` checks reject both requested invalid ranges and every cross-category overlap while retaining 0..7."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is confined to `particular_profiles.py` validation/documentation and focused tests in `test_particular_profiles.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The validation is placed immediately after the existing `kwargs.get` category defaults and preserves the public call signature and local `ValueError` style."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The existing defaults remain exactly `week=[1,2,3,4,5]`, `weekend=[6,7]`, and `holiday=[0]`, with validation occurring before otherwise unchanged factor logic."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The new parameterized tests cover all three overlap pairings through `week`, `weekend`, and default `holiday`, and test both `-1` and `8` for every category."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The `categories` mapping, named pair iteration, specific error messages, and new public docstring text make the validation straightforward to understand."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The `any(day < 0 or day > 7 for day in days)` range check and incremental `seen_days.intersection(days)` check implement both requested rejection rules."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "All changes are limited to the affected method's documentation and validation plus directly relevant tests."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation retains the existing kwargs-based API and inserts concise validation alongside the current category-default setup."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The unchanged default category assignments are explicitly exercised by `test_simple_profile_valid_categories` across frequencies and holiday configurations."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "Tests cover each category pair, both out-of-range boundaries for every category, unchanged defaults, custom valid categories, holiday representations, and `holiday_is_sunday` modes."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The `seen_days` algorithm and `Day categories must be disjoint.` error clearly express the invariant, while the docstring records the new public behavior."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C5",
+          "reason": "Diff B should be merged because C5 is stronger: beyond testing every requested failure mode, it explicitly verifies preserved default and valid-custom behavior across holiday and frequency variants."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 4.5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 4.5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T13",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:14:26.419Z",
+      "verdict": "tie",
+      "flipped": true,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The checks `if annual_demand < 0` and `if annual_demand == 0` implement the requested ValueError and UserWarning while leaving positive inputs on the existing path."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff only changes `simple_profile`, its parameter documentation, and focused tests in `tests/test_particular_profiles.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change preserves the public signature and uses the codebase's existing direct validation style, with `stacklevel=2` on the new warning."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The positive-demand test constructs the established factors and asserts the exact normalized series at both hourly and quarter-hourly frequencies."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover zero demand, two negative values, and unchanged positive behavior across `1h` and `15min` resolutions."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The docstring line `Zero demand emits a UserWarning; negative demand is rejected` and straightforward guards make the behavior immediately clear."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The added negative guard raises ValueError and the zero guard emits UserWarning before the existing profile calculation, exactly covering the ticket's named cases."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "All changes are confined to the affected implementation, its docstring, and directly relevant tests."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation retains the existing API and follows local validation conventions, while the warning message usefully directs users to check demand units."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The test `pd.testing.assert_series_equal(profile, unit_profile * 100)` verifies that positive-demand scaling remains unchanged."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "Tests cover zero, multiple negative values, and positive behavior, but unlike Diff A they exercise only the existing hourly fixture and do not independently pin the full expected positive profile."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The public docstring explicitly states both new outcomes, and the error and warning messages are concise and actionable."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C5",
+          "reason": "A should be merged because its tests more thoroughly protect the required unchanged positive behavior across multiple time resolutions and against an independently constructed expected profile."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The guards `if annual_demand < 0` and `if annual_demand == 0` implement the requested ValueError and UserWarning while leaving positive values on the existing path."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only `simple_profile`, its parameter documentation, and focused tests in `tests/test_particular_profiles.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation uses the module's existing public method unchanged and standard Python `warnings.warn(..., UserWarning, stacklevel=2)` validation style."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Validation occurs only for `annual_demand <= 0`, and `test_simple_profile_positive_demand` explicitly checks that positive scaling and totals remain unchanged."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The added tests cover zero demand, two negative values, warning absence for positive demand, positive scaling, total demand, and preservation of the result index."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The concise guards and the added docstring text `Zero demand emits a UserWarning... negative demand raises a ValueError` make the behavior immediately clear."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The new negative and zero guards exactly provide the requested rejection and warning, with positive demand continuing through the original implementation."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "All changes are confined to the relevant profile method, its documentation, and its tests."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change preserves the public API and uses conventional `ValueError` and `warnings.warn` mechanisms consistent with a small validation addition."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The guards affect only non-positive values, while the parametrized positive-demand test checks unchanged results at hourly and quarter-hourly resolutions."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "Tests exercise zero and negative edge cases plus positive behavior at two resolutions, including warning absence, exact profile values, index preservation, and normalized demand."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The production change and docstring are clear, though the lengthy hand-built `factors` calculation in the positive test makes the diff somewhat harder to review."
+              }
+            }
+          },
+          "verdict": "tie",
+          "deciding": "C1",
+          "reason": "Both diffs equally satisfy the ticket and provide strong edge-case and regression tests, while B's small readability disadvantage cannot decide the pair."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 4.5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 4.5,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T14",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:15:22.124Z",
+      "verdict": "baseline",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The `if conversion_factor is None` block derives the reciprocal interval length with `pd.Timedelta(hours=1) / pd.Timedelta(self.slp_frame.index.freq)`, while explicit values—including zero—remain untouched."
+              },
+              "C2": {
+                "score": 3,
+                "reason": "The added normalization in `get_scaled_profiles` changes a separate public method even though the ticket only requires changing `get_scaled_power_profiles`."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The implementation preserves the public call shape and uses pandas frequency objects idiomatically, but places resampling normalization in the more general `get_scaled_profiles` method."
+              },
+              "C4": {
+                "score": 2,
+                "reason": "The new `if profiles.index.freq != self.date_time_index.freq` branch silently changes `get_scaled_profiles` results for every resampled profile, including calls using an explicit power conversion factor."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parametrized tests cover hourly, quarter-hourly, and minute frequencies, both downsampling and upsampling, annual-energy preservation, and explicit overrides of `0`, `2.5`, and `4`."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The reciprocal-duration calculation is immediately understandable, and the updated docstrings clearly explain automatic derivation and explicit override behavior."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The line `conversion_factor = 3.6e12 / self.slp_frame.index.freq.nanos` correctly produces 1, 4, and 60 for the named resolutions, while the `None` guard preserves explicit overrides."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "All production changes remain confined to `get_scaled_power_profiles`, with only focused tests added for the requested behavior."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The change retains the existing API and builds on `get_scaled_profiles`, applying any necessary normalization locally to automatic conversion."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The normalization is guarded by both `conversion_factor is None` and a changed frequency, so quarter-hour defaults and explicitly supplied conversion factors preserve their prior behavior."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover all three named frequencies, explicit factors including zero, upsampled annual-energy preservation, unchanged input data, and the original quarter-hour default."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The flow and documentation are clear, although the `3.6e12` nanoseconds-per-hour literal is less self-explanatory than a duration-based expression."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C4",
+          "reason": "B should be merged because it satisfies the ticket while preserving unrelated `get_scaled_profiles` and explicit-override behavior, whereas A changes that public method for all resampled data."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The change derives the default with `conversion_factor = 3.6e12 / self.slp_frame.index.freq.nanos`, while `if conversion_factor is None` preserves explicit overrides and yields 1, 4, and 60 for the named frequencies."
+              },
+              "C2": {
+                "score": 4,
+                "reason": "Most changes are confined to the requested method and its tests, although the added `scaled_profiles.div(...)` normalization goes beyond merely deriving the conversion factor."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The public API remains compatible and the implementation uses the existing `get_scaled_profiles`, though the low-level nanosecond constant in `3.6e12 / ...freq.nanos` is less idiomatic than expressing an hour as a pandas duration."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The guard `if conversion_factor is None` leaves every explicit factor unchanged, and `test_scaled_power_default_quarter_hour` directly verifies preservation of the quarter-hourly default result."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover hourly, quarter-hourly, and minute-derived factors, explicit overrides including zero, resampling behavior, annual energy, and unchanged quarter-hourly behavior."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The updated public docstring clearly explains automatic derivation and overrides, but the `3.6e12` constant requires a reader to infer the nanoseconds-per-hour calculation."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The `pd.Timedelta(hours=1) / pd.Timedelta(self.slp_frame.index.freq)` calculation implements the requested automatic factors, and the `None` guard ensures explicit values override it."
+              },
+              "C2": {
+                "score": 3,
+                "reason": "The added frequency-dependent normalization inside `get_scaled_profiles` changes a separate public method even though the ticket only asks to derive the power conversion factor."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The duration-ratio expression is idiomatic and the public signature remains compatible, but adding resampling normalization to `get_scaled_profiles` broadens that method's established semantics."
+              },
+              "C4": {
+                "score": 2,
+                "reason": "The new `if profiles.index.freq != self.date_time_index.freq: profiles = profiles.div(profiles.sum(), axis=1)` silently changes results from `get_scaled_profiles` whenever callers replace or resample the profile frame."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The parameterized test exercises all three named frequencies with downsampling and upsampling, checks annual totals, and verifies explicit overrides including zero."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The duration-based factor, names, comments, and updated docstrings make both the intended conversion and the added normalization easy to understand."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C4",
+          "reason": "A should be merged because it preserves the behavior of the separate `get_scaled_profiles` API, whereas B silently changes that method for every frequency-modified profile."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 3,
+          "C3": 4,
+          "C4": 2,
+          "C5": 5,
+          "C6": 5
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 4.5,
+          "C3": 4.5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 4
+        }
+      }
+    },
+    {
+      "ticket": "T15",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:15:46.911Z",
+      "verdict": "tie",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "The empty diff neither conflicts with nor demonstrates use of the codebase's existing conventions and helpers."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Because the diff has no changed lines, all pre-existing behavior is preserved."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The empty diff adds no tests for omitted `holidays` or the explicitly named empty-list case."
+              },
+              "C6": {
+                "score": 1,
+                "reason": "There is no implementation in the diff for a reviewer to understand as a resolution of the ticket."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 1,
+                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "The empty diff neither conflicts with nor demonstrates use of the codebase's existing conventions and helpers."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Because the diff has no changed lines, all pre-existing behavior is preserved."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The empty diff adds no tests for omitted `holidays` or the explicitly named empty-list case."
+              },
+              "C6": {
+                "score": 1,
+                "reason": "There is no implementation in the diff for a reviewer to understand as a resolution of the ticket."
+              }
+            }
+          },
+          "verdict": "tie",
+          "deciding": "C1",
+          "reason": "Neither diff should be merged because both equally fail C1 by making no change to solve the requested warning behavior."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 1,
+                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The empty diff makes no unrelated or out-of-scope changes."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "The empty diff neither violates nor demonstrates the codebase's conventions because it contains no changed line."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The empty diff preserves all existing behavior, although that also leaves the reported behavior unfixed."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The diff adds no test line covering either omitted `holidays` or the explicitly named empty-list case."
+              },
+              "C6": {
+                "score": 3,
+                "reason": "There is no change to assess for readability, so no diff line communicates an implementation."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The empty diff makes no unrelated or out-of-scope changes."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "The empty diff neither violates nor demonstrates the codebase's conventions because it contains no changed line."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The empty diff preserves all existing behavior, although that also leaves the reported behavior unfixed."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The diff adds no test line covering either omitted `holidays` or the explicitly named empty-list case."
+              },
+              "C6": {
+                "score": 3,
+                "reason": "There is no change to assess for readability, so no diff line communicates an implementation."
+              }
+            }
+          },
+          "verdict": "tie",
+          "deciding": "C1",
+          "reason": "Both diffs equally fail the decisive C1 criterion because neither contains any change that addresses the requested warning behavior."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 1,
+          "C2": 5,
+          "C3": 3,
+          "C4": 5,
+          "C5": 1,
+          "C6": 2
+        },
+        "baseline": {
+          "C1": 1,
+          "C2": 5,
+          "C3": 3,
+          "C4": 5,
+          "C5": 1,
+          "C6": 2
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,1524 @@
+{
+  "started_at": "2026-10-27T13:28:11.871Z",
+  "repo": "/Users/QTG2659/repos/demandlib",
+  "base": "32b6cc5b15faee8d510e53cc96bba2fe2bd59305",
+  "model": "gpt-6-astra",
+  "arms": {
+    "full": {
+      "clone": "/Users/QTG2659/intentos/.intentos/benchmarks/demandlib/run-1/full/demandlib",
+      "repo_id": "repo-90bf11018f14"
+    },
+    "baseline": {
+      "clone": "/Users/QTG2659/intentos/.intentos/benchmarks/demandlib/run-1/baseline/demandlib",
+      "repo_id": "repo-29b2f40de2fe"
+    }
+  },
+  "runs": [
+    {
+      "ticket": "T01",
+      "arm": "full",
+      "run_id": "run-20261027132814-511475",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 193316,
+      "tokens": {
+        "input_tokens": 363824,
+        "output_tokens": 4265,
+        "reasoning_output_tokens": 90,
+        "cached_input_tokens": 317568,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T02",
+      "arm": "full",
+      "run_id": "run-20261027133128-9d3f60",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 175313,
+      "tokens": {
+        "input_tokens": 362853,
+        "output_tokens": 3496,
+        "reasoning_output_tokens": 113,
+        "cached_input_tokens": 301568,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T03",
+      "arm": "full",
+      "run_id": "run-20261027133423-da57d4",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 123457,
+      "tokens": {
+        "input_tokens": 223416,
+        "output_tokens": 3007,
+        "reasoning_output_tokens": 71,
+        "cached_input_tokens": 186496,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T04",
+      "arm": "full",
+      "run_id": "run-20261027133627-4a6f69",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 112036,
+      "tokens": {
+        "input_tokens": 143149,
+        "output_tokens": 2912,
+        "reasoning_output_tokens": 29,
+        "cached_input_tokens": 101376,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T05",
+      "arm": "full",
+      "run_id": "run-20261027133819-32202a",
+      "final_state": "ABSTAINED",
+      "expected_route": "clarify",
+      "route": "abstain",
+      "route_correct": false,
+      "acceptance_final": null,
+      "acceptance_first": null,
+      "first_attempt_blocking": null,
+      "blocking_final": null,
+      "review_findings_final": null,
+      "protected_paths_touched": null,
+      "changed_files": null,
+      "repair_rounds": 0,
+      "wall_ms": 125315,
+      "tokens": {
+        "input_tokens": 79797,
+        "output_tokens": 1193,
+        "reasoning_output_tokens": 17,
+        "cached_input_tokens": 74624,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T07",
+      "arm": "full",
+      "run_id": "run-20261027134025-d216ef",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": false,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 6,
+        "total": 6
+      },
+      "blocking_final": 0,
+      "review_findings_final": 3,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 156758,
+      "tokens": {
+        "input_tokens": 410642,
+        "output_tokens": 4024,
+        "reasoning_output_tokens": 74,
+        "cached_input_tokens": 327808,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T08",
+      "arm": "full",
+      "run_id": "run-20261027134301-9b327c",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": false,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 1,
+        "total": 1
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 225676,
+      "tokens": {
+        "input_tokens": 1004053,
+        "output_tokens": 6805,
+        "reasoning_output_tokens": 281,
+        "cached_input_tokens": 919168,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T09",
+      "arm": "full",
+      "run_id": "run-20261027134647-77c81c",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 169594,
+      "tokens": {
+        "input_tokens": 343877,
+        "output_tokens": 3948,
+        "reasoning_output_tokens": 86,
+        "cached_input_tokens": 289152,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T10",
+      "arm": "full",
+      "run_id": "run-20261027134937-5f9482",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 128500,
+      "tokens": {
+        "input_tokens": 269483,
+        "output_tokens": 2784,
+        "reasoning_output_tokens": 62,
+        "cached_input_tokens": 228736,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T11",
+      "arm": "full",
+      "run_id": "run-20261027135145-9ee092",
+      "final_state": "CLARIFICATION_REQUIRED",
+      "expected_route": "implement",
+      "route": "clarify",
+      "route_correct": false,
+      "acceptance_final": null,
+      "acceptance_first": null,
+      "first_attempt_blocking": null,
+      "blocking_final": null,
+      "review_findings_final": null,
+      "protected_paths_touched": null,
+      "changed_files": null,
+      "repair_rounds": 0,
+      "wall_ms": 34231,
+      "tokens": {
+        "input_tokens": 47819,
+        "output_tokens": 1345,
+        "reasoning_output_tokens": 61,
+        "cached_input_tokens": 22912,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T12",
+      "arm": "full",
+      "run_id": "run-20261027135220-d727ea",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 161948,
+      "tokens": {
+        "input_tokens": 343039,
+        "output_tokens": 3862,
+        "reasoning_output_tokens": 71,
+        "cached_input_tokens": 300672,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T13",
+      "arm": "full",
+      "run_id": "run-20261027135502-67fd24",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 2,
+        "total": 2
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 153023,
+      "tokens": {
+        "input_tokens": 344686,
+        "output_tokens": 4504,
+        "reasoning_output_tokens": 78,
+        "cached_input_tokens": 272640,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T14",
+      "arm": "full",
+      "run_id": "run-20261027135735-d29c00",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": false,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 1,
+        "total": 1
+      },
+      "blocking_final": 0,
+      "review_findings_final": 2,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 295047,
+      "tokens": {
+        "input_tokens": 1148480,
+        "output_tokens": 6663,
+        "reasoning_output_tokens": 481,
+        "cached_input_tokens": 1036544,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T15",
+      "arm": "full",
+      "run_id": "run-20261027140230-f24e25",
+      "final_state": "ABSTAINED",
+      "expected_route": "abstain",
+      "route": "abstain",
+      "route_correct": true,
+      "acceptance_final": null,
+      "acceptance_first": null,
+      "first_attempt_blocking": null,
+      "blocking_final": null,
+      "review_findings_final": null,
+      "protected_paths_touched": null,
+      "changed_files": null,
+      "repair_rounds": 0,
+      "wall_ms": 28437,
+      "tokens": {
+        "input_tokens": 52734,
+        "output_tokens": 791,
+        "reasoning_output_tokens": 17,
+        "cached_input_tokens": 25600,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T01",
+      "arm": "baseline",
+      "run_id": "run-20261027140258-64cad3",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 106643,
+      "tokens": {
+        "input_tokens": 231452,
+        "output_tokens": 2003,
+        "reasoning_output_tokens": 65,
+        "cached_input_tokens": 200832,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T02",
+      "arm": "baseline",
+      "run_id": "run-20261027140445-6ec367",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 1,
+        "functional": 0,
+        "total": 1
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 270488,
+      "tokens": {
+        "input_tokens": 956531,
+        "output_tokens": 5270,
+        "reasoning_output_tokens": 164,
+        "cached_input_tokens": 889600,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T03",
+      "arm": "baseline",
+      "run_id": "run-20261027140916-4764ae",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 94642,
+      "tokens": {
+        "input_tokens": 222572,
+        "output_tokens": 1497,
+        "reasoning_output_tokens": 43,
+        "cached_input_tokens": 208768,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T04",
+      "arm": "baseline",
+      "run_id": "run-20261027141051-79aa7d",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 120884,
+      "tokens": {
+        "input_tokens": 318826,
+        "output_tokens": 2236,
+        "reasoning_output_tokens": 62,
+        "cached_input_tokens": 298496,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T05",
+      "arm": "baseline",
+      "run_id": "run-20261027141252-174032",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "clarify",
+      "route": "implement",
+      "route_correct": false,
+      "acceptance_final": null,
+      "acceptance_first": null,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 4,
+        "functional": 0,
+        "total": 4
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 7,
+      "repair_rounds": 1,
+      "wall_ms": 179507,
+      "tokens": {
+        "input_tokens": 547786,
+        "output_tokens": 7145,
+        "reasoning_output_tokens": 312,
+        "cached_input_tokens": 499968,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T06",
+      "arm": "full",
+      "run_id": "run-20261027141633-f9fdc2",
+      "final_state": "ABSTAINED",
+      "expected_route": "abstain",
+      "route": "abstain",
+      "route_correct": true,
+      "acceptance_final": null,
+      "acceptance_first": null,
+      "first_attempt_blocking": null,
+      "blocking_final": null,
+      "review_findings_final": null,
+      "protected_paths_touched": null,
+      "changed_files": null,
+      "repair_rounds": 0,
+      "wall_ms": 42860,
+      "tokens": {
+        "input_tokens": 94798,
+        "output_tokens": 1253,
+        "reasoning_output_tokens": 0,
+        "cached_input_tokens": 68096,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T06",
+      "arm": "baseline",
+      "run_id": "run-20261027141716-8d27cc",
+      "final_state": "REVIEW_READY",
+      "expected_route": "abstain",
+      "route": "implement",
+      "route_correct": false,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 103985,
+      "tokens": {
+        "input_tokens": 353257,
+        "output_tokens": 1648,
+        "reasoning_output_tokens": 76,
+        "cached_input_tokens": 322048,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T07",
+      "arm": "baseline",
+      "run_id": "run-20261027141900-a71127",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": false,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 1,
+        "total": 1
+      },
+      "blocking_final": 0,
+      "review_findings_final": 3,
+      "protected_paths_touched": 0,
+      "changed_files": 1,
+      "repair_rounds": 1,
+      "wall_ms": 84987,
+      "tokens": {
+        "input_tokens": 233235,
+        "output_tokens": 1407,
+        "reasoning_output_tokens": 16,
+        "cached_input_tokens": 190976,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T08",
+      "arm": "baseline",
+      "run_id": "run-20261027142025-3dceb3",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": false,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 1,
+        "functional": 3,
+        "total": 4
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 137272,
+      "tokens": {
+        "input_tokens": 510015,
+        "output_tokens": 3519,
+        "reasoning_output_tokens": 85,
+        "cached_input_tokens": 472192,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T09",
+      "arm": "baseline",
+      "run_id": "run-20261027142243-c8b07c",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 21,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 21
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 145404,
+      "tokens": {
+        "input_tokens": 593911,
+        "output_tokens": 5915,
+        "reasoning_output_tokens": 113,
+        "cached_input_tokens": 516224,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T10",
+      "arm": "baseline",
+      "run_id": "run-20261027142508-3507e9",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 85545,
+      "tokens": {
+        "input_tokens": 205440,
+        "output_tokens": 1334,
+        "reasoning_output_tokens": 28,
+        "cached_input_tokens": 177280,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T11",
+      "arm": "baseline",
+      "run_id": "run-20261027142634-329cdd",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": false,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 1,
+        "functional": 1,
+        "total": 2
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 3,
+      "repair_rounds": 2,
+      "wall_ms": 242324,
+      "tokens": {
+        "input_tokens": 1324592,
+        "output_tokens": 10274,
+        "reasoning_output_tokens": 683,
+        "cached_input_tokens": 1188352,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T12",
+      "arm": "baseline",
+      "run_id": "run-20261027143036-305dee",
+      "final_state": "REVIEW_READY",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 0,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 88390,
+      "tokens": {
+        "input_tokens": 200528,
+        "output_tokens": 1537,
+        "reasoning_output_tokens": 22,
+        "cached_input_tokens": 184064,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T13",
+      "arm": "baseline",
+      "run_id": "run-20261027143205-379b9b",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 0,
+      "wall_ms": 102532,
+      "tokens": {
+        "input_tokens": 210079,
+        "output_tokens": 1438,
+        "reasoning_output_tokens": 7,
+        "cached_input_tokens": 195584,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T14",
+      "arm": "baseline",
+      "run_id": "run-20261027143347-a4b6bf",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "implement",
+      "route": "implement",
+      "route_correct": true,
+      "acceptance_final": true,
+      "acceptance_first": false,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 1,
+        "total": 1
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 2,
+      "repair_rounds": 1,
+      "wall_ms": 162817,
+      "tokens": {
+        "input_tokens": 575094,
+        "output_tokens": 4741,
+        "reasoning_output_tokens": 362,
+        "cached_input_tokens": 528000,
+        "known": true
+      },
+      "error": null
+    },
+    {
+      "ticket": "T15",
+      "arm": "baseline",
+      "run_id": "run-20261027143630-2d5dc9",
+      "final_state": "HUMAN_REVIEW",
+      "expected_route": "abstain",
+      "route": "implement",
+      "route_correct": false,
+      "acceptance_final": true,
+      "acceptance_first": true,
+      "first_attempt_blocking": {
+        "invariant": 0,
+        "architecture": 0,
+        "scope": 0,
+        "functional": 0,
+        "total": 0
+      },
+      "blocking_final": 0,
+      "review_findings_final": 1,
+      "protected_paths_touched": 0,
+      "changed_files": 0,
+      "repair_rounds": 0,
+      "wall_ms": 60560,
+      "tokens": {
+        "input_tokens": 143611,
+        "output_tokens": 599,
+        "reasoning_output_tokens": 34,
+        "cached_input_tokens": 131072,
+        "known": true
+      },
+      "error": null
+    }
+  ],
+  "merges": [
+    {
+      "ticket": "T01",
+      "arm": "full",
+      "run_id": "run-20261027132814-511475",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "passed",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T02",
+      "arm": "full",
+      "run_id": "run-20261027133128-9d3f60",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "needs_review",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T03",
+      "arm": "full",
+      "run_id": "run-20261027133423-da57d4",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "needs_review",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T04",
+      "arm": "full",
+      "run_id": "run-20261027133627-4a6f69",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "needs_review",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T05",
+      "arm": "full",
+      "run_id": "run-20261027133819-32202a",
+      "attempted": false,
+      "merged": false,
+      "how": "not mergeable: run ABSTAINED",
+      "tier": null,
+      "approvals_needed": null,
+      "blocked_by": [
+        "not mergeable: run ABSTAINED"
+      ],
+      "merged_verification": null,
+      "main_after": null
+    },
+    {
+      "ticket": "T06",
+      "arm": "full",
+      "run_id": "run-20261027141633-f9fdc2",
+      "attempted": false,
+      "merged": false,
+      "how": "not mergeable: run ABSTAINED",
+      "tier": null,
+      "approvals_needed": null,
+      "blocked_by": [
+        "not mergeable: run ABSTAINED"
+      ],
+      "merged_verification": null,
+      "main_after": null
+    },
+    {
+      "ticket": "T07",
+      "arm": "full",
+      "run_id": "run-20261027134025-d216ef",
+      "attempted": true,
+      "merged": false,
+      "how": "merge conflict",
+      "tier": null,
+      "approvals_needed": null,
+      "blocked_by": [
+        "the branch does not merge cleanly onto dev: "
+      ],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T08",
+      "arm": "full",
+      "run_id": "run-20261027134301-9b327c",
+      "attempted": true,
+      "merged": false,
+      "how": "merge conflict",
+      "tier": null,
+      "approvals_needed": null,
+      "blocked_by": [
+        "the branch does not merge cleanly onto dev: "
+      ],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T09",
+      "arm": "full",
+      "run_id": "run-20261027134647-77c81c",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "passed",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T10",
+      "arm": "full",
+      "run_id": "run-20261027134937-5f9482",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "passed",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T11",
+      "arm": "full",
+      "run_id": "run-20261027135145-9ee092",
+      "attempted": false,
+      "merged": false,
+      "how": "not mergeable: run CLARIFICATION_REQUIRED",
+      "tier": null,
+      "approvals_needed": null,
+      "blocked_by": [
+        "not mergeable: run CLARIFICATION_REQUIRED"
+      ],
+      "merged_verification": null,
+      "main_after": null
+    },
+    {
+      "ticket": "T12",
+      "arm": "full",
+      "run_id": "run-20261027135220-d727ea",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "passed",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T13",
+      "arm": "full",
+      "run_id": "run-20261027135502-67fd24",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "needs_review",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T14",
+      "arm": "full",
+      "run_id": "run-20261027135735-d29c00",
+      "attempted": true,
+      "merged": true,
+      "how": "intentos merge",
+      "tier": 1,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": "passed",
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T15",
+      "arm": "full",
+      "run_id": "run-20261027140230-f24e25",
+      "attempted": false,
+      "merged": false,
+      "how": "not mergeable: run ABSTAINED",
+      "tier": null,
+      "approvals_needed": null,
+      "blocked_by": [
+        "not mergeable: run ABSTAINED"
+      ],
+      "merged_verification": null,
+      "main_after": null
+    },
+    {
+      "ticket": "T01",
+      "arm": "baseline",
+      "run_id": "run-20261027140258-64cad3",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T02",
+      "arm": "baseline",
+      "run_id": "run-20261027140445-6ec367",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T03",
+      "arm": "baseline",
+      "run_id": "run-20261027140916-4764ae",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T04",
+      "arm": "baseline",
+      "run_id": "run-20261027141051-79aa7d",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T05",
+      "arm": "baseline",
+      "run_id": "run-20261027141252-174032",
+      "attempted": true,
+      "merged": false,
+      "how": "merge conflict",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [
+        "git merge conflict: "
+      ],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T06",
+      "arm": "baseline",
+      "run_id": "run-20261027141716-8d27cc",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T07",
+      "arm": "baseline",
+      "run_id": "run-20261027141900-a71127",
+      "attempted": true,
+      "merged": false,
+      "how": "merge conflict",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [
+        "git merge conflict: "
+      ],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T08",
+      "arm": "baseline",
+      "run_id": "run-20261027142025-3dceb3",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T09",
+      "arm": "baseline",
+      "run_id": "run-20261027142243-c8b07c",
+      "attempted": true,
+      "merged": false,
+      "how": "merge conflict",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [
+        "git merge conflict: "
+      ],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T10",
+      "arm": "baseline",
+      "run_id": "run-20261027142508-3507e9",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T11",
+      "arm": "baseline",
+      "run_id": "run-20261027142634-329cdd",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T12",
+      "arm": "baseline",
+      "run_id": "run-20261027143036-305dee",
+      "attempted": true,
+      "merged": false,
+      "how": "merge conflict",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [
+        "git merge conflict: "
+      ],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T13",
+      "arm": "baseline",
+      "run_id": "run-20261027143205-379b9b",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T14",
+      "arm": "baseline",
+      "run_id": "run-20261027143347-a4b6bf",
+      "attempted": true,
+      "merged": true,
+      "how": "plain merge after green branch CI",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    },
+    {
+      "ticket": "T15",
+      "arm": "baseline",
+      "run_id": "run-20261027143630-2d5dc9",
+      "attempted": true,
+      "merged": false,
+      "how": "no changes",
+      "tier": null,
+      "approvals_needed": 1,
+      "blocked_by": [
+        "the run produced no changes"
+      ],
+      "merged_verification": null,
+      "main_after": {
+        "green": true,
+        "project": "pass",
+        "invariants": "pass",
+        "acceptance": "pass",
+        "failed": []
+      }
+    }
+  ]
+}
