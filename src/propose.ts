@@ -77,6 +77,21 @@ export const ProposalSchema = z.object({
 });
 export type Proposal = z.infer<typeof ProposalSchema>;
 
+/** Who wrote the candidates in the review list: the host agent itself, or IntentOS's independent side thread. */
+export interface Author {
+  via: "host" | "side_thread";
+  model: string | null;
+  engine?: string | null;
+  thread_id?: string | null;
+}
+
+export const describeAuthor = (a: Author | null | undefined): string => (!a ? "the deterministic miner" : a.via === "side_thread" ? `${a.model ?? "an unnamed model"} in an independent side thread` : "the host agent");
+
+/** The compact rows the `mined` tool and the independent miner's prompt show: enough to select and restate, never the drafts. */
+export function minedRows(mined: MinerOutput) {
+  return mined.candidates.map((c) => ({ id: c.id, kind: c.kind, title: c.title, statement: c.statement, confidence: c.confidence, score: c.score, test: c.evidence.find((e) => e.type === "test")?.ref ?? null, evidence: c.evidence.slice(0, 3).map((e) => ({ type: e.type, ref: e.ref, excerpt: e.excerpt.slice(0, 160) })), applies_to_paths: c.applies_to_paths ?? [] }));
+}
+
 export interface ProposeOptions {
   policyId?: string;
   outDir?: string;
@@ -86,6 +101,8 @@ export interface ProposeOptions {
   /** Run the tests (default true; off only in unit tests of the plumbing). */
   runTests?: boolean;
   timeoutS?: number;
+  /** Recorded in the review list (default: the host agent). */
+  author?: Author;
 }
 
 export interface ProposeResult {
@@ -99,7 +116,7 @@ export interface ProposeResult {
   files: SuggestResult["files"];
 }
 
-export type AuthoredSuggestions = SuggestResult & { authored_by?: "codex" };
+export type AuthoredSuggestions = SuggestResult & { authored_by?: "codex"; author?: Author };
 
 type Draft = NonNullable<Candidate["suggested_hidden_test"]> & { pending_run?: boolean };
 
@@ -253,6 +270,7 @@ export async function ingestProposals(repoInput: string, proposals: unknown[], o
   });
   const counts = Object.fromEntries(["invariant", "architecture_rule", "frozen_paths", "decision"].map((k) => [k, all.filter((c) => c.kind === k).length]));
   const files = { json: path.join(outDir, "suggestions.json"), markdown: path.join(outDir, "policy-suggestions.md"), yaml: path.join(outDir, "policy-suggestions.yaml") };
+  const author: Author = opts.author ?? { via: "host", model: null };
   const minerShape: MinerOutput = { repo: repoPath, head: out.head, policy_id: policyId, candidates: all, counts, warnings: [] };
   fs.writeFileSync(files.markdown, renderSuggestionsMarkdown(minerShape, []));
   fs.writeFileSync(files.yaml, renderSuggestionsYaml(minerShape));
@@ -267,12 +285,13 @@ export async function ingestProposals(repoInput: string, proposals: unknown[], o
     adrs: [],
     adr_dir: null,
     codex: { used: false, model: null, usage: null, dropped: 0, note: null },
-    classification: { used: true, model: "host", usage: null, classified: all.length, kept: all.length, filtered: 0, rewrites_rejected: 0, note: `authored by the host through the ${SKILL_NAME} skill; ${rejected.length} proposal(s) rejected` },
+    classification: { used: true, model: author.model ?? "host", usage: null, classified: all.length, kept: all.length, filtered: 0, rewrites_rejected: 0, note: `authored by ${describeAuthor(author)} through the ${SKILL_NAME} skill; ${rejected.length} proposal(s) rejected` },
     filtered_out: [],
     vocabulary: [],
     warnings: [],
     next_steps: ["call review_start: the reviewer approves or rejects each candidate"],
     authored_by: "codex",
+    author,
   };
   fs.writeFileSync(files.json, JSON.stringify(result, null, 2));
   if (!previous) fs.rmSync(path.join(outDir, "review-decisions.json"), { force: true });

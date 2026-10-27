@@ -333,6 +333,28 @@ stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
   summary grouped them (financial correctness, pricing, subscription safety, export contracts, design decisions) and
   handed over the review link. The one rejection led to accepting a bare path string as a `sources` entry and to
   documenting the shape in the skill.
+- The independent miner (2026-10-27): the model that mines the rules can be one other than the model driving the
+  session (which later implements under those rules), so one model's bias does not write the policy. `intentos mine
+  <repo> --model <slug>` and the MCP `mine` tool run the same skill in a separate read-only Codex thread with that
+  model (`LiveCodexEngine` takes model and reasoning overrides; `plan` resumes a thread), take the structured answer
+  (`MINE_SCHEMA`, nulls stripped by `normalizeProposal`) through `ingestProposals` unchanged, send the rejections back
+  to the same thread for one more round, and record `author: {via: side_thread, model, engine, thread_id}` in the
+  review list; `status`, `review_start` and the widget header name the author. The model is required (`model` or
+  `INTENTOS_MINING_MODEL`, and `status` steers the host to `mine` when the variable is set); `append` puts a second
+  model's list next to the first's; `--replay` re-checks saved answers (`<out>/mine/round-N.json`) without Codex. Tests:
+  `tests/integration/mine.test.ts` (prompt contents, two rounds in one thread, author recorded, CLI replay, refusals,
+  normalisation) and MCP (`mine` refused without a model or a policy, background job gated by a fake engine, status
+  while running and when done, `review_start` and the widget session naming the author, `INTENTOS_MINING_MODEL`).
+- Headless proof of the independent miner (2026-10-27): Codex 0.164.0 (`gpt-6.1-sol`, the SDK's bundled binary; the
+  0.154.0 CLI rejects the GPT-6 models on a ChatGPT account) on a throwaway copy of the fixture, prompt "Bring this
+  repository under IntentOS, have gpt-6-astra mine the business rules independently of you, and walk me through the
+  policy candidates": `status` → `mine` with `model=gpt-6-astra` → 17 `status` polls over eleven minutes (the host read
+  the repository meanwhile and explained what the review would cover) → done: round one 19 candidates, 15 accepted,
+  4 rejected and sent back; round two all 4 fixed; 10 invariants lifted from existing tests, 4 with tests Astra wrote
+  and that passed in the venv, 5 rules without tests → `review_start` with 19 candidates. Two findings: lifted drafts
+  that pull a conftest put its `from __future__` import after the module's own imports (now hoisted, covered by the
+  Python test), and the host re-submitted Astra's list with `propose`, which recorded itself as the author; the server
+  instructions now say not to.
 
 ## Next steps
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.

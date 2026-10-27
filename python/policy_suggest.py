@@ -440,8 +440,11 @@ class Miner:
         combined = "\n\n".join(pieces)
         constants = [n for n in body if isinstance(n, ast.Assign) and all(isinstance(t, ast.Name) for t in n.targets)]
         const_lines = [ast.get_source_segment(source, n) or "" for n in constants if any(re.search(rf"\b{re.escape(t.id)}\b", combined) for t in n.targets if isinstance(t, ast.Name))]
-        draft = "\n\n".join(x for x in ["\n".join(dict.fromkeys(line for line in import_lines if line)), "\n".join(const_lines), combined] if x.strip())
-        return {"from": f"{rel}::{node.name}", "imports": "\n".join(dict.fromkeys(line for line in import_lines if line)), "source": draft, "notes": notes, "standalone": not notes}
+        # `from __future__` must be the first statement of the draft: conftest imports are appended after the module's own.
+        uniq = list(dict.fromkeys(line for line in import_lines if line))
+        imports = "\n".join([l for l in uniq if l.startswith("from __future__")] + [l for l in uniq if not l.startswith("from __future__")])
+        draft = "\n\n".join(x for x in [imports, "\n".join(const_lines), combined] if x.strip())
+        return {"from": f"{rel}::{node.name}", "imports": imports, "source": draft, "notes": notes, "standalone": not notes}
 
     def mine_tests(self) -> None:
         for rel in self.py_files:

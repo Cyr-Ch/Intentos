@@ -8,7 +8,8 @@ import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { setupFixtureEnv, type TestEnv } from "../helpers/fixture.ts";
 import { suggestPolicy } from "../../src/suggest.ts";
-import { createIntentosMcpServer, REVIEW_RESOURCE_URI } from "../../src/mcp.ts";
+import { createIntentosMcpServer, REVIEW_RESOURCE_URI, type McpOptions } from "../../src/mcp.ts";
+import { fakeMiner, ROUND_ONE, ROUND_TITLES, ROUND_TWO } from "../helpers/fake_miner.ts";
 import { loadPolicyFile } from "../../src/knowledge/policy.ts";
 import { PROJECT_ROOT } from "../../src/config.ts";
 
@@ -29,8 +30,8 @@ architecture_rules: []
 decisions: []
 `;
 
-async function connect(capabilities?: Record<string, unknown>) {
-  const built = createIntentosMcpServer({ store: env.store, logFile: path.join(env.home, "mcp.log") });
+async function connect(capabilities?: Record<string, unknown>, extra: Partial<McpOptions> = {}) {
+  const built = createIntentosMcpServer({ store: env.store, logFile: path.join(env.home, "mcp.log"), ...extra });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await built.server.connect(serverTransport);
   const client = new Client({ name: "test-host", version: "1.0.0" }, capabilities ? { capabilities: capabilities as never } : {});
@@ -56,7 +57,7 @@ describe("intentos mcp", () => {
     try {
       const tools = (await client.listTools()).tools;
       const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-      expect(Object.keys(byName).sort()).toEqual(["explain", "mined", "mining_guide", "onboard", "policy", "propose", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "status"]);
+      expect(Object.keys(byName).sort()).toEqual(["explain", "mine", "mined", "mining_guide", "onboard", "policy", "propose", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "status"]);
       expect((byName.review_start!._meta as any).ui.resourceUri).toBe(REVIEW_RESOURCE_URI);
       for (const name of ["review_session", "review_state", "review_decide", "review_finish"]) expect((byName[name]!._meta as any).ui.visibility, name).toEqual(["app"]);
       for (const name of ["explain", "policy", "review_start", "review_next", "review_close"]) expect((byName[name]!._meta as any)?.ui?.visibility, name).toBeUndefined();
@@ -353,4 +354,88 @@ describe("intentos mcp — mining by the host (the intentos-policy-mining skill)
       await built.close();
     }
   }, 120_000);
+});
+
+describe("intentos mcp — the independent miner (mine runs the skill with a model other than the host's)", () => {
+  it("refuses without a model or a policy, runs the named model in the background, and status, review_start and the widget name the author", async () => {
+    const outDir = path.join(env.home, "mine-out");
+    fs.writeFileSync(policyFile, MINIMAL_POLICY);
+    delete process.env.INTENTOS_MINING_MODEL;
+    const engines: string[] = [];
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { client, built } = await connect(UI_CAPS, {
+      mineEngine: (model) => {
+        engines.push(model);
+        return fakeMiner([() => ROUND_ONE, () => ROUND_TWO], model, { before: () => gate });
+      },
+    });
+    try {
+      expect(client.getInstructions()).toMatch(/call mine with a model other than yourself.*poll status until phase is "done"/s);
+      const refused = await client.callTool({ name: "mine", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir } });
+      expect(refused.isError).toBe(true);
+      expect(textOf(refused as never)).toMatch(/pass model=<slug>.*INTENTOS_MINING_MODEL/);
+      const notOnboarded = await client.callTool({ name: "mine", arguments: { repo: env.repo, model: "other-model", policy_file: path.join(env.home, "policies", "nope.yaml") } });
+      expect(notOnboarded.isError).toBe(true);
+      expect(textOf(notOnboarded as never)).toMatch(/not onboarded.*Call onboard first/);
+
+      const started = await client.callTool({ name: "mine", arguments: { repo: env.repo, model: "other-model", policy_file: policyFile, out_dir: outDir } });
+      expect(started.isError, textOf(started as never)).toBeFalsy();
+      expect(structured(started as never).model).toBe("other-model");
+      expect(textOf(started as never)).toMatch(/started .* with other-model \(job [0-9a-f]{8}\).*until phase is "done", then call review_start/s);
+      const again = await client.callTool({ name: "mine", arguments: { repo: env.repo, model: "other-model", policy_file: policyFile, out_dir: outDir } });
+      expect(textOf(again as never)).toMatch(/mining of .* is already running/);
+      const early = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir } });
+      expect(early.isError).toBe(true);
+      expect(textOf(early as never)).toMatch(/mining of .* is still running/);
+      const busy = structured((await client.callTool({ name: "status", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir } })) as never);
+      expect(busy.job).toMatchObject({ kind: "mine", phase: "mining" });
+      expect(busy.next).toMatch(/mining in progress \(mining\)/);
+      release();
+
+      let statusResult = await client.callTool({ name: "status", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir } });
+      let s = structured(statusResult as never);
+      for (let i = 0; i < 240 && s.job && s.job.phase !== "done" && s.job.phase !== "failed"; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        statusResult = await client.callTool({ name: "status", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir } });
+        s = structured(statusResult as never);
+      }
+      expect(s.job.phase, JSON.stringify(s.job)).toBe("done");
+      expect(s.job.kind).toBe("mine");
+      expect(s.job.result).toMatchObject({ model: "other-model", accepted: 3, rejected: 1, rounds: 2, candidates: 3 });
+      expect(s.job.result.note).toMatch(/still rejected.*Quotes carry a currency/);
+      expect(engines).toEqual(["other-model"]);
+      expect(s.suggestions.authored_by).toBe("codex");
+      expect(s.suggestions.author).toEqual({ via: "side_thread", model: "other-model", engine: "fake-miner", thread_id: "thread-fake-1" });
+      expect(s.pending).toBe(3);
+      expect(s.next).toMatch(/review_start/);
+      expect(textOf(statusResult as never)).toMatch(/authored by other-model in an independent side thread/);
+
+      const review = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir, hidden_tests_root: path.join(env.home, "hidden-mine"), by: "tester" } });
+      expect(review.isError, textOf(review as never)).toBeFalsy();
+      expect(textOf(review as never)).toMatch(/Candidates authored by other-model in an independent side thread, checked and tested by IntentOS/);
+      expect(structured(review as never).candidates.map((c: { title: string }) => c.title)).toEqual(ROUND_TITLES);
+      const session = structured((await client.callTool({ name: "review_session", arguments: {} })) as never);
+      expect(session.author.model).toBe("other-model");
+    } finally {
+      await client.close();
+      await built.close();
+    }
+  }, 180_000);
+
+  it("status points at mine when INTENTOS_MINING_MODEL names the model", async () => {
+    process.env.INTENTOS_MINING_MODEL = "env-model";
+    const { client, built } = await connect();
+    try {
+      const s = structured((await client.callTool({ name: "status", arguments: { repo: env.repo, policy_file: policyFile, out_dir: path.join(env.home, "mine-env-out") } })) as never);
+      expect(s.mining_model).toBe("env-model");
+      expect(s.next).toMatch(/call mine \(INTENTOS_MINING_MODEL=env-model is set: a model other than you does the mining\)/);
+    } finally {
+      delete process.env.INTENTOS_MINING_MODEL;
+      await client.close();
+      await built.close();
+    }
+  });
 });

@@ -56,6 +56,7 @@ machine-readable output; every command exits non-zero on critical failure.
 | `review <repo>` | opens a local one-page UI (127.0.0.1, token in the URL) that walks the candidates of the last `suggest` run one by one; **Approve** appends the block to `policies/<id>.yaml` with the next `INV-`/`ARCH-`/`DEC-` id and your name (file comments preserved), writes the hidden-test draft to `benchmarks/hidden_tests/<id>/invariants/`, and adds a section to `docs/intentos-policy.md` in the repository when the candidate has no document source; related candidates (same cluster) can be folded into one approval as extra hidden tests of a single invariant; **Reject** records the reason; **Finish** writes `feedback.json` and re-indexes. `--by`, `--no-open`, `--include-filtered`, `--policy-file` |
 | `mcp` | IntentOS as an MCP server on stdio: `status` and `onboard` let the agent bring a repository under IntentOS itself (the CLI runs in a child process; the agent polls `status`); `explain` and `policy` give a coding agent the evidence pack and the approved rules from inside its session; `review_start` opens the policy review as an MCP Apps widget in hosts that render it (Claude, VS Code, …), `review_next` / `review_close` run it through the host's own elicitation prompts (Codex), and the token-protected local URL is the fallback. The tools that change the policy are app-only and require a widget token, so the model cannot approve. `--print-codex-config` prints the `codex mcp add` line; `.intentos/mcp.log` records the client's declared capabilities |
 | `propose <repo> --file <json>` | validates host-authored candidates (the `intentos-policy-mining` skill's output): references checked against the repository, existing tests lifted and run, written tests run in the repository's venv; writes the review files with `authored_by: codex` (`--append` keeps an earlier list) |
+| `mine <repo> --model <slug>` | the independent miner: runs the `intentos-policy-mining` skill in a separate read-only Codex thread with the named model (`INTENTOS_MINING_MODEL` as the default), takes the answer through the same checks as `propose`, sends the rejections back to that thread once, and writes the review files with the author recorded (`author: {via: side_thread, model, thread_id}`); `--append` keeps the current list; `--reasoning`, `--rounds`; `--replay <dir>` re-checks saved answers (`<out>/mine/round-N.json`) without Codex |
 | `skill install` / `skill show` | symlinks `skills/intentos-policy-mining` into `~/.agents/skills` (`--dir` for another skills directory) / prints the skill text |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
@@ -134,8 +135,9 @@ codex                                                  # in the target repositor
 The server tells the host how to use it (MCP `instructions`), so one sentence is enough. Codex then calls `status`
 (where the repository stands and which tool to call next), `onboard` when it is not onboarded (venv and dependencies,
 draft policy, one run of the suite, index, raw candidate mining; it runs in the background and Codex polls `status`
-until it is done), mines the business rules itself with the skill (next section) and submits them with `propose`,
-then `review_start`. `onboard` refuses to overwrite an existing policy unless `force=true`.
+until it is done), mines the business rules itself with the skill (next section) and submits them with `propose`, or
+hands the mining to a model other than its own with `mine` when you ask for an independent opinion or set
+`INTENTOS_MINING_MODEL`, then `review_start`. `onboard` refuses to overwrite an existing policy unless `force=true`.
 
 ## Mining the rules: the skill, the proposal, the check
 
@@ -158,6 +160,17 @@ resubmits the fixed ones with `append=true`. What passes becomes the review list
 it in the invariant's `verified_by`, so every approved rule has a verifier. `intentos propose <repo> --file c.json`
 is the same path from the command line.
 
+**Another model, so one model's bias does not write the rules.** The model driving the Codex session is also the one
+that will later implement changes under the rules it mined, and any one model has its own blind spots. `mine` (the MCP
+tool, or `intentos mine <repo> --model gpt-6-astra`) runs the same skill in a separate read-only Codex thread with the
+model you name: the thread reads the repository and answers with candidates as structured output, IntentOS checks and
+tests them exactly as it does a `propose` submission, sends the rejections back to the same thread once, and writes the
+review list marked with its author (`via: side_thread`, the model, the thread id). `status`, `review_start` and the
+widget header say who mined the list. Set `INTENTOS_MINING_MODEL` and `status` steers Codex to `mine` by itself; say
+"mine with gpt-6-astra" and Codex passes the model; `append=true` puts a second model's candidates next to the first's.
+The model is never defaulted to the host's own: `mine` without a model is refused with the reason. Prompts and answers
+are kept under `<out>/mine/`, and `--replay` re-checks them without a new Codex call.
+
 The Codex app renders MCP Apps, so there the review appears inline as the widget (list, progress, approve / reject /
 fold, finish) and `review_next` steps aside: a host that rendered the widget never also gets the form. The Codex CLI
 (`codex exec`, the terminal UI) does not render widgets but supports **elicitation**, so there `review_next` shows a
@@ -174,6 +187,7 @@ instructions tell it not to invent candidates. Hosts with neither get the token-
 | `INTENTOS_PYTHON` | interpreter for indexer/verifier (default: `.intentos/venv/bin/python`, else `python3`) |
 | `INTENTOS_CODEX_MODEL` | Codex model (default: the CLI's configured default; may be unsupported for ChatGPT accounts) |
 | `INTENTOS_CODEX_REASONING` | reasoning effort passed to Codex |
+| `INTENTOS_MINING_MODEL` | model for the independent miner (`mine`); with it set, `status` steers the host to `mine` instead of mining itself |
 | `INTENTOS_CODEX_PATH` | override the Codex binary used by the SDK |
 | `INTENTOS_CODEX_TIMEOUT_MS` | per-turn timeout (default 20 min) |
 | `INTENTOS_RUN_TIMEOUT_MS` | whole-run wall budget (default 60 min) |

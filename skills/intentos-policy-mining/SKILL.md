@@ -18,6 +18,10 @@ reject or edit a candidate on the reviewer's behalf, and never pad the list with
 2. Call `mined`. It returns the deterministic miner's raw list: rule-like tests with ready-made hidden-test drafts,
    fix commits, must/never sentences from documents, layer imports and frozen directories. It is a starting point with
    noise, not the answer. Keep the ids: a proposal can cite one with `from_mined` and inherit its evidence and test.
+3. If the user asks for an independent, second or unbiased opinion, names a model, or `status` says a mining model is
+   configured, call `mine` with that model instead of mining yourself: IntentOS runs this skill in a separate read-only
+   thread with that model and checks the result exactly as it checks yours; poll `status` until it is done, then call
+   `review_start`. `append: true` puts that model's candidates next to yours instead of replacing them.
 
 ## What counts as a business rule
 

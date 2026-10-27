@@ -182,6 +182,25 @@ with `authored_by: "codex"` and the classification fields filled from the agent'
 host-authored list and continues the ids, a plain call replaces it and clears stale decisions. The hidden-test header
 says whether the test was lifted or written by the agent and validated at the base revision.
 
+## The independent miner (`src/mine.ts`, `intentos mine`, MCP `mine`)
+
+`mineWithModel` is the second author of host-shaped candidates: the same skill, run by IntentOS in a separate
+read-only Codex thread with a model the user names, so the model that finds the rules is not the one driving the
+session or later implementing under them. It builds one prompt from the skill text (frontmatter stripped, a preamble
+that maps the MCP steps onto the thread: the raw list from `loadMined` is inlined in place of `mined`, the structured
+answer replaces `propose`, there is no `review_start`) and runs it through `LiveCodexEngine.plan`; the engine now
+takes `{model, reasoningEffort}` overrides and `plan` resumes a thread by id. The answer is structured output under
+`MINE_SCHEMA`: every field present, null or an empty list where it does not apply, because strict schemas allow no
+optional keys; `normalizeProposal` strips those to the shape `ProposalSchema` takes, and `ingestProposals` runs
+unchanged with `author: {via: "side_thread", model, engine, thread_id}`. Rejections become `buildFixPrompt` for a
+second round in the same thread, ingested with `append: true`, at most `rounds` times (default 2); what was never
+resubmitted stays in `rejected`. Prompts and raw answers go to `<out>/mine/prompt-N.txt` and `round-N.json`, the
+summary to `result.json`; `ReplayEngine` feeds saved answers back through the checks without Codex. In the MCP server
+`mine` is a background job of the same kind as `onboard` (`Job.kind`), run in-process with the SDK (a test passes a
+fake engine through `McpOptions.mineEngine`); `status` reports the phase (`mining`, `checking`), the model and the
+counts, and `review_start`, `publicState` and the widget header carry `author`. The model is required (`model`, else
+`INTENTOS_MINING_MODEL`): the server cannot know which model the host runs, so it never defaults to one.
+
 ## Architectural surprise (review signals)
 
 `architecture_surprise` is a builtin verification command (advisory, injected by the compiler when the policy lists

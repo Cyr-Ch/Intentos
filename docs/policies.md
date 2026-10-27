@@ -175,7 +175,8 @@ API layer); with empty path lists the third detector is simply inactive.
 
 The fast path is to let the coding agent do it under review: `intentos onboard`, then the `intentos-policy-mining`
 skill (installed by `intentos skill install`) has Codex mine the rules with a test each and submit them through the
-MCP `propose` tool; `intentos review` or the review widget approves them. The rest of this section is the manual path.
+MCP `propose` tool, or `mine` runs the same skill with a model other than the host's (`INTENTOS_MINING_MODEL`);
+`intentos review` or the review widget approves them. The rest of this section is the manual path.
 
 1. Run `intentos onboard <repo>`: it drafts identity, paths, scope tags and commands, creates the venv, runs the
    suite once and indexes. The draft is explicit about being a draft.

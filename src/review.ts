@@ -10,6 +10,7 @@ import type { KnowledgeStore } from "./knowledge/storage.ts";
 import { indexRepository, repoIdFor, type IndexSummary } from "./knowledge/indexer.ts";
 import { loadPolicyFile } from "./knowledge/policy.ts";
 import { recordReviewFeedback, suggestPolicy, type Candidate, type ReviewFeedback } from "./suggest.ts";
+import type { Author } from "./propose.ts";
 import { nowIso } from "./util/ids.ts";
 
 /**
@@ -91,6 +92,8 @@ export interface ReviewState {
   candidates: Candidate[];
   decisions: Decision[];
   finished: FinishResult | null;
+  /** Who authored the list when the host or the independent miner did (null: the deterministic miner). */
+  author: Author | null;
   opts: ReviewOptions;
 }
 
@@ -104,7 +107,7 @@ export async function loadReviewState(repoInput: string, opts: ReviewOptions): P
     opts.log?.("no suggestions yet; mining first (deterministic ranking only)…");
     await suggestPolicy(repoPath, { policyId: opts.policyId, outDir, writeAdrs: false, withCodex: false }, opts.log);
   }
-  const previous = JSON.parse(fs.readFileSync(suggestionsFile, "utf8")) as { policy_id: string; candidates: Candidate[] };
+  const previous = JSON.parse(fs.readFileSync(suggestionsFile, "utf8")) as { policy_id: string; candidates: Candidate[]; authored_by?: string; author?: Author };
   const policyId = opts.policyId ?? previous.policy_id;
   const policyFile = path.resolve(opts.policyFile ?? path.join(paths.policies, `${policyId}.yaml`));
   if (!fs.existsSync(policyFile)) throw new Error(`${policyFile} not found; run intentos onboard ${repoPath} first so there is a policy to append to`);
@@ -125,6 +128,7 @@ export async function loadReviewState(repoInput: string, opts: ReviewOptions): P
     candidates,
     decisions,
     finished: null,
+    author: previous.authored_by === "codex" ? (previous.author ?? { via: "host", model: null }) : null,
     opts,
   };
 }
@@ -355,6 +359,7 @@ export function publicState(state: ReviewState) {
     doc_file: state.doc_file,
     by: state.by,
     finished: state.finished,
+    author: state.author,
     candidates: state.candidates.map((c) => ({ id: c.id, kind: c.kind, title: c.title, statement: c.statement, score: c.score, relevance: c.relevance, confidence: c.confidence, cluster: c.cluster, cluster_members: c.cluster_members, evidence: c.evidence.map((e) => ({ type: e.type, ref: e.ref, excerpt: e.excerpt, path: e.path ?? null, line: e.line ?? null })), applies_to_paths: c.applies_to_paths ?? [], sources: c.sources ?? [], classification: c.classification ?? null, hidden_test: c.suggested_hidden_test ? { from: c.suggested_hidden_test.from, source: c.suggested_hidden_test.source, notes: c.suggested_hidden_test.notes, standalone: c.suggested_hidden_test.standalone } : null, rule: c.rule ?? null, status: c.status ?? null })),
     decisions: state.decisions,
   };
@@ -523,7 +528,7 @@ const pending = () => state.candidates.filter(c => !decisionOf(c.id));
 async function load() { state = await api('/api/state'); if (!current) { const p = pending(); current = p.length ? p[0].id : (state.candidates[0]||{}).id; } render(); }
 function render() {
   const total = state.candidates.length, done = total - pending().length;
-  document.getElementById('meta').textContent = state.policy_id + ' · ' + state.repo_path + ' · reviewer ' + state.by;
+  document.getElementById('meta').textContent = state.policy_id + ' · ' + state.repo_path + ' · reviewer ' + state.by + (state.author ? ' · candidates by ' + (state.author.via === 'side_thread' ? (state.author.model || 'an unnamed model') + ' (independent side thread)' : 'the host agent') + ', checked by IntentOS' : '');
   document.getElementById('count').textContent = done + ' / ' + total + ' decided';
   document.getElementById('bar').style.width = (total ? 100*done/total : 0) + '%';
   const list = document.getElementById('list');

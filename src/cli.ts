@@ -14,6 +14,7 @@ import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./sugge
 import { defaultReviewer, loadReviewState, startReviewServer } from "./review.ts";
 import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
 import { ingestProposals, installSkill, SKILL_NAME, skillText } from "./propose.ts";
+import { mineWithModel, ReplayEngine } from "./mine.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 
 function printSuggestions(result: SuggestResult): void {
@@ -241,7 +242,7 @@ program
 
 program
   .command("mcp")
-  .description("Run IntentOS as an MCP server on stdio (tools: status, onboard, explain, policy, review_start, review_next, review_close; the host onboards and reviews on one sentence from the user)")
+  .description("Run IntentOS as an MCP server on stdio (tools: status, onboard, mined, mining_guide, propose, mine, explain, policy, review_start, review_next, review_close; the host onboards, mines and reviews on one sentence from the user)")
   .option("--log <file>", "log file for client info and tool calls (default .intentos/mcp.log)")
   .option("--print-codex-config", "print the command that registers this server with Codex and exit", false)
   .action(async (opts: { log?: string; printCodexConfig: boolean }) => {
@@ -285,6 +286,35 @@ program
       console.log(`${r.accepted.length} accepted, ${r.rejected.length} rejected; review list: ${r.candidates.length} candidate(s) in ${r.files.json}`);
       for (const a of r.accepted) console.log(`  ${a.id}  ${a.title}  [${a.kind}; test: ${a.verified}${a.notes.length ? `; ${a.notes.join("; ")}` : ""}]`);
       for (const x of r.rejected) console.log(`  rejected  ${x.title}\n    ${x.reasons.join("\n    ")}`);
+    } catch (err) {
+      fail((err as Error).message);
+    }
+  });
+
+program
+  .command("mine")
+  .description(`Mine a repository's business rules with an independent model: run the ${SKILL_NAME} skill in a separate read-only Codex thread with --model, check and test the answer like propose, send rejections back once, and write the review files`)
+  .argument("<repo>", "path to the repository root (onboarded)")
+  .option("--model <slug>", "Codex model for the side thread (default INTENTOS_MINING_MODEL); one other than the model that drives your sessions")
+  .option("--reasoning <level>", "reasoning effort for the side thread (default INTENTOS_CODEX_REASONING, else the model's own)")
+  .option("--rounds <n>", "rounds at most, the first included", "2")
+  .option("--append", "add to the current review list instead of replacing it", false)
+  .option("--policy-id <id>", "policy id (default: sanitised project name)")
+  .option("--policy-file <file>", "policy file (default policies/<policy-id>.yaml)")
+  .option("--out <dir>", "directory of the review files (default .intentos/onboard/<repo-id>)")
+  .option("--replay <dir>", "re-check the saved answers of an earlier run (round-N.json in that directory) instead of calling Codex")
+  .action(async (repo: string, opts: { model?: string; reasoning?: string; rounds: string; append: boolean; policyId?: string; policyFile?: string; out?: string; replay?: string }) => {
+    const json = program.opts().json as boolean;
+    try {
+      const r = await mineWithModel(repo, { model: opts.model, reasoningEffort: opts.reasoning, rounds: Number(opts.rounds), append: opts.append, policyId: opts.policyId, policyFile: opts.policyFile, outDir: opts.out, engine: opts.replay ? new ReplayEngine(path.resolve(opts.replay), opts.model ?? null) : undefined }, (line) => console.error(`[mine] ${line}`));
+      if (json) {
+        console.log(JSON.stringify(r, null, 2));
+        return;
+      }
+      console.log(`mined by ${r.model ?? r.engine} (${r.engine}), ${r.rounds.length} round(s): ${r.accepted.length} accepted, ${r.rejected.length} still rejected; review list: ${r.candidates.length} candidate(s) in ${r.files.json}`);
+      for (const a of r.accepted) console.log(`  ${a.id}  ${a.title}  [${a.kind}; test: ${a.verified}${a.notes.length ? `; ${a.notes.join("; ")}` : ""}]`);
+      for (const x of r.rejected) console.log(`  rejected  ${x.title}\n    ${x.reasons.join("\n    ")}`);
+      console.log(`  prompts and answers: ${r.files.dir}`);
     } catch (err) {
       fail((err as Error).message);
     }

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { codexSettings, resolvePython } from "../config.ts";
+import { codexSettings, resolvePython, type CodexSettings } from "../config.ts";
 
 /**
  * The only module that touches `@openai/codex-sdk`. Verified against the installed
@@ -31,6 +31,8 @@ export interface PlanRequest {
   onEvent?: (e: EngineEvent) => void;
   /** Called as soon as the SDK reports the thread id (`thread.started`), before the turn completes. */
   onThreadStarted?: (threadId: string) => void;
+  /** Continue an earlier read-only thread (the independent miner's second round) instead of starting a new one. */
+  threadId?: string | null;
 }
 export interface PlanResult {
   text: string;
@@ -101,7 +103,15 @@ export class LiveCodexEngine implements CodingEngine {
   readonly name = "codex-sdk";
   readonly simulated = false;
   private sdk: SdkModule | null = null;
-  private readonly settings = codexSettings();
+  private readonly settings: CodexSettings;
+
+  /**
+   * `overrides` pin the model or reasoning effort of this engine (the independent miner runs with a model other than
+   * the host's); an undefined field keeps the environment's setting, `null` the CLI's own default.
+   */
+  constructor(overrides: { model?: string | null; reasoningEffort?: string | null } = {}) {
+    this.settings = { ...codexSettings(), ...(overrides.model !== undefined ? { model: overrides.model } : {}), ...(overrides.reasoningEffort !== undefined ? { reasoningEffort: overrides.reasoningEffort } : {}) };
+  }
 
   private async codex() {
     if (!this.sdk) this.sdk = await import("@openai/codex-sdk");
@@ -139,7 +149,8 @@ export class LiveCodexEngine implements CodingEngine {
 
   async plan(req: PlanRequest): Promise<PlanResult> {
     const codex = await this.codex();
-    const thread = codex.startThread(this.threadOptions(req.cwd, "read-only"));
+    const options = this.threadOptions(req.cwd, "read-only");
+    const thread = req.threadId ? codex.resumeThread(req.threadId, options) : codex.startThread(options);
     const { signal, clear } = this.withTimeout(req.signal);
     try {
       const streamed = await thread.runStreamed(req.prompt, { outputSchema: req.outputSchema, signal });
