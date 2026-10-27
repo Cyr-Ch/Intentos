@@ -34,6 +34,7 @@ import json, sys
 s = json.load(open(sys.argv[1]))
 for k, v in s["runs"].items():
     print(f"  {k:16} {v['runId']}  {v['state']}")
+if s.get("rename_pr"): print(f"  rename PR        #{s['rename_pr']['pr']} on {s['rename_pr']['branch']} (tier {s['rename_pr']['tier']})")
 print("red main:", s.get("red", {}).get("main", {}).get("status", "not prepared"))
 print("restart Codex, then follow demo/RUNBOOK.md")
 EOF

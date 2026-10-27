@@ -23,8 +23,9 @@ the policy; every one of them is a hidden test the verifier runs.
 
 **Moment A, the hook mid-task, 4 min.** Paste `sentences.momentA_start` from state.json (T12, overlapping day
 categories; its file imports `add_weekdays2df`). Codex calls `run` and starts polling `status`. After the status log
-shows "implementing in …", say `sentences.momentA_during`: "Merge run <P1>, approvals from Priya and Sam." P1 renames
-`add_weekdays2df`, a public API, so the gate asks for two humans; it lands and main moves. Keep polling `status` for
+shows "implementing in …", say `sentences.momentA_during`: "Merge PR #1, approvals from Priya and Sam." PR #1 renames
+`add_weekdays2df`, a public API (the old definition is gone, a deprecated alias remains), so the gate asks for two
+humans; it lands and main moves. Keep polling `status` for
 the T12 run: the log shows the hook's note reaching the implementer (the symbol, the commit, the file and line, "first
 bring main into your branch"), the agent syncing, and verification ending green against the new main with
 `coordination: up to date`. Then `sentences.momentA_after`: "Merge the T12 run, approval from Priya." Tier 1, merged

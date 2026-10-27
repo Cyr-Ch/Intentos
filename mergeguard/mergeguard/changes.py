@@ -12,7 +12,12 @@ from .git import files_at, git, read_at, run, sha
 
 
 def module_name(path: str) -> str:
+    """Dotted module name of a file. A leading `src/` (the src layout) is not part of the import path, so it is
+    dropped: otherwise `from pkg.mod import f` in one file and `from .mod import f` in another would name two
+    different symbols and an absolute import would never match the index."""
     parts = list(PurePosixPath(path).with_suffix("").parts)
+    if len(parts) > 1 and parts[0] == "src":
+        parts = parts[1:]
     if parts[-1] == "__init__":
         parts.pop()
     return ".".join(parts)

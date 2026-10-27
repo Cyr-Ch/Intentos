@@ -53,3 +53,11 @@ def test_positional_order_change(repo_factory):
     repo = repo_factory({"api.py": "def f(x, y):\n    return x\n"})
     repo.main_change({"api.py": "def f(y, x):\n    return x\n"})
     assert detect(repo.path, repo.base, "origin/main")[0]["change"] == "signature_changed"
+
+
+def test_src_layout_is_not_part_of_the_module_name():
+    from mergeguard.changes import module_name
+    assert module_name("src/oemof/demand/tools.py") == "oemof.demand.tools"
+    assert module_name("src/oemof/demand/__init__.py") == "oemof.demand"
+    assert module_name("pkg/mod.py") == "pkg.mod"
+    assert module_name("src.py") == "src"

@@ -36,13 +36,19 @@ def run_tests(checkout, nodeids: list[str] | None = None) -> dict:
         except subprocess.TimeoutExpired:
             return {"outcome": "error", "failed": [], "output": "pytest timed out after 60 seconds"}
         evidence = json.loads(output.read_text()) if output.exists() else {}
+        missing = sorted(set(requested) - set(existing))
         if result.returncode == 0:
             outcome = "pass"
         elif result.returncode == 1 and evidence.get("failed"):
             outcome = "fail"
+        elif requested and result.returncode == 4 and not evidence.get("collected") and "no match" in (result.stdout + result.stderr):
+            # The file exists at this commit but the requested test functions do not (they were added later):
+            # absent tests pass by the bisect convention, exactly like an absent file.
+            outcome = "pass"
+            missing = sorted(set(requested))
         else:
             outcome = "error"
-        return {**evidence, "outcome": outcome, "missing": sorted(set(requested) - set(existing)),
+        return {**evidence, "outcome": outcome, "missing": missing,
                 "output": (result.stdout + result.stderr)[-12000:]}
 
 

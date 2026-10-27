@@ -50,7 +50,7 @@ const { repoInterpreter, repoVenvDir } = await import("../src/knowledge/venv.ts"
 const { precedentsFile } = await import("../src/knowledge/precedents.ts");
 const { createRun, executeRun } = await import("../src/orchestrator/runner.ts");
 const { mergeRun } = await import("../src/coordination/merge.ts");
-const { coordinationStatus } = await import("../src/coordination/mergeguard.ts");
+const { coordinationStatus, coordinationEnv, openPr } = await import("../src/coordination/mergeguard.ts");
 const { loadTicketFile } = await import("../src/acceptance.ts");
 const { git, headSha } = await import("../src/util/git.ts");
 
@@ -111,6 +111,32 @@ function projectSuite(repo: string): { status: string; failed: string[] } {
 }
 
 type Prepared = { runId: string; state: string; worktree: string | null };
+type PreparedPr = { pr: number; branch: string; head: string; tier: number };
+
+/** The rename as a branch and a mergeguard PR: old definition gone, a module-level alias keeps external callers working. */
+function renamePr(store: InstanceType<typeof KnowledgeStore>, repo: string): PreparedPr {
+  const branch = "intentos/rename-add_weekdays2df";
+  const policy = policyForRepo(repo) ?? fallbackPolicy(repo);
+  const coord = coordinationEnv(repo, policy);
+  const existing = git(repo, ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], { allowFail: true });
+  if (existing.status !== 0) {
+    const main = headSha(repo);
+    const wt = path.join(root, "home", "worktrees", "rename");
+    git(repo, ["worktree", "add", "-q", "-b", branch, wt, main]);
+    const edit = (rel: string, fn: (t: string) => string) => fs.writeFileSync(path.join(wt, rel), fn(fs.readFileSync(path.join(wt, rel), "utf8")));
+    for (const rel of ["src/oemof/demand/bdew/elec_slp.py", "src/oemof/demand/bdew/heat_building.py", "src/oemof/demand/particular_profiles.py", "src/oemof/demand/vdi/regions.py"]) {
+      if (fs.existsSync(path.join(wt, rel))) edit(rel, (t) => t.replace(/\badd_weekdays2df\b/g, "annotate_weekdays"));
+    }
+    edit("src/oemof/demand/tools.py", (t) => t.replace("def add_weekdays2df(", "def annotate_weekdays(").trimEnd() + "\n\n\n# Deprecated alias: the function is annotate_weekdays; external callers keep working for now.\nadd_weekdays2df = annotate_weekdays\n");
+    git(wt, ["add", "-A"]);
+    git(wt, ["-c", "user.name=intentos", "-c", "user.email=intentos@localhost", "commit", "-q", "-m", "Rename add_weekdays2df to annotate_weekdays; keep a deprecated alias"]);
+    git(repo, ["worktree", "remove", "--force", wt]);
+  }
+  const head = git(repo, ["rev-parse", `refs/heads/${branch}`]).stdout.trim();
+  const pr = openPr(coord, repo, branch, "Rename add_weekdays2df to annotate_weekdays", { author: "intentos", prompter: "demo" });
+  log(`P1 (rename): PR #${pr.number} on ${branch} (${head.slice(0, 10)}), tier ${pr.decision.tier}: ${pr.decision.reasons.join("; ")}`);
+  return { pr: pr.number, branch, head, tier: pr.decision.tier };
+}
 const OK = (r: Prepared | undefined): r is Prepared => !!r && ["REVIEW_READY", "HUMAN_REVIEW"].includes(r.state);
 
 async function main() {
@@ -136,8 +162,10 @@ async function main() {
   const demo = ensureClone(path.join(root, "demandlib"));
   const base = headSha(demo);
   const p2 = await need("P2_T13", demo, tickets.T13!, "T13", "P2 (T13)");
-  const renameTicket = ["Rename add_weekdays2df to annotate_weekdays", "", "`tools.add_weekdays2df` is a poor name: it does more than add weekdays (it also tags holidays and adds the date column).", "Please rename it to `annotate_weekdays` and update every internal caller and test to the new name. Keep", "`add_weekdays2df` as a deprecated alias that calls the new function, so external code keeps working for now."].join("\n");
-  const p1 = await need("P1_rename", demo, renameTicket, null, "P1 (rename)");
+  // P1 is a scripted change, not an agent run: the rename must remove the old definition (an agent tends to keep a
+  // wrapper function, which the symbol index still sees as the same API), so it is made deterministically and opened
+  // as a mergeguard PR. The gate rates it tier 2 (public API change): two approvals.
+  const p1 = renamePr(store, demo);
 
   // ---- the red clone: two runs that each pass alone and clash in meaning, landed with the merged-result checks off
   const red = ensureClone(path.join(root, "red", "demandlib"));
@@ -154,7 +182,8 @@ async function main() {
     const health = projectSuite(red);
     redMerges = { a: { pr: ma.pr.number, merged: ma.merged, blocked_by: ma.blocked_by }, b: { pr: mb.pr.number, merged: mb.merged, blocked_by: mb.blocked_by }, main: health };
     log(`red main after both merges: ${health.status}${health.failed.length ? ` (${health.failed.join(", ")})` : ""}`);
-  } else log(`red clone: runs ended ${a.state} / ${b.state}; the guardian moment is not prepared`);
+  } else if (redDone) log(`red clone: kept (main ${String((redMerges.main as { status?: string })?.status)})`);
+  else log(`red clone: runs ended ${a.state} / ${b.state}; the guardian moment is not prepared`);
 
   // ---- register the MCP server for this home
   const registration = `codex mcp add intentos-demo --env INTENTOS_HOME=${process.env.INTENTOS_HOME} --env INTENTOS_CODEX_MODEL=${model} -- ${process.execPath} --disable-warning=ExperimentalWarning ${path.join(PROJECT_ROOT, "bin", "intentos.js")} mcp`;
@@ -173,14 +202,15 @@ async function main() {
     demo_repo: demo,
     base,
     red_repo: red,
-    runs: { P1_rename: p1, P2_T13: p2, red_A_T13: a, red_B_prosumer: b },
+    runs: { P2_T13: p2, red_A_T13: a, red_B_prosumer: b },
+    rename_pr: p1,
     red: redMerges,
     live_ticket_for_moment_A: "T12",
     registration,
     sentences: {
       opener: "What does IntentOS know about this repository? Show me status and the policy.",
       momentA_start: `Implement this under IntentOS, task id T12:\n\n${tickets.T12}`,
-      momentA_during: `Merge run ${p1.runId}, approvals from Priya and Sam.`,
+      momentA_during: `Merge PR #${p1.pr} of ${demo}, approvals from Priya and Sam.`,
       momentA_after: "Merge the T12 run, approval from Priya.",
       momentB: `Merge run ${p2.runId}, approval from Priya.`,
       momentC: `Main of ${red} is red. Investigate.`,

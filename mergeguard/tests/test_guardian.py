@@ -61,3 +61,17 @@ def test_direct_bug_is_not_called_a_clash(world):
     assert result["status"] == "culprit"
     assert result["partner_pr"] is None
     assert result["undo_pr"] is not None
+
+
+def test_requested_test_absent_at_commit_passes_by_convention(tmp_path):
+    """A test function added by the culprit does not exist at good: pytest exits 4 ("no match"); that is a pass by the
+    bisect convention, like an absent file, not an infrastructure error."""
+    from mergeguard.guardian import run_tests
+    checkout = tmp_path / "checkout"
+    (checkout / "tests").mkdir(parents=True)
+    (checkout / "tests" / "test_x.py").write_text("def test_present():\n    assert True\n")
+    result = run_tests(checkout, ["tests/test_x.py::test_added_later"])
+    assert result["outcome"] == "pass"
+    assert result["missing"] == ["tests/test_x.py::test_added_later"]
+    present = run_tests(checkout, ["tests/test_x.py::test_present"])
+    assert present["outcome"] == "pass" and present["missing"] == []
