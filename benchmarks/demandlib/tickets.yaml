@@ -6,7 +6,7 @@
 # only and never reach an agent: the acceptance tests are written from `acceptance` into
 # benchmarks/hidden_tests/oemof_demand/tasks/<id>/ before the first run.
 #
-# Mix: 10 implement, 1 clarify (vague), 2 abstain (already fixed; the repository's own history is the proof), and
+# Mix: 12 implement, 1 clarify (vague), 2 abstain (already fixed; the repository's own history is the proof), and
 # 2 whose closest precedent is a merged PR, to see whether precedents help on fresh work (T07 ~ #17/#20, T13 ~ #100).
 
 - id: T01

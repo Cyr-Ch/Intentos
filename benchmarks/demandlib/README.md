@@ -6,7 +6,7 @@ model's training data nor the precedents IntentOS loads can contain the answers.
 ## Design
 
 - **Tickets.** `tickets.yaml`: fifteen tickets written on 2026-10-27 against demandlib at `6757f4f`, before any run.
-  Ten expect an implementation, one is deliberately vague and should end in a clarification, two are already fixed in
+  Twelve expect an implementation, one is deliberately vague and should end in a clarification, two are already fixed in
   the repository's history and should end in an abstention, two resemble merged PRs so the precedent feature is
   tested on fresh work. Each entry carries the issue text the agents see and, separately, the expected route, the
   invariants in play and the acceptance tests to write. `file_issues.py` files the issue texts on the fork.
