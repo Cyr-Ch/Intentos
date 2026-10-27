@@ -5,7 +5,9 @@ rehearse. The exact run ids for the sentences below are in `~/intentos-demo/stat
 
 ## Before the session
 
-1. `demo/reset.sh`, then start a new Codex session (the `intentos-demo` MCP server reopens the restored store).
+1. `demo/reset.sh`, then start Codex on the demo home: `INTENTOS_HOME=~/intentos-demo/home INTENTOS_CODEX_MODEL=gpt-6-astra codex`
+   (the IntentOS plugin's server reads both from the environment; without the plugin, `demo/prepare.ts --register`
+   registers an `intentos-demo` server instead).
 2. Laptop on power, `caffeinate -i` in a spare terminal, Codex credits checked, network checked.
 3. Second terminal ready at `~/intentos-demo/demandlib` for `git log --oneline --first-parent | head` and
    `cat ~/intentos-demo/home/mcp.log`.

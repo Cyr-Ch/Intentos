@@ -100,7 +100,7 @@ query expansion crashed on the word "constructor"; the runner prepared the basel
 the judge saw no resolution for abstentions and clarifications. One run per cell.
 
 ## intentos-setup skill (2026-10-27)
-`skills/intentos-setup/SKILL.md`: a Codex skill that sets IntentOS up for a repository with checks at each step
+`plugins/intentos/skills/intentos-setup/SKILL.md`: a Codex skill that sets IntentOS up for a repository with checks at each step
 (installation and `coordination`, `codex mcp add` from `mcp --print-codex-config`, `onboard` with the suite result at
 base reported, `mine` with a model other than the session's and the rules written into the policy, optional
 precedents, `explain` to confirm a first run can start), asking the user only for the checkout path, the repository,
@@ -382,7 +382,7 @@ stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
   has no UI extension and keeps the form path. Test: a UI-capable host calling `review_next` after `review_start`
   gets the deferral.
 - Mining by the host (2026-10-26): the candidates a reviewer sees are the ones Codex selected and backed with a test.
-  IntentOS ships the instructions as a Codex skill (`skills/intentos-policy-mining/SKILL.md`, installed into
+  IntentOS ships the instructions as a Codex skill (`plugins/intentos/skills/intentos-policy-mining/SKILL.md`, installed into
   `~/.agents/skills` by `intentos skill install`, served by the `mining_guide` tool to hosts without skills) and
   takes the result through `propose`: shape errors per proposal, `from_mined` inheritance from the cached raw list
   (`mined` tool), references checked against tracked files and the commit graph (Python `Ingestor`), a test required

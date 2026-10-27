@@ -58,7 +58,7 @@ machine-readable output; every command exits non-zero on critical failure.
 | `propose <repo> --file <json>` | validates host-authored candidates (the `intentos-policy-mining` skill's output): references checked against the repository, existing tests lifted and run, written tests run in the repository's venv; writes the review files with `authored_by: codex` (`--append` keeps an earlier list) |
 | `mine <repo> --model <slug>` | the independent miner: runs the `intentos-policy-mining` skill in a separate read-only Codex thread with the named model (`INTENTOS_MINING_MODEL` as the default), takes the answer through the same checks as `propose`, sends the rejections back to that thread once, and writes the review files with the author recorded (`author: {via: side_thread, model, thread_id}`); `--append` keeps the current list; `--reasoning`, `--rounds`; `--replay <dir>` re-checks saved answers (`<out>/mine/round-N.json`) without Codex |
 | `precedents sync <repo> --issues owner/name [--pulls owner/name]` / `precedents show <repo>` | `.intentos/precedents/<repo-id>.json`: the tracker's closed issues and the merged pull request that resolved each one (found through links in the ticket text and the issue timeline), with the pull request's diff read from the local history (files, Python definitions containing changed lines, test functions added); then a re-index, which links every precedent to the current graph (`TOUCHES` symbols/modules, `ADDS_TEST` tests) and marks it `current`, `partially_stale` or `stale` after following renames. `explain`, the planner prompt, the implementer prompt and the report then show how similar tickets were solved here. History, never policy: see [docs/precedents.md](docs/precedents.md) |
-| `skill install` / `skill show` | symlinks the two skills, `skills/intentos-policy-mining` and `skills/intentos-setup` (connect the MCP server, onboard a repository, mine and write its rules, load precedents, confirm a first run), into `~/.agents/skills` (`--dir` for another skills directory; `--name` for one) / prints a skill's text |
+| `skill install` / `skill show` | symlinks the two skills, `plugins/intentos/skills/intentos-policy-mining` and `plugins/intentos/skills/intentos-setup` (connect the MCP server, onboard a repository, mine and write its rules, load precedents, confirm a first run), into `~/.agents/skills` (`--dir` for another skills directory; `--name` for one) / prints a skill's text |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
 | `plan <repo> "<task>"` | a run dir with `task.json`, `evidence.json`, `planner_prompt.txt`, `planner_output.json`, `contract.json`, `contract_validation.json`; run row in state `CONTRACT_VALIDATED` / `CLARIFICATION_REQUIRED` / `ABSTAINED` |
@@ -126,11 +126,23 @@ npm run verifier:image   # optional: build the container used by INTENTOS_VERIFI
 
 ## Using IntentOS from inside Codex (or another MCP host)
 
+IntentOS ships as a Codex plugin (`plugins/intentos/`: the MCP server, the `intentos-setup` and
+`intentos-policy-mining` skills, the onboarding skill hook). The checkout is also a local marketplace:
+
+```bash
+codex plugin marketplace add ~/intentos        # the checkout's .agents/plugins/marketplace.json
+codex plugin add intentos@intentos             # installs the plugin: server + skills, in every Codex session
+codex                                          # in the target repository
+> set up IntentOS for this repository          # the intentos-setup skill: checks, onboard, mine, precedents, first run
+```
+
+The plugin's server finds the checkout through `INTENTOS_ROOT` (default `~/intentos`) and reads `INTENTOS_HOME`,
+`INTENTOS_CODEX_MODEL`, `INTENTOS_MINING_MODEL` and the other `INTENTOS_*` variables from the environment Codex was
+started in, so a demo or a second data home is `INTENTOS_HOME=... codex`. Without the plugin, the older way still works:
+
 ```bash
 $(npm run -s intentos -- mcp --print-codex-config)   # registers the server with the absolute node path (GUI hosts start servers with a bare PATH)
-npm run -s intentos -- skill install                   # symlinks skills/intentos-policy-mining into ~/.agents/skills, where Codex looks
-codex                                                  # in the target repository
-> bring this repository under IntentOS and walk me through the policy candidates
+npm run -s intentos -- skill install                   # symlinks the two skills into ~/.agents/skills, where Codex looks
 ```
 
 The server tells the host how to use it (MCP `instructions`), so one sentence is enough. Codex then calls `status`
@@ -143,7 +155,7 @@ hands the mining to a model other than its own with `mine` when you ask for an i
 ## Mining the rules: the skill, the proposal, the check
 
 The candidates a reviewer sees are the ones **Codex** selected and backed with a test, not the deterministic miner's.
-IntentOS ships the instructions for that as a Codex skill, `skills/intentos-policy-mining/SKILL.md`: what a business
+IntentOS ships the instructions for that as a Codex skill, `plugins/intentos/skills/intentos-policy-mining/SKILL.md`: what a business
 rule is and is not, where to look and in which order (tests, fix commits, must/never sentences in documents, the
 import graph and frozen directories), how to state a rule, how to cite evidence, when to pick an existing test and
 when to write one, and the `propose` contract. `intentos skill install` symlinks it into `~/.agents/skills`; Codex

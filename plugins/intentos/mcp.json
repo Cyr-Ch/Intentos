@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "intentos": {
+      "command": "/bin/sh",
+      "args": ["./scripts/intentos-launch.sh", "mcp"],
+      "cwd": ".",
+      "env_vars": ["PATH", "HOME", "INTENTOS_ROOT", "INTENTOS_HOME", "INTENTOS_PYTHON", "INTENTOS_CODEX_MODEL", "INTENTOS_CODEX_REASONING", "INTENTOS_MINING_MODEL", "INTENTOS_ACCEPTANCE_MODEL", "INTENTOS_COORDINATION", "INTENTOS_NODE", "CODEX_HOME"],
+      "tool_timeout_sec": 120
+    }
+  }
+}

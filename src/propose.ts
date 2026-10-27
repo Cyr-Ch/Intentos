@@ -23,7 +23,8 @@ export const SKILL_NAME = "intentos-policy-mining";
 export const SETUP_SKILL_NAME = "intentos-setup";
 /** Skills shipped with IntentOS: mining the rules (followed by the host), and setting IntentOS up for a repository. */
 export const SKILL_NAMES = [SKILL_NAME, SETUP_SKILL_NAME] as const;
-export const skillDir = (name: string = SKILL_NAME): string => path.join(PROJECT_ROOT, "skills", name);
+/** The skills live inside the Codex plugin (plugins/intentos/skills), the one place Codex reads them from when the plugin is installed. */
+export const skillDir = (name: string = SKILL_NAME): string => path.join(PROJECT_ROOT, "plugins", "intentos", "skills", name);
 export const skillText = (name: string = SKILL_NAME): string => fs.readFileSync(path.join(skillDir(name), "SKILL.md"), "utf8");
 
 /** Symlink the skill into a Codex skills directory (default `~/.agents/skills`, scanned by Codex for every project). */

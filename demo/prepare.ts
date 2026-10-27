@@ -9,7 +9,8 @@
  *   demandlib/         the demo repository, indexed, with the original's venv and precedents
  *   red/demandlib/     a second clone whose main is red after two merges that each pass alone (for the guardian)
  *   state.json         run ids, PR numbers, the sentences to say
- * and registers the MCP server `intentos-demo` in Codex with INTENTOS_HOME pointing at <root>/home.
+ * With the IntentOS plugin installed, start Codex as `INTENTOS_HOME=<root>/home INTENTOS_CODEX_MODEL=... codex`;
+ * `--register` instead registers a separate `intentos-demo` server for installations without the plugin.
  *
  * Prepared runs on demandlib (finished, not merged):
  *   P2  ticket T13 (zero-demand warning); its changed file imports tools.add_weekdays2df
@@ -33,7 +34,9 @@ const opt = (name: string, dflt: string | null = null): string | null => {
 const root = path.resolve(opt("--root", path.join(os.homedir(), "intentos-demo"))!);
 const source = path.resolve(opt("--source", path.join(os.homedir(), "repos", "demandlib"))!);
 const model = opt("--model", process.env.INTENTOS_CODEX_MODEL ?? "gpt-6-astra")!;
-const register = !argv.includes("--no-register");
+// With the IntentOS plugin installed, the demo home is selected by INTENTOS_HOME in Codex's environment; a separate
+// `intentos-demo` server registration is only for installations without the plugin (`--register`).
+const register = argv.includes("--register");
 process.env.INTENTOS_HOME = path.join(root, "home");
 process.env.INTENTOS_CODEX_MODEL = model;
 delete process.env.INTENTOS_COORDINATION;

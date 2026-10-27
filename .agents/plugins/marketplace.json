@@ -1,0 +1,21 @@
+{
+  "name": "intentos",
+  "interface": {
+    "displayName": "IntentOS"
+  },
+  "plugins": [
+    {
+      "name": "intentos",
+      "source": {
+        "source": "local",
+        "path": "./plugins/intentos"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools",
+      "description": "Verification and coordination for Codex: world model, compiled contracts, isolated implementation with coordination hooks, independent verification with hidden tests, gated merges and a guardian. Includes the setup and policy-mining skills."
+    }
+  ]
+}
