@@ -172,7 +172,7 @@
       "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T11",
       "hazards": [],
       "offline_patches": {},
-      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:39:56.315Z); fail at base, pass when solved | accepted_routes added after run 1: the energy-factor region for a user file is a genuine open question",
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:39:56.315Z); fail at base, pass when solved | underspecified: the energy-factor region for a user file is not given; a clarification is a correct route",
       "accepted_routes": [
         "clarify"
       ]

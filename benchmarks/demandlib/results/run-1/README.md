@@ -109,9 +109,9 @@ would replace this number; until then the judge figures carry the label "model-t
 
 - One run per cell; a single-ticket difference is noise. Only the control pattern, the invariant catch and the repair
   counts are large enough to mean something.
-- One ground-truth change after the run, recorded in `tickets.yaml` and `tasks.json`: T11 now accepts a clarification
-  as a correct route, because the energy-factor question is real. It changes one cell (route correct for IntentOS on
-  T11) and nothing else.
+- T11 is underspecified by nature (a TRY file carries weather only; the VDI energy factors are selected by region
+  number), so a clarification counts as a correct route for it, as `tickets.yaml` records; the acceptance tests stay in
+  place for an implementation that states its assumption.
 - The tickets and the rubric were written by the people evaluating the system (before any run, committed, with the
   acceptance tests reviewed and two of them corrected by hand: `T07` expected weekdays, `T10` house inputs).
 - The baseline shares the verifier and its repair loop; see the note at the top.
