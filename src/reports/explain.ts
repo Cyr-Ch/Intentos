@@ -1,4 +1,5 @@
 import type { EvidencePack } from "../knowledge/retrieval.ts";
+import { currentName } from "../knowledge/precedents.ts";
 
 export function renderEvidencePack(p: EvidencePack): string {
   const lines: string[] = [];
@@ -35,6 +36,19 @@ export function renderEvidencePack(p: EvidencePack): string {
     lines.push("");
     lines.push("## Conflicts / staleness (deterministic)");
     for (const c of p.conflicts) lines.push(`  ${c.kind} (${c.resolution}): ${c.summary}`);
+  }
+  lines.push("");
+  lines.push("## Precedents (how similar tickets were solved here; history, not policy)");
+  if (!p.precedents.length) lines.push("  (none matched — run `intentos precedents sync <repo> --issues owner/name` to load the ticket history)");
+  for (const pr of p.precedents) {
+    lines.push(`  [${pr.evidence_id}] #${pr.number} "${pr.title}"${pr.pull ? ` ← PR #${pr.pull.number}${pr.pull.merged_at ? ` (${pr.pull.merged_at.slice(0, 10)})` : ""}` : ""}  relevance=${pr.relevance}  ${pr.staleness}`);
+    const where = pr.symbols.map((x) => `${currentName(x)}${x.current ? (x.line_start ? ` (${x.path}:${x.line_start})` : "") : " [gone]"}`);
+    if (where.length) lines.push(`      changed: ${where.join(", ")}`);
+    const files = pr.files.filter((f) => !f.is_test).map((f) => `${f.path}${f.current ? "" : " [gone]"}`);
+    if (files.length && !where.length) lines.push(`      files: ${files.join(", ")}`);
+    if (pr.tests_added.length) lines.push(`      tests added: ${pr.tests_added.map((t) => `${t.path}::${t.name}${t.current ? "" : " [gone]"}`).join(", ")}`);
+    lines.push(`      why: ${pr.reasons.join("; ")}${pr.staleness_reasons.length ? `; ${pr.staleness_reasons.join("; ")}` : ""}`);
+    lines.push(`      ${pr.url}`);
   }
   lines.push("");
   lines.push(`## Probable impact (${p.impact.method})`);

@@ -1,7 +1,7 @@
 import type { ConstraintHit, DocHit } from "./retrieval.ts";
 
 export interface Conflict {
-  kind: "superseded_decision" | "stale_document" | "conflicted_source" | "contradicting_decisions";
+  kind: "superseded_decision" | "stale_document" | "conflicted_source" | "contradicting_decisions" | "stale_precedent";
   ids: string[];
   summary: string;
   resolution: "do_not_enforce" | "clarify" | "report";

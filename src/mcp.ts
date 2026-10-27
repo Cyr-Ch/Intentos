@@ -45,7 +45,7 @@ import crypto from "node:crypto";
 const SERVER_INSTRUCTIONS = [
   "IntentOS keeps a repository's business rules as an approved policy (invariants, architecture rules, decisions) backed by hidden tests, and gives you an evidence pack before you plan a change. Always pass absolute repository paths.",
   `Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) Mine the business rules yourself, following the ${SKILL_NAME} skill (call mining_guide if the skill is not installed in this host): read the tests, the git history, the documents and the structure; state each rule with evidence; pick an existing test or write one that proves it; submit the list with propose. mined gives the deterministic miner's raw list as a starting point. IntentOS checks every reference and runs every test; fix the rejected ones and call propose again with append=true. (4) review_start. If its result says ui=widget, the reviewer works inside the inline widget: do not call review_next (it would show the same candidate again as a form); wait for the reviewer to say they are done. If it says ui=link, give the reviewer the link. Otherwise call review_next repeatedly: each call shows the reviewer one candidate through this host's own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never submit a candidate without evidence from the repository. (5) review_close when no candidates remain, or when the reviewer says they are done and the widget did not finish.`,
-  "Before planning or implementing a change: explain for the evidence pack, policy for the approved rules.",
+  "Before planning or implementing a change: explain for the evidence pack, policy for the approved rules. explain also lists precedents, resolved tickets and the pull requests that solved them, linked to the code they changed; when the task is of the same kind and the precedent is current, follow its location and pattern. Load them once per repository with precedents (owner/name of the issue tracker; pulls=owner/name when the pull requests live upstream).",
 ].join("\n");
 
 export const REVIEW_RESOURCE_URI = "ui://intentos/review.html";
@@ -121,6 +121,27 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         const pack = buildEvidencePack(opts.store, indexed, task);
         log(`explain ${repo}: ${pack.reusable_symbols.length} symbols, ${pack.invariants.length} invariants`);
         return text(renderEvidencePack(pack), { revision: pack.revision, policy_id: indexed.policy.policy_id, reusable_symbols: pack.reusable_symbols.slice(0, 15), invariants: pack.invariants, architecture_rules: pack.architecture_rules, allowed_path_universe: pack.allowed_path_universe, protected_paths: pack.protected_paths });
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
+  server.registerTool(
+    "precedents",
+    {
+      description: "Load a repository's ticket history as precedents: closed issues and the merged pull requests that resolved them, each linked to the code it changed (files, definitions, tests added) at the current revision. Afterwards `explain` lists, for a task, how similar tickets were solved here and whether that code still exists. Runs the GitHub CLI (`gh`) in a child process; needs the merge commits in the local history.",
+      inputSchema: z.object({ repo: z.string().describe("absolute path of the repository root"), issues: z.string().describe("GitHub repository `owner/name` whose closed issues are the tickets"), pulls: z.string().optional().describe("repository of the pull requests when it differs (tickets on a fork, pull requests upstream)"), limit: z.number().int().positive().optional().describe("newest N closed issues (default 500)") }),
+    },
+    async ({ repo, issues, pulls, limit }) => {
+      try {
+        const lines: string[] = [];
+        const r = await runCli(["precedents", "sync", repo, "--issues", issues, ...(pulls ? ["--pulls", pulls] : []), ...(limit ? ["--limit", String(limit)] : [])], (l) => lines.push(l.replace(/^\[precedents\] /, "")));
+        if (r.status !== 0) throw new Error(`intentos precedents sync failed: ${lastLine(r.stderr) ?? `exit ${r.status}`}`);
+        const out = JSON.parse(r.stdout) as { file: string; precedents: number; with_pull: number; linked_to_diff: number; index: { current: number; partially_stale: number; stale: number; unlinked: number } | null; revision: string | null };
+        log(`precedents ${repo}: ${out.precedents} from ${issues} (${out.linked_to_diff} linked to diffs)`);
+        const summary = `${out.precedents} precedent(s) from ${issues}: ${out.with_pull} with a merged pull request, ${out.linked_to_diff} linked to their diff${out.index ? `; at ${out.revision?.slice(0, 10)}: ${out.index.current} current, ${out.index.partially_stale} partially stale, ${out.index.stale} stale, ${out.index.unlinked} text-only` : ""}. Call explain with the task to see which precedents apply.`;
+        return text([summary, ...lines.slice(-12)].join("\n"), out);
       } catch (e) {
         return fail((e as Error).message);
       }

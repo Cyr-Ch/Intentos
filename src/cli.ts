@@ -15,6 +15,7 @@ import { defaultReviewer, loadReviewState, startReviewServer } from "./review.ts
 import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
 import { ingestProposals, installSkill, SKILL_NAME, skillText } from "./propose.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
+import { currentName, precedentsFile, syncPrecedents, writePrecedentsFile, type PrecedentAttributes } from "./knowledge/precedents.ts";
 
 function printSuggestions(result: SuggestResult): void {
   console.log(`Suggestions for ${result.repo_path} (policy ${result.policy_id}, ${result.head.slice(0, 7)})`);
@@ -106,6 +107,78 @@ program
       if (opts.out) fs.writeFileSync(opts.out, JSON.stringify(pack, null, 2));
       if (program.opts().json) console.log(JSON.stringify(pack, null, 2));
       else console.log(renderEvidencePack(pack));
+    } catch (err) {
+      fail((err as Error).message);
+    } finally {
+      store.close();
+    }
+  });
+
+const precedents = program.command("precedents").description("Resolved tickets and the pull requests that resolved them: how similar work was done here, linked to the current code at every index (history the planner may follow, never policy)");
+precedents
+  .command("sync")
+  .description("Fetch closed issues and their merged pull requests with the GitHub CLI, read each pull request's diff from the local history (files, definitions, tests added), store them under .intentos/precedents/<repo-id>.json and re-index")
+  .argument("<repo>", "path of the repository root (its git history must contain the merge commits)")
+  .requiredOption("--issues <owner/name>", "GitHub repository whose closed issues are the tickets")
+  .option("--pulls <owner/name>", "GitHub repository of the pull requests when it differs (e.g. tickets on a fork, pull requests upstream)")
+  .option("--limit <n>", "newest N closed issues", (v) => Number(v), 500)
+  .option("--no-timeline", "do not walk issue timelines for cross-referenced pull requests (fewer API calls; links in the issue text only)")
+  .option("--no-index", "write the file but do not re-index")
+  .option("--gh <path>", "GitHub CLI binary", "gh")
+  .action((repo: string, opts: { issues: string; pulls?: string; limit: number; timeline: boolean; index: boolean; gh: string }) => {
+    const store = openStore();
+    try {
+      const repoPath = path.resolve(repo);
+      const repoId = repoIdFor(repoPath);
+      const data = syncPrecedents(repoPath, repoId, { issues: opts.issues, pulls: opts.pulls ?? null, limit: opts.limit, timeline: opts.timeline, ghBin: opts.gh }, (line) => console.error(`[precedents] ${line}`));
+      const file = precedentsFile(resolvePaths(), repoId);
+      writePrecedentsFile(file, data);
+      const linked = data.precedents.filter((p) => p.pull?.diff).length;
+      const summary = opts.index ? indexRepository(store, repoPath) : null;
+      if (program.opts().json) console.log(JSON.stringify({ file, precedents: data.precedents.length, with_pull: data.precedents.filter((p) => p.pull).length, linked_to_diff: linked, index: summary?.precedents ?? null, revision: summary?.head_sha ?? null }, null, 2));
+      else {
+        console.log(`Synced ${data.precedents.length} precedent(s) from ${opts.issues}${opts.pulls ? ` (pull requests in ${opts.pulls})` : ""} -> ${file}`);
+        console.log(`  with a merged pull request: ${data.precedents.filter((p) => p.pull).length}; diff read from local history: ${linked}`);
+        if (summary?.precedents) console.log(`  linked at ${summary.head_sha.slice(0, 10)}: ${summary.precedents.current} current, ${summary.precedents.partially_stale} partially stale, ${summary.precedents.stale} stale, ${summary.precedents.unlinked} text-only`);
+        console.log(`  next: intentos explain ${repo} "<task>" shows the matching precedents; intentos precedents show ${repo} lists them all`);
+      }
+    } catch (err) {
+      fail((err as Error).message);
+    } finally {
+      store.close();
+    }
+  });
+precedents
+  .command("show")
+  .description("List the precedents linked at the indexed revision: ticket, pull request, definitions changed, tests added, staleness")
+  .argument("<repo>", "indexed repository root")
+  .option("--stale", "only precedents whose code no longer exists (fully or partially)", false)
+  .action((repo: string, opts: { stale: boolean }) => {
+    const store = openStore();
+    try {
+      const indexed = loadIndexedRepo(store, repo);
+      const rows = store
+        .nodes(indexed.repo.id, indexed.revision, "precedent")
+        .map((n) => ({ id: n.id, ...(JSON.parse(n.attributes_json) as PrecedentAttributes) }))
+        .filter((p) => !opts.stale || p.staleness === "stale" || p.staleness === "partially_stale")
+        .sort((a, b) => a.number - b.number);
+      if (program.opts().json) {
+        console.log(JSON.stringify(rows, null, 2));
+        return;
+      }
+      if (!rows.length) {
+        console.log(`No precedents linked for ${indexed.repoPath}. Run: intentos precedents sync ${repo} --issues <owner/name>`);
+        return;
+      }
+      console.log(`${rows.length} precedent(s) at ${indexed.revision.slice(0, 10)}`);
+      for (const p of rows) {
+        const where = p.symbols.map((x) => `${currentName(x)}${x.current ? "" : " [gone]"}`);
+        const files = p.files.filter((f) => !f.is_test).map((f) => `${f.renamed_to ?? f.path}${f.current ? "" : " [gone]"}`);
+        console.log(`  #${String(p.number).padEnd(5)} ${p.staleness.padEnd(15)} ${p.title}${p.pull ? `  ← PR #${p.pull.number}` : ""}`);
+        if (where.length || files.length) console.log(`         changed: ${(where.length ? where : files).slice(0, 6).join(", ")}${(where.length ? where : files).length > 6 ? ", …" : ""}`);
+        if (p.tests_added.length) console.log(`         tests added: ${p.tests_added.map((t) => t.name).slice(0, 4).join(", ")}${p.tests_added.length > 4 ? ", …" : ""}`);
+        for (const r of p.staleness_reasons) console.log(`         note: ${r.length > 220 ? `${r.slice(0, 220)}…` : r}`);
+      }
     } catch (err) {
       fail((err as Error).message);
     } finally {

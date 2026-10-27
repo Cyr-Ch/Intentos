@@ -1,6 +1,6 @@
 # IntentOS — Implementation Status
 
-Last updated: 2026-10-26 (`intentos onboard` and `intentos suggest` landed after the M4–M6 features: container verifier, architectural-surprise signals, resume re-entry, incremental re-indexing). Everything below was observed in this checkout; nothing is projected.
+Last updated: 2026-10-27 (precedents: ticket history linked to the code, after `intentos onboard`, `intentos suggest`, the review UI, the MCP server and the M4–M6 features). Everything below was observed in this checkout; nothing is projected.
 
 ## Summary
 
@@ -13,7 +13,7 @@ Last updated: 2026-10-26 (`intentos onboard` and `intentos suggest` landed after
 | M5 Benchmark runner + metrics | **functional (small scale)** | `benchmarks/evaluate.ts` offline matrix run; live full + one live baseline run; metrics from artifacts only |
 | M6 Team deployment | **partial** | container-isolated verification runner (`INTENTOS_VERIFIER=docker`, fail-closed) done; GitHub App, tenant isolation and hosted runners not started (docs/security.md) |
 
-Tests: `npm test` → 18 files, **107 tests** (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **30 passed**; `npm run typecheck` clean. Suggestion-ranking benchmark on the fixture (`tests/integration/suggest_rank.test.ts`): precision@10 = 0.90, no unit-test/preamble noise in the top 10, mean score of policy material 0.64 vs 0.46 for noise.
+Tests: `npm test` → 21 files, **141 tests** (24 of them in `tests/unit/precedents.test.ts` + `tests/integration/precedents.test.ts`) (3 of them need a Docker daemon plus the `intentos-verifier:0.1` image and are skipped otherwise; `tests/integration/resume.test.ts` covers thread id persisted at `thread.started`, re-entry, bounded re-entry, no-thread/offline fallbacks, moved-worktree guard; `tests/integration/incremental_index.test.ts` proves incremental == full; `tests/integration/onboard.test.ts` covers the onboarding command); `npm run test:python` → **31 passed**; `npm run typecheck` clean. Suggestion-ranking benchmark on the fixture (`tests/integration/suggest_rank.test.ts`): precision@10 = 0.90, no unit-test/preamble noise in the top 10, mean score of policy material 0.64 vs 0.46 for noise.
 
 ## Independent audit (2026-10-26) and fixes
 A separate reviewer agent compared the code with the spec and probed the verifier. Confirmed weaknesses, all fixed with regression tests:
@@ -338,3 +338,19 @@ stdio process answers `tools/list` and `resources/read` (7 tools, 415 KB page).
 1. Run `evaluate.ts --mode full` and `--mode baseline` several times per task (A–D) and record variance before any comparative claim.
 2. Resume re-entry: done with a stand-in engine (2026-10-26); still to do: observe one real `resumeThread` continuation with live credentials.
 3. Symlink-escape checks on snapshot copy; stronger-than-Docker isolation (gVisor/VM) for the container verifier.
+
+## Precedents: ticket history as evidence (2026-10-27)
+`intentos precedents sync <repo> --issues owner/name [--pulls owner/name]` fetches the tracker's closed issues and
+the merged pull request that resolved each one (links in the ticket text + issue timeline, via `gh`), reads the
+pull request's diff from the local history (files, enclosing Python definitions of changed lines, tests added) and
+stores `.intentos/precedents/<repo-id>.json`; every `index` re-links the precedents to HEAD (`precedent` nodes,
+`TOUCHES`/`ADDS_TEST` edges, `historical_precedent` evidence) following renames (`git diff -M`, then path tail) and
+marks them `current` / `partially_stale` / `stale` / `unlinked`. `explain` ranks them (lexical + structural overlap),
+the planner may cite their evidence ids, the implementer prompt names their location and tests, the verifier adds
+review-only `PRECEDENT-FOLLOWED` / `PRECEDENT-DIVERGENCE` signals, the report has a Precedents section, and the MCP
+server exposes `precedents`. Observed on `oemof-demand` (43 reconstructed tickets on the fork
+`Cyr-Ch/oemof-demand`, pull requests upstream, package renamed `demandlib` → `oemof.demand` in between): all 43
+linked to their diff; at HEAD 19 current, 12 partially stale, 12 stale (pre-rename examples, `setup.py`, removed
+modules). `explain "Raise an error instead of a warning when a profile is created without holidays"` returns #43
+(`oemof.demand.tools.set_holidays_in_df`, the two holiday tests) at relevance 1, then #25 and #41.
+Limits: definitions by indentation walk-up only; first merged pull request per ticket; ranking is heuristic.
