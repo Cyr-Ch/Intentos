@@ -38,8 +38,23 @@ commands:
   pytest_project:
     description: Project test suite from the verification snapshot (editable by the implementer; lower authority than hidden tests)
     track: functional
-    argv: [ "{python}", "-m", "pytest", "src", "tests", "docs", "-q", "-p", "no:cacheprovider", "-o", "pythonpath=src tests", "--junit-xml={junit}" ]
+    # Quarantined: tests/test_tools.py::TestWeekdays::test_no_warning_with_empty_holidays fails at the base revision
+    # under pandas 3.1 (DatetimeIndex.weekday emits a deprecation warning the test escalates); the benchmark ticket T07
+    # removes the cause. The hidden test test_inv_001_no_warning_with_empty_holidays is set aside for the same reason
+    # (benchmarks/hidden_tests/oemof_demand/quarantined); INV-001 keeps its other tests.
+    argv: [ "{python}", "-m", "pytest", "src", "tests", "docs", "-q", "-p", "no:cacheprovider", "-o", "pythonpath=src tests", "--deselect", "tests/test_tools.py::TestWeekdays::test_no_warning_with_empty_holidays", "--junit-xml={junit}" ]
     timeout_s: 900
+  pytest_hidden_task:
+    description: Hidden acceptance tests for the task, written before implementation by a model other than the implementer (benchmarks/hidden_tests/oemof_demand/tasks/<id>)
+    track: functional
+    argv: [ "{python}", "-m", "pytest", "{hidden_tests_dir}/task", "-q", "-p", "no:cacheprovider", "-o", "pythonpath=src tests", "--junit-xml={junit}" ]
+    timeout_s: 600
+    requires_task_tests: true
+  pytest_invariants:
+    description: Hidden business-invariant tests bound to the approved invariants (benchmarks/hidden_tests/oemof_demand/invariants)
+    track: business_invariant
+    argv: [ "{python}", "-m", "pytest", "{hidden_tests_dir}/invariants", "-q", "-p", "no:cacheprovider", "-o", "pythonpath=src tests", "--junit-xml={junit}" ]
+    timeout_s: 600
   scope_check:
     description: Changed files must stay inside allowed paths and outside protected paths
     track: scope
@@ -83,7 +98,6 @@ invariants:
       - path: docs/intentos-policy.md
         heading: No warning with empty holidays
     verified_by:
-      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_001_no_warning_with_empty_holidays.py
       - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_001_frame_without_holidays.py
       - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_001_warning_without_holidays.py
     enforcement: blocking

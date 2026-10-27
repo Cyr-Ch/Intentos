@@ -24,7 +24,11 @@ def run_tests(checkout, nodeids: list[str] | None = None) -> dict:
         # This harness executes repository tests, just as CI does. It is not a sandbox.
         env = {**os.environ, "MERGEGUARD_TEST_RESULT": str(output), "MERGEGUARD_DISABLE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "PYTHONDONTWRITEBYTECODE": "1",
                "PYTHONPATH": os.pathsep.join([str(checkout), str(Path(__file__).resolve().parent.parent)])}
-        command = [sys.executable, "-m", "pytest", "-q", "--tb=short", "-p", "mergeguard.pytest_probe", *existing]
+        # MERGEGUARD_PYTEST_ARGS: the repository's own pytest needs (a src-layout `-o pythonpath=…`, a `--deselect` of a test
+        # known to fail at base), the same flags the project's CI uses; shell-free, split like a shell would.
+        import shlex
+        extra = shlex.split(os.environ.get("MERGEGUARD_PYTEST_ARGS", ""))
+        command = [sys.executable, "-m", "pytest", "-q", "--tb=short", "-p", "mergeguard.pytest_probe", *extra, *existing]
         try:
             result = subprocess.run(command, cwd=checkout, env=env, text=True, capture_output=True, timeout=60)
         except subprocess.TimeoutExpired:
