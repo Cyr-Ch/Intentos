@@ -194,7 +194,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     job.log.push(line);
     if (job.log.length > 400) job.log.splice(0, job.log.length - 400);
   };
-  const runMineJob = async (job: Job, a: { model: string; reasoning?: string; rounds?: number; append?: boolean; policy_id?: string; policy_file?: string; out_dir?: string; review?: boolean }): Promise<void> => {
+  const runMineJob = async (job: Job, a: { model: string; reasoning?: string; rounds?: number; append?: boolean; policy_id?: string; policy_file?: string; out_dir?: string; review?: boolean; hidden_tests_root?: string }): Promise<void> => {
     try {
       job.phase = "mining";
       const r = await mineWithModel(job.repo, { model: a.model, reasoningEffort: a.reasoning, rounds: a.rounds, append: a.append, policyId: a.policy_id, policyFile: a.policy_file, outDir: a.out_dir, engine: opts.mineEngine?.(a.model) }, (l) => {
@@ -205,7 +205,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       Object.assign(job.result, { policy_id: r.policy_id, model: r.model, accepted: r.accepted.length, rejected: r.rejected.length, rounds: r.rounds.length, candidates: r.candidates.length, kept: r.candidates.length, filtered: 0, note: r.rejected.length ? `${r.rejected.length} candidate(s) still rejected after ${r.rounds.length} round(s): ${r.rejected.map((x) => x.title).join("; ")}` : null });
       if (!a.review) {
         // No person in the loop: the accepted rules go straight into the policy and the hidden tests; the user is told where to edit them.
-        const state = await loadReviewState(job.repo, { policyId: a.policy_id, outDir: a.out_dir, policyFile: a.policy_file, by: autoApprover({ via: "side_thread", model: r.model, engine: r.engine, thread_id: r.thread_id }), store: opts.store, log: (l) => push(job, l) });
+        const state = await loadReviewState(job.repo, { policyId: a.policy_id, outDir: a.out_dir, policyFile: a.policy_file, hiddenTestsRoot: a.hidden_tests_root, by: autoApprover({ via: "side_thread", model: r.model, engine: r.engine, thread_id: r.thread_id }), store: opts.store, log: (l) => push(job, l) });
         const approved = autoApprove(state);
         Object.assign(job.result, { policy_file: approved.policy_file, approved: approved.approved.length, without_test: approved.without_test.length, note: [job.result.note, approved.without_test.length ? `${approved.without_test.length} candidate(s) left pending for lack of a test: ${approved.without_test.map((w) => w.title).join("; ")}` : null, approved.failed.length ? `${approved.failed.length} not approved: ${approved.failed.map((f) => `${f.title} (${f.error})`).join("; ")}` : null].filter(Boolean).join(" | ") || null });
         push(job, `approved ${approved.approved.length} rule(s) as ${approved.by} into ${approved.policy_file}`);
@@ -420,6 +420,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         policy_file: z.string().optional(),
         out_dir: z.string().optional(),
         review: z.boolean().optional().describe("true: leave the accepted rules for a person to review (review_start) instead of writing them into the policy at once; default false"),
+        hidden_tests_root: z.string().optional().describe("where the approved rules' hidden tests are written (default benchmarks/hidden_tests)"),
       }),
     },
     async (a) => {
@@ -436,7 +437,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         const job = newJob("mine", repo, "mining");
         jobs.set(repo, job);
         log(`mine ${repo}: job ${job.id} started (model=${model}, reasoning=${a.reasoning ?? "default"}, rounds=${a.rounds ?? 2}, append=${a.append ?? false})`);
-        void runMineJob(job, { model, reasoning: a.reasoning, rounds: a.rounds, append: a.append, policy_id: a.policy_id, policy_file: a.policy_file, out_dir: a.out_dir, review: a.review });
+        void runMineJob(job, { model, reasoning: a.reasoning, rounds: a.rounds, append: a.append, policy_id: a.policy_id, policy_file: a.policy_file, out_dir: a.out_dir, review: a.review, hidden_tests_root: a.hidden_tests_root });
         return text(`Independent mining started for ${repo} with ${model} (job ${job.id}): the side thread reads the repository and follows the ${SKILL_NAME} skill, IntentOS checks and tests its candidates and sends rejections back once. This takes a few minutes. Call status with repo=${repo} about every 20 seconds until phase is "done"${a.review ? ", then call review_start" : "; the accepted rules are then already written into the policy file and the hidden tests, and status says how many: tell the user where the file is so any rule can be edited or removed"}.${a.append ? " The current review list is kept and this model's candidates are added to it." : " The review list is replaced by this model's candidates."}`, { job_id: job.id, phase: job.phase, repo, model, policy_id: policyId, policy_file: policyFile });
       } catch (e) {
         return fail((e as Error).message);
