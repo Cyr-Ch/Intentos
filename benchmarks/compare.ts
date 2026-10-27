@@ -224,11 +224,12 @@ async function runPhase(args: Args, state: State, store: KnowledgeStore, outDir:
       const indexed = loadIndexedRepo(store, clone);
       const text = ticketText(t);
       const opts: RunOptions = { mode: "live", taskId: bound.has(t.id) ? t.id : null, log: (l) => log(`  ${arm}/${t.id}: ${l}`) };
-      if (arm === "baseline") opts.engine = new BaselineEngine(text, buildEvidencePack(store, indexed, text));
       log(`${arm}/${t.id}: ${t.title}`);
       const row: RunRow = { ticket: t.id, arm, run_id: null, final_state: "ERROR", expected_route: t.expected_route, route: "none", route_correct: false, acceptance_final: null, acceptance_first: null, first_attempt_blocking: null, blocking_final: null, review_findings_final: null, protected_paths_touched: null, changed_files: null, repair_rounds: 0, wall_ms: 0, tokens: "unknown", error: null };
       const t0 = Date.now();
       try {
+        // Inside the try: a crash while preparing the engine is an error row, never the end of the batch.
+        if (arm === "baseline") opts.engine = new BaselineEngine(text, buildEvidencePack(store, indexed, text));
         const rs = createRun(store, indexed, text, opts);
         row.run_id = rs.runId;
         const outcome = await executeRun(store, rs, opts);
