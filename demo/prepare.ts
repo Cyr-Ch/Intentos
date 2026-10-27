@@ -218,6 +218,9 @@ async function main() {
     },
   };
   fs.writeFileSync(path.join(root, "state.json"), JSON.stringify(state, null, 2));
+  // Preparation attempts remain in the audit store but do not crowd the live ticket view.
+  const hiddenRunIds = store.listRuns(repoIdFor(demo)).filter((row) => row.id !== p2.runId).map((row) => row.id);
+  fs.writeFileSync(path.join(resolvePaths().home, "dashboard.json"), JSON.stringify({ hidden_run_ids: hiddenRunIds }, null, 2));
   store.close();
 
   // ---- snapshot for demo/reset.sh

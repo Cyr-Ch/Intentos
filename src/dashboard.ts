@@ -106,7 +106,13 @@ function liveState(repo: string, selected: string | null): unknown {
   try {
     const repoId = repoIdFor(repo);
     const indexed = store.getRepository(repoId);
-    const runs = store.listRuns(repoId).slice(0, 20).map((run) => {
+    let hiddenRunIds = new Set<string>();
+    const visibilityFile = path.join(resolvePaths().home, "dashboard.json");
+    if (fs.existsSync(visibilityFile)) {
+      const visibility = JSON.parse(fs.readFileSync(visibilityFile, "utf8")) as { hidden_run_ids?: unknown };
+      if (Array.isArray(visibility.hidden_run_ids)) hiddenRunIds = new Set(visibility.hidden_run_ids.filter((id): id is string => typeof id === "string"));
+    }
+    const runs = store.listRuns(repoId).filter((run) => !hiddenRunIds.has(run.id)).slice(0, 20).map((run) => {
       const task = JSON.parse(run.task_json) as { task?: string; task_id?: string };
       const result = run.result_json ? JSON.parse(run.result_json) as { merge?: { merged?: boolean } } : null;
       return { id: run.id, state: run.state, task: task.task ?? "", task_id: task.task_id ?? null, started_at: run.started_at, updated_at: run.updated_at, base: run.base_sha.slice(0, 10), merged: !!result?.merge?.merged };
