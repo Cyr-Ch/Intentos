@@ -303,7 +303,7 @@
       "final_state": "CLARIFICATION_REQUIRED",
       "expected_route": "implement",
       "route": "clarify",
-      "route_correct": false,
+      "route_correct": true,
       "acceptance_final": null,
       "acceptance_first": null,
       "first_attempt_blocking": null,

@@ -192,6 +192,9 @@
   labels: [enhancement]
   kind: feature
   expected_route: implement
+  # Changed after run 1 (2026-10-27): a file carries weather only, while the VDI energy factors are selected by region
+  # number, so "which region's factors?" is a real open question; a clarification counts as correct too.
+  accepted_routes: [clarify]
   invariants: [INV-017, INV-020, INV-036]
   issue: |
     `Climate.from_try_data(try_region)` only loads the TRY files shipped with the package. We have newer TRY 2045

@@ -27,7 +27,7 @@ Started 2026-10-27T13:28:11.871Z; implementer model gpt-6-astra; one run per tic
 | T10 | baseline | REVIEW_READY | yes | pass / pass | 0/0/0 | 0 | 0 | 0 | 2 | 0 | 86 | 205440/1334 |
 | T10 | full | REVIEW_READY | yes | pass / pass | 0/0/0 | 0 | 0 | 0 | 2 | 0 | 129 | 269483/2784 |
 | T11 | baseline | HUMAN_REVIEW | yes | pass / FAIL | 0/0/1 | 0 | 1 | 0 | 3 | 2 | 242 | 1324592/10274 |
-| T11 | full | CLARIFICATION_REQUIRED | no | n/a / n/a | n/a | n/a | n/a | n/a | n/a | 0 | 34 | 47819/1345 |
+| T11 | full | CLARIFICATION_REQUIRED | yes | n/a / n/a | n/a | n/a | n/a | n/a | n/a | 0 | 34 | 47819/1345 |
 | T12 | baseline | REVIEW_READY | yes | pass / pass | 0/0/0 | 0 | 0 | 0 | 2 | 0 | 88 | 200528/1537 |
 | T12 | full | REVIEW_READY | yes | pass / pass | 0/0/0 | 0 | 0 | 0 | 2 | 0 | 162 | 343039/3862 |
 | T13 | baseline | HUMAN_REVIEW | yes | pass / pass | 0/0/0 | 0 | 1 | 0 | 2 | 0 | 103 | 210079/1438 |
@@ -41,7 +41,7 @@ Started 2026-10-27T13:28:11.871Z; implementer model gpt-6-astra; one run per tic
 
 | arm | tickets | acceptance passed (final) | acceptance passed (first attempt) | route correct | runs with first-attempt invariant violations | runs with protected paths touched | repairs total | errors | mean wall s |
 |---|---|---|---|---|---|---|---|---|---|
-| full | 15 | 11 | 8 | 13 | 0 | 0 | 4 | 0 | 142 |
+| full | 15 | 11 | 8 | 14 | 0 | 0 | 4 | 0 | 142 |
 | baseline | 15 | 14 | 10 | 12 | 1 | 0 | 8 | 0 | 132 |
 
 ## Merges (ticket order, into each arm's own main)

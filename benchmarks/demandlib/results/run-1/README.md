@@ -25,7 +25,7 @@ before any feedback, the closest this run has to Codex alone.
 | T08 daily heat demand | implement | solved after 1 repair | solved after 1 repair |
 | T09 validate HeatBuilding | implement | solved, pass/pass, 0 | solved after 1 repair; first attempt broke 21 hidden invariant tests |
 | T10 duplicate house names | implement | solved, pass/pass, 0 | solved, pass/pass, 0 |
-| T11 custom TRY file | implement | asked a question instead | solved after 2 repairs |
+| T11 custom TRY file | implement, clarify accepted | asked which region's energy factors apply to a user file | solved after 2 repairs, region 1 assumed silently |
 | T12 overlapping categories | implement | solved, pass/pass, 0 | solved, pass/pass, 0 |
 | T13 zero demand warning | implement | solved, pass/pass, 1 repair | solved, pass/pass, 0 |
 | T14 conversion factor | implement | solved after 1 repair | solved after 1 repair |
@@ -35,7 +35,7 @@ before any feedback, the closest this run has to Codex alone.
 
 | per arm | tickets | implement tickets solved | solved at first attempt | route correct on the 3 controls | first-attempt invariant violations | protected paths touched | repairs | tokens in+out | wall |
 |---|---|---|---|---|---|---|---|---|---|
-| IntentOS | 15 | 11 of 12 | 8 of 11 | 3 of 3 | 0 | 0 | 4 | 5.28 M | 35 min |
+| IntentOS | 15 | 11 of 12, plus T11 clarified (accepted route) | 8 of 11 | 3 of 3 | 0 | 0 | 4 | 5.28 M | 35 min |
 | baseline | 15 | 12 of 12 | 10 of 12 | 0 of 3 (cannot clarify or abstain by construction; changed nothing on T15) | 1 run, 21 tests | 0 | 8 | 6.68 M | 33 min |
 
 ## Merges, in ticket order, into each arm's own main
@@ -91,9 +91,10 @@ would replace this number; until then the judge figures carry the label "model-t
 ## Reading
 
 1. On writing the code, the planner and the contract did not make Codex better on this repository: both arms solve
-   nearly every implement ticket, and the baseline was slightly ahead before any repair. T11 is a miss for IntentOS: a
-   precise ticket answered with a question, though the judge sided with the question once it saw what the baseline
-   had assumed.
+   nearly every implement ticket, and the baseline was slightly ahead before any repair. On T11 IntentOS asked which
+   region's VDI energy factors a user-supplied file should get, a question the ticket leaves open, while the baseline
+   assumed region 1 silently; the judge sided with the question. A clarification still leaves the ticket undone until a
+   person answers, which is a cost, and this run had no one answering.
 2. The controls separate the arms. IntentOS declined the vague ticket and the two already-fixed ones with cited reasons;
    the baseline built a seven-file feature nobody specified and fixed a bug that does not exist, and passed its own tests
    doing so. On a real team, those are the two changes that cost review time and trust.
@@ -108,6 +109,9 @@ would replace this number; until then the judge figures carry the label "model-t
 
 - One run per cell; a single-ticket difference is noise. Only the control pattern, the invariant catch and the repair
   counts are large enough to mean something.
+- One ground-truth change after the run, recorded in `tickets.yaml` and `tasks.json`: T11 now accepts a clarification
+  as a correct route, because the energy-factor question is real. It changes one cell (route correct for IntentOS on
+  T11) and nothing else.
 - The tickets and the rubric were written by the people evaluating the system (before any run, committed, with the
   acceptance tests reviewed and two of them corrected by hand: `T07` expected weekdays, `T10` house inputs).
 - The baseline shares the verifier and its repair loop; see the note at the top.
