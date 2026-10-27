@@ -20,6 +20,7 @@ import { spawnSync } from "node:child_process";
 import { gitHead, PATCHES, setupFixtureEnv, TASK_A, type TestEnv } from "../helpers/fixture.ts";
 import { advanceBase, createRun, executeRun, type RunOptions } from "../../src/orchestrator/runner.ts";
 import { loadIndexedRepo } from "../../src/knowledge/repo.ts";
+import { repoIdFor } from "../../src/knowledge/indexer.ts";
 import { RunStore } from "../../src/orchestrator/store.ts";
 import { guardRepo, listRepoPrs, mergeNumberedPr, mergeRun } from "../../src/coordination/merge.ts";
 import { coordinationEnv, coordinationStatus, readLedger, resetCoordinationProbe, syncCheck } from "../../src/coordination/mergeguard.ts";
@@ -180,7 +181,7 @@ describe("mergeguard coordination inside IntentOS (offline runs, real verifier, 
     expect(loadIndexedRepo(env.store, env.repo).revision).toBe(merged.merge_commit);
     expect(readLedger(coord()).map((e) => e.type)).toEqual(["merged"]);
     expect(fs.existsSync(path.join(env.repo, ".mergeguard-prs.json"))).toBe(false);
-    expect(fs.existsSync(path.join(env.home, "coordination", "startup_billing", "prs.json"))).toBe(true);
+    expect(fs.existsSync(path.join(env.home, "coordination", repoIdFor(env.repo), "prs.json"))).toBe(true);
     expect(JSON.parse(runX.rs.row.result_json!).merge).toMatchObject({ merged: true, pr: merged.pr.number });
     mainAfterX = gitHead(env.repo);
   });

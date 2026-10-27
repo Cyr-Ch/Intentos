@@ -48,6 +48,23 @@ calibrated against a person on ten pairs before any aggregate is reported.
 - Public repository: the model has seen demandlib's code, equally in both arms.
 - n = 3 per cell is the floor for a claim, not a comfortable number. Report per-ticket wins and losses, not one average.
 
+## Running it
+
+```bash
+cd ~/intentos
+export INTENTOS_CODEX_MODEL=gpt-6-astra          # the implementer, both arms
+# 1. acceptance tests by another model (done; benchmarks/hidden_tests/oemof_demand/tasks/)
+node --disable-warning=ExperimentalWarning bin/intentos.js acceptance ~/repos/demandlib --tickets benchmarks/demandlib/tickets.yaml --model gpt-5.6-terra
+# 2. the comparison: one run per ticket per arm from the same base, then the merges in ticket order into each arm's clone
+node --disable-warning=ExperimentalWarning benchmarks/compare.ts --repo ~/repos/demandlib --out .intentos/benchmarks/demandlib/run-1
+#    --phase run | merge | all, --only T01,T02, --arms full,baseline, --resume <dir> to continue an interrupted batch
+# 3. the judge: a third model, pairwise, blinded, order-swapped; calibration pairs first
+node --disable-warning=ExperimentalWarning benchmarks/judge.ts --compare .intentos/benchmarks/demandlib/run-1 --calibrate
+node --disable-warning=ExperimentalWarning benchmarks/judge.ts --compare .intentos/benchmarks/demandlib/run-1 --model gpt-5.6-sol
+```
+
+`compare.json` and `report.md` are rewritten after every run and every merge; `judge.json` and `judge.md` after every pair.
+
 ## Status
 
 Tickets and rubric drafted; acceptance tests, task bindings and the replay of the evaluator over these tickets are

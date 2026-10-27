@@ -21,6 +21,7 @@ import type { Policy } from "../knowledge/policy.ts";
 import { resolvePaths, resolvePython } from "../config.ts";
 import { currentBranch, git, repoToplevel } from "../util/git.ts";
 import { ensureDir } from "../util/paths.ts";
+import { repoIdFor } from "../knowledge/indexer.ts";
 
 export interface CoordinationEnv {
   /** Environment variables that put mergeguard in local mode for this repository. */
@@ -54,8 +55,9 @@ export function resetCoordinationProbe(): void {
   available = null;
 }
 
+/** Directory name for a repository's coordination state: IntentOS's own repository id (a hash of the real path), so two clones with the same folder name never share a PR registry or ledger. */
 function repoId(repoPath: string): string {
-  return path.basename(path.resolve(repoPath)).replace(/[^A-Za-z0-9_.-]/g, "_");
+  return repoIdFor(repoPath);
 }
 
 /**
