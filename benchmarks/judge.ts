@@ -85,16 +85,18 @@ export function buildJudgePrompt(a: { ticket: string; text: string; rubric: stri
   L.push("");
   L.push(a.rubric);
   L.push("");
-  L.push("## Diff A");
+  L.push("A resolution may be a diff, or a written answer instead of code (a refusal with its reasons, or questions asked before implementing); the rubric's C1 says how to score those.");
   L.push("");
-  L.push("```diff");
-  L.push(a.first.trim() || "(empty: no change)");
+  L.push("## Resolution A");
+  L.push("");
+  L.push("```");
+  L.push(a.first.trim() || "(empty: no change and no answer)");
   L.push("```");
   L.push("");
-  L.push("## Diff B");
+  L.push("## Resolution B");
   L.push("");
-  L.push("```diff");
-  L.push(a.second.trim() || "(empty: no change)");
+  L.push("```");
+  L.push(a.second.trim() || "(empty: no change and no answer)");
   L.push("```");
   L.push("");
   L.push('Output: a JSON object {"A": {"C1": {"score": n, "reason": "..."}, ... "C6": {...}}, "B": {...}, "verdict": "A" | "B" | "tie", "deciding_criterion": "C1".."C6", "reason": "<one sentence>"} and nothing else.');
@@ -111,10 +113,18 @@ function parse(text: string): Record<string, unknown> {
   }
 }
 
+/**
+ * What the judge sees as a resolution: the diff, or, for a run that answered instead of changing code, the answer
+ * itself (an abstention's cited rationale, a clarification's questions), so the rubric's "question or refusal" clause
+ * can apply. An empty string means the run changed nothing and said nothing.
+ */
 function diffOf(store: KnowledgeStore, runId: string | null): string | null {
   if (!runId) return null;
   const row = store.getRun(runId);
   if (!row) return null;
+  const result = row.result_json ? (JSON.parse(row.result_json) as { final_state?: string; rationale?: string; open_questions?: Array<{ id: string; question: string; blocking: boolean }> }) : null;
+  if (result?.final_state === "ABSTAINED") return `(no code change: the agent declined with this rationale)\n\n${result.rationale ?? ""}`;
+  if (result?.final_state === "CLARIFICATION_REQUIRED") return `(no code change: the agent asked before implementing)\n\n${(result.open_questions ?? []).map((q) => `- ${q.question}`).join("\n")}\n\n${result.rationale ?? ""}`;
   const file = path.join(row.run_dir, "diff.patch");
   return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
 }

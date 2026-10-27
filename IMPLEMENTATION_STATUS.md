@@ -88,6 +88,17 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 
 **Stubbed / not started:** M6 GitHub App, tenant isolation, hosted runners. Embedding-based retrieval. Plots.
 
+## demandlib comparison, run 1 (2026-10-27)
+`benchmarks/compare.ts` (per-arm clones, one run per ticket per arm, merges in ticket order with main health after
+each) and `benchmarks/judge.ts` (pairwise, blinded, order-swapped, third model, calibration export) ran over the
+fifteen fresh tickets. Results and the interpretation: `benchmarks/demandlib/results/run-1/README.md`. Headline:
+on the twelve implement tickets both arms solve nearly everything (IntentOS 11, baseline 12; first attempt 8 and 10);
+the controls separate them (IntentOS abstained on the vague and the two already-fixed tickets, the baseline
+implemented two of them); the baseline broke 21 hidden invariant tests at first attempt on one ticket, IntentOS none;
+no merge left main red in either arm; merge conflicts 2 of 11 versus 5 of 15. Defects found by the batch and fixed:
+query expansion crashed on the word "constructor"; the runner prepared the baseline engine outside its safety net;
+the judge saw no resolution for abstentions and clarifications. One run per cell.
+
 ## intentos-setup skill (2026-10-27)
 `skills/intentos-setup/SKILL.md`: a Codex skill that sets IntentOS up for a repository with checks at each step
 (installation and `coordination`, `codex mcp add` from `mcp --print-codex-config`, `onboard` with the suite result at

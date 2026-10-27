@@ -67,5 +67,7 @@ node --disable-warning=ExperimentalWarning benchmarks/judge.ts --compare .intent
 
 ## Status
 
-Tickets and rubric drafted; acceptance tests, task bindings and the replay of the evaluator over these tickets are
-not written yet. No run has been made.
+Run 1 (2026-10-27, implementer `gpt-6-astra`, acceptance tests by `gpt-5.6-terra`, judge `gpt-5.6-sol`): all fifteen
+tickets in both arms, all merges, the judge pass. Artifacts and the interpretation are in `results/run-1/`
+(`report.md`, `compare.json`, `judge.md`, `judge.json`, the calibration pairs without their key, and `README.md` with
+the reading of the numbers and the caveats). One run per cell.

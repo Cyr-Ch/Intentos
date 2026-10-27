@@ -583,296 +583,6 @@
       }
     },
     {
-      "ticket": "T05",
-      "model": "gpt-5.6-sol",
-      "judged_at": "2026-10-27T15:08:10.951Z",
-      "verdict": "baseline",
-      "flipped": false,
-      "passes": [
-        {
-          "scores": {
-            "full": {
-              "C1": {
-                "score": 1,
-                "reason": "The diff is explicitly “(empty: no change),” so it provides no regional-holiday support."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The “(empty: no change)” diff introduces no unrelated or out-of-scope modifications."
-              },
-              "C3": {
-                "score": 1,
-                "reason": "Because the diff is “(empty: no change),” it makes no use of the codebase’s existing holiday helpers or profile APIs."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The “(empty: no change)” diff preserves all existing behavior."
-              },
-              "C5": {
-                "score": 1,
-                "reason": "The “(empty: no change)” diff adds no tests for regional holidays."
-              },
-              "C6": {
-                "score": 1,
-                "reason": "There is no implementation to understand or public documentation describing regional-holiday behavior in the “(empty: no change)” diff."
-              }
-            },
-            "baseline": {
-              "C1": {
-                "score": 5,
-                "reason": "The new `holidays.partition(\"-\")` and `country_holidays(..., subdiv=...)` logic directly supports country and regional codes such as `\"DE-BY\"` across profiles using the shared helper."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The changes are confined to the shared holiday helper, affected public type hints and documentation, and focused tests for the requested feature."
-              },
-              "C3": {
-                "score": 5,
-                "reason": "The implementation extends the existing `set_holidays_in_df` helper and therefore propagates support through established profile classes without creating a parallel holiday mechanism."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The new behavior is guarded by `if isinstance(holidays, str)`, leaving existing dictionary, list, and `None` handling unchanged."
-              },
-              "C5": {
-                "score": 5,
-                "reason": "Tests cover country and state codes, multiple years, timezone-aware indices, missing dependency behavior, Sunday mapping, and observable differences between Bavarian and Berlin industrial profiles."
-              },
-              "C6": {
-                "score": 4,
-                "reason": "Names and errors such as `country`, `subdivision`, and `Use a holiday code such as 'DE' or 'DE-BY'` are clear, though the repeated docstring wording ending in `Alternatively:` is slightly awkward."
-              }
-            }
-          },
-          "verdict": "baseline",
-          "deciding": "C1",
-          "reason": "Diff B should be merged because it implements regional calendar selection throughout the existing holiday-processing path, while Diff A does not address the ticket."
-        },
-        {
-          "scores": {
-            "baseline": {
-              "C1": {
-                "score": 5,
-                "reason": "The new string branch in `set_holidays_in_df` parses codes such as `DE-BY` and calls `country_holidays(..., subdiv=...)`, directly supporting state-specific calendars."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The diff confines implementation to the shared holiday helper, updates affected public docstrings/type hints, and adds focused tests."
-              },
-              "C3": {
-                "score": 5,
-                "reason": "The change extends the existing `set_holidays_in_df` pathway at `if isinstance(holidays, str):`, so all profiles continue to use the codebase's established holiday mechanism."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "Existing dictionary, list, and `None` behavior remains behind the new string-only branch, including the established warning and `holiday_is_sunday` handling."
-              },
-              "C5": {
-                "score": 5,
-                "reason": "The added tests cover country and subdivision parsing, multiple years, timezone-aware indices, missing dependency behavior, Sunday mapping, and observable Bavaria-versus-Berlin profile behavior."
-              },
-              "C6": {
-                "score": 4,
-                "reason": "Names and errors such as `country`, `subdivision`, and `Use a holiday code such as 'DE' or 'DE-BY'` make the implementation clear, though the repeated docstring phrase `Alternatively:` reads awkwardly before the existing sentence."
-              }
-            },
-            "full": {
-              "C1": {
-                "score": 1,
-                "reason": "The empty diff adds no regional-holiday support."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
-              },
-              "C3": {
-                "score": 3,
-                "reason": "The empty diff neither conflicts with nor extends the codebase's existing holiday helpers, but provides no implementation whose fit can be demonstrated."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The empty diff preserves all existing behavior unchanged."
-              },
-              "C5": {
-                "score": 1,
-                "reason": "The empty diff adds no tests for regional holidays."
-              },
-              "C6": {
-                "score": 5,
-                "reason": "The empty diff contains no code whose readability could be impaired."
-              }
-            }
-          },
-          "verdict": "baseline",
-          "deciding": "C1",
-          "reason": "A should be merged because it implements the requested regional-calendar behavior and tests German state differences, while B makes no change."
-        }
-      ],
-      "mean": {
-        "full": {
-          "C1": 1,
-          "C2": 5,
-          "C3": 2,
-          "C4": 5,
-          "C5": 1,
-          "C6": 3
-        },
-        "baseline": {
-          "C1": 5,
-          "C2": 5,
-          "C3": 5,
-          "C4": 5,
-          "C5": 5,
-          "C6": 4
-        }
-      }
-    },
-    {
-      "ticket": "T06",
-      "model": "gpt-5.6-sol",
-      "judged_at": "2026-10-27T15:08:49.752Z",
-      "verdict": "baseline",
-      "flipped": false,
-      "passes": [
-        {
-          "scores": {
-            "full": {
-              "C1": {
-                "score": 1,
-                "reason": "The `(empty: no change)` diff leaves the pandas 2.2 FutureWarning and warning-as-error constructor failure unresolved."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The `(empty: no change)` diff introduces no unrelated or out-of-scope modifications."
-              },
-              "C3": {
-                "score": 5,
-                "reason": "The `(empty: no change)` diff does not disturb existing APIs or codebase conventions."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The `(empty: no change)` diff preserves all existing behavior, although that includes the reported defect."
-              },
-              "C5": {
-                "score": 1,
-                "reason": "The `(empty: no change)` diff adds no regression test for pandas 2.2 or FutureWarning escalation."
-              },
-              "C6": {
-                "score": 5,
-                "reason": "The `(empty: no change)` diff is immediately understandable as making no modification."
-              }
-            },
-            "baseline": {
-              "C1": {
-                "score": 5,
-                "reason": "Changing `pd.DataFrame(data=0, ...)` to `pd.DataFrame(data=0.0, ...)` gives profile columns a compatible float dtype before profile values are assigned, directly preventing the reported warning."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The implementation changes only the initial dtype and removes the now-redundant `new_df[profile_columns].map(float)`, while adding one focused regression test."
-              },
-              "C3": {
-                "score": 5,
-                "reason": "The line `new_df = pd.DataFrame(data=0.0, index=dt_index, columns=slp_types)` retains the existing construction flow and public API without introducing a parallel mechanism."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The test assertions `assert not profiles.isna().any().any()` and normalized totals near `1.0` support that profile behavior remains intact beyond the dtype correction."
-              },
-              "C5": {
-                "score": 5,
-                "reason": "The test uses `@pytest.mark.filterwarnings(\"error::FutureWarning\")`, covers both ordinary and leap years via `[2023, 2024]`, and verifies float dtypes, completeness, and normalization."
-              },
-              "C6": {
-                "score": 5,
-                "reason": "The `data=0.0` change clearly expresses the intended float allocation, and deleting the subsequent conversion makes the data flow easier to understand."
-              }
-            }
-          },
-          "verdict": "baseline",
-          "deciding": "C1",
-          "reason": "Diff B should be merged because it directly fixes the incompatible dtype assignment and adds a warning-as-error regression test, whereas Diff A leaves the ticket entirely unresolved."
-        },
-        {
-          "scores": {
-            "baseline": {
-              "C1": {
-                "score": 5,
-                "reason": "The change initializes profile columns as floats at `new_df = pd.DataFrame(data=0.0, ...)`, directly preventing pandas 2.2's incompatible-dtype assignment warning."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The diff changes only the problematic DataFrame initialization, removes the now-redundant `.map(float)`, and adds a focused regression test."
-              },
-              "C3": {
-                "score": 5,
-                "reason": "Using `0.0` in the existing DataFrame construction preserves the current implementation structure and public `ElecSlp` API."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The test's normalization and missing-value assertions after `get_profiles()` demonstrate that the dtype-only adjustment preserves profile results."
-              },
-              "C5": {
-                "score": 5,
-                "reason": "`@pytest.mark.filterwarnings(\"error::FutureWarning\")` with years 2023 and 2024 directly verifies the named warning-as-error case while also checking float dtypes and profile integrity."
-              },
-              "C6": {
-                "score": 5,
-                "reason": "The one-character initialization change to `data=0.0` makes the dtype intent immediately clear, and removing the redundant conversion keeps the flow simple."
-              }
-            },
-            "full": {
-              "C1": {
-                "score": 1,
-                "reason": "The `(empty: no change)` diff leaves the pandas 2.2 FutureWarning and warning-as-error constructor failure unresolved."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The `(empty: no change)` diff introduces no unrelated or out-of-scope modifications."
-              },
-              "C3": {
-                "score": 3,
-                "reason": "Although `(empty: no change)` cannot violate codebase conventions, it supplies no codebase-fitting resolution to assess."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The `(empty: no change)` diff preserves all existing behavior, including the unwanted warning."
-              },
-              "C5": {
-                "score": 1,
-                "reason": "The `(empty: no change)` diff adds no regression test for pandas 2.2 or warnings escalated to errors."
-              },
-              "C6": {
-                "score": 1,
-                "reason": "The `(empty: no change)` diff communicates no implementation or resolution for a reviewer to understand."
-              }
-            }
-          },
-          "verdict": "baseline",
-          "deciding": "C1",
-          "reason": "A should be merged because it directly fixes the incompatible dtype initialization and verifies the warning-as-error scenario, whereas B does not address the ticket."
-        }
-      ],
-      "mean": {
-        "full": {
-          "C1": 1,
-          "C2": 5,
-          "C3": 4,
-          "C4": 5,
-          "C5": 1,
-          "C6": 3
-        },
-        "baseline": {
-          "C1": 5,
-          "C2": 5,
-          "C3": 5,
-          "C4": 5,
-          "C5": 5,
-          "C6": 5
-        }
-      }
-    },
-    {
       "ticket": "T07",
       "model": "gpt-5.6-sol",
       "judged_at": "2026-10-27T15:09:19.395Z",
@@ -1453,151 +1163,6 @@
       }
     },
     {
-      "ticket": "T11",
-      "model": "gpt-5.6-sol",
-      "judged_at": "2026-10-27T15:12:54.844Z",
-      "verdict": "baseline",
-      "flipped": false,
-      "passes": [
-        {
-          "scores": {
-            "full": {
-              "C1": {
-                "score": 1,
-                "reason": "The empty diff makes no change to `Climate.from_try_data`, so a user-supplied path remains unsupported."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
-              },
-              "C3": {
-                "score": 1,
-                "reason": "The empty diff provides no implementation that can fit or reuse the codebase's existing TRY-loading mechanism."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The empty diff necessarily preserves all existing behavior."
-              },
-              "C5": {
-                "score": 1,
-                "reason": "The empty diff adds no tests for path-based loading, header validation, or numeric-region validation."
-              },
-              "C6": {
-                "score": 1,
-                "reason": "The empty diff contains no readable implementation or updated public-function documentation to review."
-              }
-            },
-            "baseline": {
-              "C1": {
-                "score": 5,
-                "reason": "The `from_path = isinstance(try_region, (str, os.PathLike))` branch accepts both string and path-like files while the numeric branch retains the existing `ValueError` validation."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The changes are confined to TRY loading and focused tests, with `os.fspath(weather_file_path)` being necessary to keep the existing header error compatible with path-like inputs."
-              },
-              "C3": {
-                "score": 5,
-                "reason": "The diff reuses `dwd_try.read_dwd_weather_file(fn_weather)` and the existing weather-processing and energy-factor-loading paths rather than introducing a parallel loader."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The original numbered-region path construction and validation remain in the `else` branch, preserving behavior for existing numeric calls."
-              },
-              "C5": {
-                "score": 5,
-                "reason": "The added tests cover `str` and `Path` inputs, successful loading, missing headers, missing files, and continued rejection of invalid region numbers."
-              },
-              "C6": {
-                "score": 5,
-                "reason": "The expanded docstring clearly describes the new accepted types and the explicit `from_path` branches make the behavior straightforward to follow."
-              }
-            }
-          },
-          "verdict": "baseline",
-          "deciding": "C1",
-          "reason": "Diff B should be merged because it implements the requested path-based loading while preserving numeric-region behavior, whereas Diff A does not address the ticket."
-        },
-        {
-          "scores": {
-            "baseline": {
-              "C1": {
-                "score": 5,
-                "reason": "The `from_path = isinstance(try_region, (str, os.PathLike))` branch accepts both string and PathLike DWD TRY paths while retaining the numeric-region validation in the `else` branch."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The diff is confined to TRY loading, its path-compatible error message, and focused tests in `tests/test_vdi4655.py`."
-              },
-              "C3": {
-                "score": 5,
-                "reason": "The implementation continues to use `dwd_try.read_dwd_weather_file(fn_weather)` and the existing climate-processing and energy-factor machinery rather than introducing a parallel loader."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "Numeric calls still execute `if try_region not in list(range(1, 16))` and construct the same packaged `TRY2010_{:02d}_Jahr.dat` path, preserving existing validation and behavior."
-              },
-              "C5": {
-                "score": 5,
-                "reason": "The added tests cover string and Path inputs, successful parsing, retained/default energy factors, missing headers, missing files, and invalid numeric regions through `test_try_from_path`, `test_try_path_missing_header`, `test_try_path_missing_file`, and `test_try_invalid_region`."
-              },
-              "C6": {
-                "score": 5,
-                "reason": "The new public docstring clearly describes `try_region : int, str or os.PathLike`, and the compact `from_path` branches make the behavior straightforward to follow."
-              }
-            },
-            "full": {
-              "C1": {
-                "score": 1,
-                "reason": "The empty diff adds no path-handling branch to `Climate.from_try_data`, so user-supplied DWD TRY files remain unsupported."
-              },
-              "C2": {
-                "score": 5,
-                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
-              },
-              "C3": {
-                "score": 3,
-                "reason": "Although the empty diff does not violate codebase conventions, it also provides no implementation that can demonstrate a fit with the existing TRY-loading design."
-              },
-              "C4": {
-                "score": 5,
-                "reason": "The empty diff preserves all existing behavior because it changes no lines."
-              },
-              "C5": {
-                "score": 1,
-                "reason": "The empty diff adds no tests for file paths, header checking, or continued numeric-region validation."
-              },
-              "C6": {
-                "score": 3,
-                "reason": "There is no changed code to assess for clarity and no updated public docstring explaining the requested path behavior."
-              }
-            }
-          },
-          "verdict": "baseline",
-          "deciding": "C1",
-          "reason": "A should be merged because it implements the requested path-based loading while preserving the explicitly named numeric validation and header behavior, whereas B does not address the ticket."
-        }
-      ],
-      "mean": {
-        "full": {
-          "C1": 1,
-          "C2": 5,
-          "C3": 2,
-          "C4": 5,
-          "C5": 1,
-          "C6": 2
-        },
-        "baseline": {
-          "C1": 5,
-          "C2": 5,
-          "C3": 5,
-          "C4": 5,
-          "C5": 5,
-          "C6": 5
-        }
-      }
-    },
-    {
       "ticket": "T12",
       "model": "gpt-5.6-sol",
       "judged_at": "2026-10-27T15:13:41.327Z",
@@ -2033,147 +1598,582 @@
       }
     },
     {
-      "ticket": "T15",
+      "ticket": "T05",
       "model": "gpt-5.6-sol",
-      "judged_at": "2026-10-27T15:15:46.911Z",
-      "verdict": "tie",
+      "judged_at": "2026-10-27T15:17:59.117Z",
+      "verdict": "baseline",
       "flipped": false,
       "passes": [
         {
           "scores": {
             "full": {
               "C1": {
-                "score": 1,
-                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+                "score": 2,
+                "reason": "The rationale says users can merely “supply dates for the relevant German state,” which does not add the regional-calendar selection requested by the ticket."
               },
               "C2": {
                 "score": 5,
-                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
+                "reason": "The statement “No files were modified” means the resolution introduces no unrelated changes."
               },
               "C3": {
                 "score": 3,
-                "reason": "The empty diff neither conflicts with nor demonstrates use of the codebase's existing conventions and helpers."
+                "reason": "The rationale correctly identifies the existing shared “holidays argument” and helper path, but it provides no code that extends that established API."
               },
               "C4": {
                 "score": 5,
-                "reason": "Because the diff has no changed lines, all pre-existing behavior is preserved."
+                "reason": "Because “No files were modified,” all existing behavior, defaults, warnings, and errors remain unchanged."
               },
               "C5": {
                 "score": 1,
-                "reason": "The empty diff adds no tests for omitted `holidays` or the explicitly named empty-list case."
+                "reason": "Although the rationale cites existing tests in “tests/test_tools.py,” it adds no test demonstrating selection of different regional holiday calendars."
               },
               "C6": {
+                "score": 4,
+                "reason": "The explanation beginning “Reading HEAD confirms” is concise and understandable, though its opaque evidence identifiers such as “EV-fac57cb49d” are not useful to a repository reviewer."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The new `isinstance(holidays, str)` branch and `country_holidays(country, subdiv=..., years=...)` call directly support country and German-state codes such as `DE-BY`."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The changes are confined to the shared holiday helper, affected public type hints and documentation, and focused tests for the new regional-calendar behavior."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The implementation extends the existing `set_holidays_in_df` helper at `if isinstance(holidays, str):`, so all existing profile classes gain the feature through the codebase’s established mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The new behavior is guarded by `if isinstance(holidays, str):`, leaving existing dictionary, list, empty-list, and `None` paths intact."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The tests cover country and subdivision parsing, multiple years, timezone-aware indices, missing dependency handling, Sunday mapping, German-state differences, and an `IndustrialLoadProfile` integration path."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "Names and control flow are clear and the `set_holidays_in_df` docstring explains codes and year inference, though repeated prose ending in “Alternatively:” is grammatically awkward."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "A does not implement regional calendar selection, while B directly solves the request through the shared helper and backs it with comprehensive behavioral tests."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The `if isinstance(holidays, str):` branch and `country_holidays(..., subdiv=...)` call directly add country and regional calendar support, including German state codes such as `DE-BY`."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "Changes are confined to the shared holiday helper, relevant public type hints and documentation, and focused tests, such as the `holidays: dict | list | str | None` updates."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "Regional lookup is implemented centrally in the existing `set_holidays_in_df` helper, so all profile classes continue using the codebase's established holiday mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The new string-specific branch precedes the unchanged `if holidays is None:` and list/dictionary handling, preserving behavior for all existing inputs."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "Tests cover country and subdivision parsing, multiple years, German-state differences, Sunday mapping, missing dependency behavior, and profile integration, including `test_german_state_calendars` and `test_regional_industrial_profile`."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "Names and errors such as `country`, `subdivision`, and `Use a holiday code such as 'DE' or 'DE-BY'` are clear, although the documentation phrase `Alternatively:` flows awkwardly into the following sentence."
+              }
+            },
+            "full": {
+              "C1": {
                 "score": 1,
-                "reason": "There is no implementation in the diff for a reviewer to understand as a resolution of the ticket."
+                "reason": "The statement that users can already `supply dates for the relevant German state` leaves callers to construct regional calendars themselves and therefore does not add the requested regional-holiday support."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The resolution makes no unrelated modifications, as explicitly stated by `No files were modified`."
+              },
+              "C3": {
+                "score": 2,
+                "reason": "Although the rationale correctly identifies the shared holiday argument, its conclusion that `Automatic region lookup is not requested explicitly` avoids extending the existing helper in the natural codebase location."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Because `No files were modified`, existing behavior, defaults, warnings, and public signatures remain unchanged."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "No new regional behavior is tested, and the response explicitly says `pytest was not run` while citing only existing generic dictionary/list calendar tests."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The written rationale is concise and understandable, but the claim that existing arbitrary-date input constitutes regional-calendar support obscures the functional gap."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "A should be merged because it actually implements regional calendar selection through country/subdivision codes and tests that behavior, whereas B declines the requested feature."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 1.5,
+          "C2": 5,
+          "C3": 2.5,
+          "C4": 5,
+          "C5": 1,
+          "C6": 4
+        },
+        "baseline": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 4
+        }
+      }
+    },
+    {
+      "ticket": "T06",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:18:45.359Z",
+      "verdict": "tie",
+      "flipped": true,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The rationale precisely identifies that the requested fix is already present in `new_df[profile_columns].map(float)`, `tmp_df[slp_types].astype(float)`, and the restricted profile-column update."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The resolution makes no code changes after determining from the cited existing dtype conversions that another fix would be redundant."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The rationale relies on the existing `create_bdew_load_profiles` implementation and its established profile-column handling rather than introducing a parallel mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "By declining to alter the already-correct implementation, the resolution preserves all existing behavior."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The rationale explicitly says runtime verification could not complete, and it adds no regression test."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The rationale clearly names the relevant existing conversions, the exclusion of calendar columns, and the environmental reasons verification was unavailable."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 3,
+                "reason": "Changing `pd.DataFrame(data=0, ...)` to `pd.DataFrame(data=0.0, ...)` safely handles the dtype concern, but the removed `new_df[profile_columns] = new_df[profile_columns].map(float)` shows that the base revision already contained a targeted fix."
+              },
+              "C2": {
+                "score": 4,
+                "reason": "The diff is tightly confined to the affected constructor and its tests, although replacing an already-working targeted conversion is unnecessary."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The change retains the existing API and local implementation structure, but makes profile dtype depend on the initial scalar instead of the explicit profile-column conversion previously used."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Initializing the profile frame with `0.0` and leaving the calendar columns added later preserves the resulting profile values and public behavior."
+              },
+              "C5": {
+                "score": 3,
+                "reason": "The parametrized warning-as-error test covers both `2023` and leap year `2024` and checks profile integrity, but it would also pass against the base revision's existing `map(float)` fix."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "Both the `data=0.0` change and `test_elec_slp_float_profiles` are immediately understandable and directly connected to dtype behavior."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C1",
+          "reason": "A should be accepted because C1 favors its precise recognition that the ticket is already fixed, while B substitutes a redundant implementation and adds a regression test that does not distinguish its change from the base revision."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 5,
+                "reason": "The change initializes `new_df` with `data=0.0`, ensuring profile columns are float before seasonal float values are assigned and directly preventing the pandas 2.2 incompatible-dtype FutureWarning."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff changes only the destination dtype initialization, removes the now-redundant `new_df[profile_columns].map(float)` conversion, and adds a focused regression test in `tests/test_elec_slp.py`."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "Using `pd.DataFrame(data=0.0, ...)` preserves the existing construction flow and public API while following the module's existing explicit float handling in `tmp_df[slp_types].astype(float)`."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The test verifies preserved behavior through `assert not profiles.isna().any().any()` and normalized profile totals while the production change alters only the profile columns' initial numeric dtype."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "`@pytest.mark.filterwarnings(\"error::FutureWarning\")` makes the reported warning fail the test, and parametrization over `[2023, 2024]` covers both ordinary and leap years while checking dtype and profile integrity."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The one-token initialization change from `0` to `0.0` makes the dtype intent immediately clear, and deletion of the later conversion leaves a simpler data flow."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 1,
+                "reason": "The refusal incorrectly treats the later `map(float)` conversion as an existing fix even though its own rationale says conversion occurs after profile creation, leaving the incompatible assignment that triggers the ticket's warning unchanged."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The response makes no unrelated changes and confines its rationale to the affected profile dtype and calendar columns."
+              },
+              "C3": {
+                "score": 2,
+                "reason": "Although it references the existing `map(float)` and `astype(float)` operations, it misinterprets their place in the codebase's assignment sequence and therefore declines a necessary localized fix."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Because it makes no code change, it does not alter any existing behavior outside the ticket, though it also preserves the reported defect."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The response adds no regression test and explicitly states that runtime verification could not complete."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The rationale is concise and understandable, but the claim that the existing conversion fixes the warning obscures the crucial timing of that conversion relative to assignment."
+              }
+            }
+          },
+          "verdict": "baseline",
+          "deciding": "C1",
+          "reason": "A should be merged because it directly prevents the incompatible dtype assignment and tests warnings-as-errors, whereas B leaves the reported constructor failure unresolved."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 3,
+          "C2": 5,
+          "C3": 3.5,
+          "C4": 5,
+          "C5": 1,
+          "C6": 4.5
+        },
+        "baseline": {
+          "C1": 4,
+          "C2": 4.5,
+          "C3": 4.5,
+          "C4": 5,
+          "C5": 4,
+          "C6": 5
+        }
+      }
+    },
+    {
+      "ticket": "T11",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:19:44.863Z",
+      "verdict": "full",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The question “which region's VDI energy factors should be used?” precisely identifies a material ambiguity that must be resolved before path-only behavior can be correct."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The response makes no code changes and limits its discussion to the path input and the associated `.loc[try_region]` factor selection."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The response grounds its clarification in the existing `energy factors via .loc[try_region]` mechanism instead of proposing a parallel or incompatible API."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Because it makes no code change, the existing header check, numeric validation, and factor selection remain unchanged."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "The explicit `(no code change: the agent asked before implementing)` means no tests were added for path loading or preserved numeric behavior."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The single question and the explanation beginning “Reading HEAD confirms” make the unresolved design decision immediately clear."
+              }
+            },
+            "baseline": {
+              "C1": {
+                "score": 3,
+                "reason": "The path branch at `fn_weather = os.fspath(try_region)` loads user files and preserves numeric validation, but `try_region = 1` silently invents region-1 energy factors for a fresh climate."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The changes are confined to the TRY reader, `Climate.from_try_data`, and directly relevant tests."
+              },
+              "C3": {
+                "score": 4,
+                "reason": "The implementation reuses `read_dwd_weather_file` and keeps the public signature, although the special early return at `if from_path and self.energy_factors is not None` gives path calls implicit state-dependent semantics."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The original number validation remains under `if try_region not in list(range(1, 16))`, and the existing packaged-file and factor-loading paths remain intact for numeric inputs."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "Tests cover string and `Path` inputs, missing headers, missing files, invalid numeric regions, and factor behavior in `test_try_from_path` and the following tests."
+              },
+              "C6": {
+                "score": 4,
+                "reason": "The new docstring clearly documents accepted path types, but “defaulting to region 1” exposes an arbitrary policy choice rather than explaining a domain-supported mapping."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C1",
+          "reason": "A should be preferred because C1 outweighs implementation completeness here: B silently assigns region-1 VDI factors to arbitrary user-supplied TRY files, while A correctly requests the missing domain decision."
+        },
+        {
+          "scores": {
+            "baseline": {
+              "C1": {
+                "score": 3,
+                "reason": "The path branch at `if from_path:` loads user-supplied TRY data, but `try_region = 1` invents a region-1 energy-factor default that the ticket does not specify."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The diff is narrowly limited to the TRY reader, `Climate.from_try_data`, and directly relevant tests."
+              },
+              "C3": {
+                "score": 3,
+                "reason": "The state-dependent branch `if from_path and self.energy_factors is not None: return self` makes factor selection depend on prior object use, which is surprising despite preserving the public signature."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "Numeric inputs still pass through the original `try_region not in list(range(1, 16))` validation and packaged-file selection logic."
+              },
+              "C5": {
+                "score": 5,
+                "reason": "The added tests cover string and `Path` inputs, malformed headers, missing files, invalid numeric regions, parsed values, and energy-factor behavior."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The new docstring clearly describes accepted input types and explicitly documents the preservation and region-1 fallback behavior."
+              }
+            },
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The question `which region's VDI energy factors should be used?` precisely identifies a consequential ambiguity that must be resolved before a correct path-based API can be implemented."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The response stays entirely within scope and asks only for the missing factor-selection requirement."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The explanation correctly connects the existing `.loc[try_region]` factor lookup to the proposed replacement of the region argument by a path."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "By withholding implementation until factor selection is defined, the response avoids silently changing existing climate-profile behavior."
+              },
+              "C5": {
+                "score": 1,
+                "reason": "No code or tests were added because the response stops at clarification."
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The single question and the supporting sentence about `.loc[try_region]` make the blocker immediately understandable."
+              }
+            }
+          },
+          "verdict": "full",
+          "deciding": "C1",
+          "reason": "A maintainer should choose B because C1 outweighs A's stronger tests: A silently invents state-dependent and region-1 energy-factor semantics, while B identifies the requirement needed for a correct implementation."
+        }
+      ],
+      "mean": {
+        "full": {
+          "C1": 5,
+          "C2": 5,
+          "C3": 5,
+          "C4": 5,
+          "C5": 1,
+          "C6": 5
+        },
+        "baseline": {
+          "C1": 3,
+          "C2": 5,
+          "C3": 3.5,
+          "C4": 5,
+          "C5": 5,
+          "C6": 4.5
+        }
+      }
+    },
+    {
+      "ticket": "T15",
+      "model": "gpt-5.6-sol",
+      "judged_at": "2026-10-27T15:20:25.112Z",
+      "verdict": "full",
+      "flipped": false,
+      "passes": [
+        {
+          "scores": {
+            "full": {
+              "C1": {
+                "score": 5,
+                "reason": "The statement “The requested behavior already exists on HEAD” precisely answers an already-fixed ticket and cites both the `None` warning and silent `[]` edge case."
+              },
+              "C2": {
+                "score": 5,
+                "reason": "The line “No files were modified” avoids unnecessary changes for behavior already present."
+              },
+              "C3": {
+                "score": 5,
+                "reason": "The rationale points to the existing implementation in `src/oemof/demand/tools.py` and its established tests instead of proposing a parallel mechanism."
+              },
+              "C4": {
+                "score": 5,
+                "reason": "The line “No files were modified” guarantees that unrelated defaults, errors, warnings, and outputs remain unchanged."
+              },
+              "C5": {
+                "score": 4,
+                "reason": "The answer cites `test_warning_without_holidays` and `test_no_warning_with_empty_holidays`, which cover both requested cases, but explicitly says “tests were not executed.”"
+              },
+              "C6": {
+                "score": 5,
+                "reason": "The concise explanation clearly distinguishes `None` from `[]`, names the implementation and test files, and states the conclusion."
               }
             },
             "baseline": {
               "C1": {
                 "score": 1,
-                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+                "reason": "The empty resolution neither implements the requested warning nor explains that the requested behavior already exists."
               },
               "C2": {
                 "score": 5,
-                "reason": "The empty diff introduces no unrelated or out-of-scope changes."
+                "reason": "The empty resolution introduces no unrelated changes."
               },
               "C3": {
-                "score": 3,
-                "reason": "The empty diff neither conflicts with nor demonstrates use of the codebase's existing conventions and helpers."
+                "score": 1,
+                "reason": "The empty resolution demonstrates no use or recognition of the codebase’s existing holiday handling."
               },
               "C4": {
                 "score": 5,
-                "reason": "Because the diff has no changed lines, all pre-existing behavior is preserved."
+                "reason": "With no changes, existing behavior is preserved."
               },
               "C5": {
                 "score": 1,
-                "reason": "The empty diff adds no tests for omitted `holidays` or the explicitly named empty-list case."
+                "reason": "The empty resolution adds, cites, or reports no tests for either the omitted-holidays case or the empty-list edge case."
               },
               "C6": {
                 "score": 1,
-                "reason": "There is no implementation in the diff for a reviewer to understand as a resolution of the ticket."
+                "reason": "An empty answer gives a reviewer no explanation of the ticket’s status or intended resolution."
               }
             }
           },
-          "verdict": "tie",
+          "verdict": "full",
           "deciding": "C1",
-          "reason": "Neither diff should be merged because both equally fail C1 by making no change to solve the requested warning behavior."
+          "reason": "A should be merged because it precisely establishes that the ticket is already fixed and addresses both named cases, whereas B provides no resolution at all."
         },
         {
           "scores": {
             "baseline": {
               "C1": {
                 "score": 1,
-                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+                "reason": "The sole line, “(empty: no change and no answer),” neither implements the warning nor explains that the behavior already exists."
               },
               "C2": {
                 "score": 5,
-                "reason": "The empty diff makes no unrelated or out-of-scope changes."
+                "reason": "The line “(empty: no change and no answer)” introduces no unrelated or out-of-scope changes."
               },
               "C3": {
                 "score": 3,
-                "reason": "The empty diff neither violates nor demonstrates the codebase's conventions because it contains no changed line."
+                "reason": "Although “(empty: no change and no answer)” does not conflict with codebase conventions, it provides no evidence that the existing implementation was examined."
               },
               "C4": {
                 "score": 5,
-                "reason": "The empty diff preserves all existing behavior, although that also leaves the reported behavior unfixed."
+                "reason": "Because the resolution is “(empty: no change and no answer),” all existing behavior is preserved."
               },
               "C5": {
                 "score": 1,
-                "reason": "The diff adds no test line covering either omitted `holidays` or the explicitly named empty-list case."
+                "reason": "The line “(empty: no change and no answer)” supplies neither new tests nor evidence from existing tests."
               },
               "C6": {
-                "score": 3,
-                "reason": "There is no change to assess for readability, so no diff line communicates an implementation."
+                "score": 1,
+                "reason": "The line “(empty: no change and no answer)” gives a reviewer no explanation of how the ticket is resolved."
               }
             },
             "full": {
               "C1": {
-                "score": 1,
-                "reason": "The diff is empty and contains no line implementing a warning when `holidays` is omitted or preserving silence for an empty list."
+                "score": 5,
+                "reason": "The rationale states that “None emits UserWarning starting 'No holidays given', while [] bypasses the warning,” precisely covering the main case and named edge case."
               },
               "C2": {
                 "score": 5,
-                "reason": "The empty diff makes no unrelated or out-of-scope changes."
+                "reason": "The line “The requested behavior already exists on HEAD. No files were modified” appropriately avoids duplicating an already-present fix."
               },
               "C3": {
-                "score": 3,
-                "reason": "The empty diff neither violates nor demonstrates the codebase's conventions because it contains no changed line."
+                "score": 5,
+                "reason": "The rationale cites the existing implementation in “src/oemof/demand/tools.py” and its established tests instead of introducing a parallel mechanism or API change."
               },
               "C4": {
                 "score": 5,
-                "reason": "The empty diff preserves all existing behavior, although that also leaves the reported behavior unfixed."
+                "reason": "The line “No files were modified” guarantees that behavior outside the already-satisfied ticket remains unchanged."
               },
               "C5": {
-                "score": 1,
-                "reason": "The diff adds no test line covering either omitted `holidays` or the explicitly named empty-list case."
+                "score": 4,
+                "reason": "The rationale identifies “test_warning_without_holidays and test_no_warning_with_empty_holidays” as covering both required behaviors, but also discloses that “tests were not executed.”"
               },
               "C6": {
-                "score": 3,
-                "reason": "There is no change to assess for readability, so no diff line communicates an implementation."
+                "score": 5,
+                "reason": "The concise explanation connects the implementation and both named tests to the ticket and clearly explains why no patch was necessary."
               }
             }
           },
-          "verdict": "tie",
+          "verdict": "full",
           "deciding": "C1",
-          "reason": "Both diffs equally fail the decisive C1 criterion because neither contains any change that addresses the requested warning behavior."
+          "reason": "Resolution B should be merged because it demonstrates that the requested behavior and empty-list edge case already exist, whereas Resolution A provides no resolution or evidence."
         }
       ],
       "mean": {
         "full": {
-          "C1": 1,
+          "C1": 5,
           "C2": 5,
-          "C3": 3,
+          "C3": 5,
           "C4": 5,
-          "C5": 1,
-          "C6": 2
+          "C5": 4,
+          "C6": 5
         },
         "baseline": {
           "C1": 1,
           "C2": 5,
-          "C3": 3,
+          "C3": 2,
           "C4": 5,
           "C5": 1,
-          "C6": 2
+          "C6": 1
         }
       }
     }
