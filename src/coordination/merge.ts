@@ -161,6 +161,9 @@ export function mergeRun(store: KnowledgeStore, runId: string, opts: MergeOption
 
   const { branch, pr: opened, head } = branchAndPr(rs, coord, worktree, opts);
   log(`PR #${opened.number} ${branch} (${head.slice(0, 10)}): tier ${opened.decision.tier}, ${opened.decision.reasons.join("; ")}`);
+  if (rs.state === "REVIEW_READY" && opened.decision.tier > 0) {
+    rs.transition("HUMAN_REVIEW", { tier: opened.decision.tier, reasons: opened.decision.reasons, reason: "the PR gate requires human approval" });
+  }
   rs.event("merge.pr_opened", { pr: opened.number, branch, head, tier: opened.decision.tier, reasons: opened.decision.reasons, proofs: opened.decision.proofs, ci: opened.ci?.outcome ?? null });
   let pr = opened;
   for (const user of opts.approve ?? []) {
@@ -219,7 +222,7 @@ export function mergeRun(store: KnowledgeStore, runId: string, opts: MergeOption
 
 function recordMergeOutcome(rs: RunStore, outcome: MergeOutcome): void {
   const existing = rs.row.result_json ? (JSON.parse(rs.row.result_json) as Record<string, unknown>) : {};
-  rs.update({ result_json: JSON.stringify({ ...existing, merge: { pr: outcome.pr.number, branch: outcome.branch, tier: outcome.pr.decision.tier, merged: outcome.merged, merge_commit: outcome.merge_commit, blocked_by: outcome.blocked_by, merged_verification: outcome.merged_verification?.status ?? null, at: nowIso() } }) });
+  rs.update({ result_json: JSON.stringify({ ...existing, final_state: rs.state, merge: { pr: outcome.pr.number, branch: outcome.branch, tier: outcome.pr.decision.tier, merged: outcome.merged, merge_commit: outcome.merge_commit, blocked_by: outcome.blocked_by, merged_verification: outcome.merged_verification?.status ?? null, at: nowIso() } }) });
   rs.writeJson("merge.json", outcome);
   try {
     generateReport(rs.store, rs.runId);

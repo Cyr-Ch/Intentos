@@ -191,6 +191,7 @@ describe("mergeguard coordination inside IntentOS (offline runs, real verifier, 
     const sync = syncCheck(coord(), runA.rs.row.worktree_path!);
     expect(sync.clean).toBe(true);
     const a = mergeRun(env.store, runA.rs.runId, { approve: ["sam"] });
+    expect(runA.rs.state).toBe("HUMAN_REVIEW"); // verification passed, but the PR router requires a person
     expect(a.merged).toBe(false);
     expect(a.pr.gate.allowed).toBe(true); // branch CI green, sync clean, approval present: GitHub would merge this
     expect(a.merged_verification?.status).toBe("failed");

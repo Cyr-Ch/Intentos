@@ -114,8 +114,10 @@ function liveState(repo: string, selected: string | null): unknown {
     }
     const runs = store.listRuns(repoId).filter((run) => !hiddenRunIds.has(run.id)).slice(0, 20).map((run) => {
       const task = JSON.parse(run.task_json) as { task?: string; task_id?: string };
-      const result = run.result_json ? JSON.parse(run.result_json) as { merge?: { merged?: boolean } } : null;
-      return { id: run.id, state: run.state, task: task.task ?? "", task_id: task.task_id ?? null, started_at: run.started_at, updated_at: run.updated_at, base: run.base_sha.slice(0, 10), merged: !!result?.merge?.merged };
+      const result = run.result_json ? JSON.parse(run.result_json) as { merge?: { merged?: boolean; tier?: number; blocked_by?: string[] } } : null;
+      const merge = result?.merge;
+      const displayState = merge?.merged ? "MERGED" : run.state === "HUMAN_REVIEW" || (run.state === "REVIEW_READY" && (merge?.tier ?? 0) > 0) ? "HUMAN_REVIEW" : run.state === "REVIEW_READY" && merge?.tier === 0 && !merge.blocked_by?.length ? "MERGE_READY" : run.state === "REVIEW_READY" ? "VERIFIED" : run.state;
+      return { id: run.id, state: run.state, display_state: displayState, task: task.task ?? "", task_id: task.task_id ?? null, started_at: run.started_at, updated_at: run.updated_at, base: run.base_sha.slice(0, 10), merged: !!merge?.merged };
     });
     const runId = selected && runs.some((r) => r.id === selected) ? selected : runs[0]?.id;
     const run = runId ? store.getRun(runId) : null;
