@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import YAML from "yaml";
@@ -44,6 +45,18 @@ function policyFile(repo: string): string | null {
 }
 
 function hash(text: string): string { return crypto.createHash("sha256").update(text).digest("hex"); }
+
+function dashboardToken(): string {
+  // Keep the link stable across demo/reset.sh, which replaces INTENTOS_HOME.
+  const dir = path.join(os.homedir(), ".config", "intentos");
+  const file = path.join(dir, "dashboard-token");
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  try { fs.writeFileSync(file, crypto.randomBytes(18).toString("hex"), { flag: "wx", mode: 0o600 }); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
+  const token = fs.readFileSync(file, "utf8").trim();
+  if (!/^[a-f0-9]{36}$/.test(token)) throw new Error(`Invalid dashboard token in ${file}`);
+  return token;
+}
 
 export function renderEditedPolicy(before: string, edit: Record<string, unknown>): string {
   const kind = edit.kind;
@@ -151,7 +164,7 @@ function knowledgeState(repo: string): unknown {
 export async function startDashboard(repoInput: string, opts: { port?: number; open?: boolean } = {}): Promise<{ url: string; close: () => Promise<void> }> {
   const repo = fs.realpathSync(path.resolve(repoInput));
   if (!isGitRepo(repo)) throw new Error(`${repo} is not a Git repository`);
-  const token = crypto.randomBytes(18).toString("hex");
+  const token = dashboardToken();
   const html = fs.readFileSync(path.join(PROJECT_ROOT, "web", "dashboard.html"), "utf8").replaceAll("__TOKEN__", token);
   const server = http.createServer(async (req, res) => {
     try {
@@ -166,7 +179,7 @@ export async function startDashboard(repoInput: string, opts: { port?: number; o
       else json(res, 404, { error: "not found" });
     } catch (error) { json(res, 400, { error: (error as Error).message }); }
   });
-  await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(opts.port ?? 0, "127.0.0.1", resolve); });
+  await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(opts.port ?? 8787, "127.0.0.1", resolve); });
   const addr = server.address();
   const port = typeof addr === "object" && addr ? addr.port : 0;
   const url = `http://127.0.0.1:${port}/?token=${token}`;
