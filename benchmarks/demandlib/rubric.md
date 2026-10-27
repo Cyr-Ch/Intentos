@@ -38,6 +38,8 @@ duplicates or breaks what exists.
 - 1: broad rewrites, reformatting of whole files, or changes to documentation, packaging or policy files the ticket
   did not ask for.
 
+A changelog entry for the change is not out of scope: this repository's pull requests add one.
+
 ### C3. Fits the codebase
 
 - 5: reuses the existing helpers and classes where they exist (the holiday helpers in `tools`, the profile base
@@ -71,7 +73,8 @@ duplicates or breaks what exists.
 ## Pairwise verdict
 
 After scoring both diffs, the judge states which one a maintainer should merge, or "tie", with one sentence that
-names the deciding criterion. The pair is judged twice with the order swapped; a verdict that flips with the order
+names the deciding criterion. When the criteria disagree, C1 and C5 (solves what was asked, tests) outweigh C6
+(readability); readability alone never decides a pair. The pair is judged twice with the order swapped; a verdict that flips with the order
 is recorded as a tie.
 
 ## Calibration
