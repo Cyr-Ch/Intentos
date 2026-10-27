@@ -89,7 +89,9 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 **Stubbed / not started:** M6 GitHub App, tenant isolation, hosted runners. Embedding-based retrieval. Plots.
 
 ## Coordination between runs: mergeguard (2026-10-27)
-mergeguard (the deterministic coordination harness for parallel coding agents) runs inside IntentOS in local mode: the
+mergeguard (the deterministic coordination harness for parallel coding agents) is part of this repository under
+`mergeguard/` (package, 90 tests, design notes, demo, evaluation scripts and raw run logs; `npm run setup:python`
+installs it into the venv; every invocation uses `python -I` so the directory never shadows the package). It runs inside IntentOS in local mode: the
 indexed repository's checked-out branch is main, run worktrees are branches in waiting, and all mergeguard state (PR
 registry, ledger, policy rendered from the IntentOS policy) lives under `INTENTOS_HOME/coordination/`. Pieces:
 `src/coordination/mergeguard.ts` (client, local-mode environment, hook install/remove, `syncedBase`),
