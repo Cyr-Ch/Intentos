@@ -8,6 +8,7 @@ import { git, headSha, isDirty, isGitRepo, repoToplevel } from "../util/git.ts";
 import { matchesAny } from "../util/paths.ts";
 import type { Authority, EdgeRow, EpistemicStatus, EvidenceRow, KnowledgeStore, NodeRow } from "./storage.ts";
 import { fallbackPolicy, policyForRepo, type Policy, type SourceRef } from "./policy.ts";
+import { linkPrecedent, precedentsFile, readPrecedentsFile, renamesBetween, type GraphLookup, type PrecedentAttributes } from "./precedents.ts";
 
 // ---- raw indexer output (mirrors python/index_repo.py dataclasses) ---------
 
@@ -316,6 +317,8 @@ export interface IndexSummary {
   carried_files: string[];
   /** Raw extraction cache written for this revision (null when the working tree was dirty). */
   cache_file: string | null;
+  /** Precedents linked from `<home>/precedents/<repo-id>.json` (absent when no file exists). */
+  precedents: { file: string; total: number; current: number; partially_stale: number; stale: number; unlinked: number } | null;
 }
 
 export interface IndexOptions {
@@ -772,6 +775,60 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
     }
   }
 
+  // --- precedents: resolved tickets + resolving pull requests, linked to this revision's graph
+  let precedentSummary: IndexSummary["precedents"] = null;
+  const precFile = precedentsFile(paths, repoId);
+  const precedents = readPrecedentsFile(precFile);
+  if (precedents) {
+    const lookup: GraphLookup = {
+      files: new Set(raw.files),
+      symbolByQn: new Map(raw.symbols.filter((s) => s.kind !== "module").map((s) => [s.qualified_name, { id: s.id, path: s.path, line_start: s.line_start, name: s.name }])),
+      symbolsByPathName: new Map(),
+      testByKey: new Map(raw.tests.map((t) => [`${t.path}::${t.name}`, t.id])),
+      moduleByPath: new Map(raw.symbols.filter((s) => s.kind === "module").map((s) => [s.path, s.id])),
+    };
+    for (const s of raw.symbols) {
+      if (s.kind === "module") continue;
+      const k = `${s.path}\0${s.name}`;
+      lookup.symbolsByPathName.set(k, [...(lookup.symbolsByPathName.get(k) ?? []), s.id]);
+    }
+    const tally = { total: 0, current: 0, partially_stale: 0, stale: 0, unlinked: 0 };
+    for (const rec of precedents.precedents) {
+      const pullPart = rec.pull ? ` (PR #${rec.pull.number}${rec.pull.merged_at ? `, merged ${rec.pull.merged_at.slice(0, 10)}` : ""})` : "";
+      const evId = addEvidence({
+        id: evidenceId([revision, "precedent", rec.url]),
+        source_type: "precedent",
+        path: null,
+        line_start: null,
+        line_end: null,
+        source_ref: rec.url,
+        authority: "historical_precedent",
+        status: "supported",
+        content_hash: sha256(`${rec.title}\n${rec.body ?? ""}`),
+        summary: `precedent #${rec.number}: ${rec.title}${pullPart}`,
+      });
+      // Trace renames only when a touched file is gone: one git call per precedent that needs it.
+      const diffFiles = rec.pull?.diff?.files ?? [];
+      const needsRenames = !!rec.pull?.merge_sha && diffFiles.some((f) => f.status !== "deleted" && !lookup.files.has(f.path));
+      const renames = needsRenames ? renamesBetween(repoPath, rec.pull!.merge_sha!, revision) : new Map<string, string>();
+      const attrs: PrecedentAttributes = linkPrecedent(rec, lookup, evId, renames);
+      if (attrs.staleness === "stale") {
+        const row = evidence.find((e) => e.id === evId);
+        if (row) row.status = "superseded";
+      }
+      addNode(rec.id, "precedent", `#${rec.number} ${rec.title}`, attrs);
+      for (const f of attrs.files) {
+        const mod = lookup.moduleByPath.get(f.path);
+        if (mod && f.current) addEdge(rec.id, "TOUCHES", mod, evId, 1);
+      }
+      for (const sym of attrs.symbols) if (sym.symbol_id) addEdge(rec.id, "TOUCHES", sym.symbol_id, evId, sym.match === "exact" ? 1 : 0.6);
+      for (const t of attrs.tests_added) if (t.test_id) addEdge(rec.id, "ADDS_TEST", t.test_id, evId, 1);
+      tally.total++;
+      tally[attrs.staleness]++;
+    }
+    precedentSummary = { file: precFile, ...tally };
+  }
+
   const seenNodeIds = new Set<string>();
   let duplicateNodes = 0;
   for (const n of nodes) {
@@ -810,6 +867,7 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
     deleted_files: plan ? plan.deleted : [],
     carried_files: plan ? plan.carried : [],
     cache_file: cacheFile,
+    precedents: precedentSummary,
   };
 }
 

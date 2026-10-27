@@ -2,6 +2,7 @@ import { logForPaths } from "../util/git.ts";
 import { matchesAny, GLOBAL_PROTECTED_PATTERNS } from "../util/paths.ts";
 import type { KnowledgeStore, NodeRow, EdgeRow, EvidenceRow } from "./storage.ts";
 import type { ConstraintAttributes, DocSectionAttributes, SymbolAttributes, TestAttributes } from "./indexer.ts";
+import { currentName, type PrecedentAttributes, type Staleness } from "./precedents.ts";
 import type { Policy } from "./policy.ts";
 import type { IndexedRepo } from "./repo.ts";
 import { detectConflicts, type Conflict } from "./conflicts.ts";
@@ -145,6 +146,27 @@ export interface ConstraintHit {
   binding: boolean;
   basis: "trusted_policy";
 }
+/** A resolved ticket and the pull request that resolved it, ranked against the task. Advisory history, never binding. */
+export interface PrecedentHit {
+  precedent_id: string;
+  number: number;
+  url: string;
+  title: string;
+  excerpt: string | null;
+  labels: string[];
+  closed_at: string | null;
+  pull: PrecedentAttributes["pull"];
+  files: PrecedentAttributes["files"];
+  symbols: PrecedentAttributes["symbols"];
+  tests_added: PrecedentAttributes["tests_added"];
+  staleness: Staleness;
+  staleness_reasons: string[];
+  relevance: number;
+  reasons: string[];
+  evidence_id: string;
+  authority: "historical_precedent";
+  basis: "fact";
+}
 export interface ImpactEntry {
   path: string;
   module_id: string;
@@ -166,6 +188,8 @@ export interface EvidencePack {
   architecture_rules: ConstraintHit[];
   decisions: ConstraintHit[];
   conflicts: Conflict[];
+  /** How similar tickets were solved in this repository (top matches; `staleness` says whether the location still exists). */
+  precedents: PrecedentHit[];
   impact: { probable_files: ImpactEntry[]; method: string; limitations: string[] };
   history: Array<{ sha: string; date: string; subject: string; paths: string[] }>;
   suggestions: Array<{ text: string; basis: "heuristic" }>;
@@ -180,7 +204,7 @@ function parseAttrs<T>(n: NodeRow): T {
   return JSON.parse(n.attributes_json) as T;
 }
 
-export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, task: string, opts: { maxSymbols?: number; maxDocs?: number; maxTests?: number } = {}): EvidencePack {
+export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, task: string, opts: { maxSymbols?: number; maxDocs?: number; maxTests?: number; maxPrecedents?: number } = {}): EvidencePack {
   const { repo, revision, policy, repoPath } = indexed;
   const terms = expandQuery(task, policy);
   const allNodes = store.nodes(repo.id, revision);
@@ -212,6 +236,10 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
       const a = parseAttrs<DocSectionAttributes>(n);
       weights.add(`${a.heading} ${a.excerpt.slice(0, 300)}`);
     } else if (n.kind === "test") weights.add(parseAttrs<TestAttributes>(n).name);
+    else if (n.kind === "precedent") {
+      const a = parseAttrs<PrecedentAttributes>(n);
+      weights.add(`${a.title} ${a.excerpt ?? ""} ${a.pull?.title ?? ""}`);
+    }
   }
 
   // A class is described by its constructor parameters too (e.g. HTTPTransport(retries=...)).
@@ -441,6 +469,87 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
 
   const conflicts = detectConflicts([...invariants, ...rules, ...decisions], docHits);
 
+  // --- precedents: resolved tickets ranked by text similarity plus overlap with the symbols/files this task touches
+  const precedentHits: PrecedentHit[] = [];
+  const topSymbolIds = new Set(symbols.slice(0, 8).map((h) => h.symbol_id));
+  const topSymbolPaths = new Set(symbols.slice(0, 8).map((h) => h.path));
+  const testIds = new Set(tests.map((t) => t.test_id));
+  for (const n of allNodes.filter((x) => x.kind === "precedent")) {
+    const a = parseAttrs<PrecedentAttributes>(n);
+    const reasons: string[] = [];
+    let s = 0;
+    const titleScore = scoreText(a.title, terms, 3, weights);
+    if (titleScore) {
+      s += titleScore;
+      reasons.push("ticket title matches task terms");
+    }
+    const bodyScore = Math.min(scoreText(a.excerpt, terms, 0.75, weights), 4);
+    if (bodyScore) {
+      s += bodyScore;
+      reasons.push("ticket text mentions task terms");
+    }
+    const pullScore = Math.min(scoreText(a.pull?.title, terms, 1.5, weights), 3);
+    if (pullScore) s += pullScore;
+    const labelScore = Math.min(scoreText(a.labels.join(" "), terms, 1, weights), 1);
+    if (labelScore) s += labelScore;
+    const text = `${a.title} ${a.excerpt ?? ""} ${a.pull?.title ?? ""}`;
+    const matched = matchedTerms(text, terms);
+    const distinct = new Set(matched).size;
+    const specific = matched.some((m) => weights.idf(m) > 0.6);
+    // Structural overlap: the precedent changed what this task is about to touch.
+    const sharedSymbols = a.symbols.filter((x) => x.symbol_id && topSymbolIds.has(x.symbol_id));
+    if (sharedSymbols.length) {
+      s += Math.min(3 * sharedSymbols.length, 6);
+      reasons.push(`changed ${sharedSymbols.map(currentName).join(", ")}, retrieved for this task`);
+    }
+    const sharedFiles = a.files.filter((f) => f.current && !f.is_test && [f.path, f.renamed_to ?? ""].some((x) => topSymbolPaths.has(x) || impactedPaths.includes(x)));
+    if (sharedFiles.length && !sharedSymbols.length) {
+      s += Math.min(1.5 * sharedFiles.length, 3);
+      reasons.push(`changed ${sharedFiles.map((f) => f.renamed_to ?? f.path).join(", ")}, probably impacted by this task`);
+    }
+    const sharedTests = a.tests_added.filter((t) => t.test_id && testIds.has(t.test_id));
+    if (sharedTests.length) {
+      s += Math.min(sharedTests.length, 2);
+      reasons.push(`added ${sharedTests.map((t) => t.name).join(", ")}, relevant to this task`);
+    }
+    // Text alone needs breadth or a specific term; one generic word ("fix") is not a precedent.
+    const structural = sharedSymbols.length + sharedFiles.length + sharedTests.length > 0;
+    if (!structural && !(distinct >= 2 || specific)) continue;
+    if (distinct >= 2) s *= 1 + 0.25 * Math.min(distinct - 1, 3);
+    if (a.staleness === "stale") {
+      s *= 0.5;
+      reasons.push("stale: the code it changed no longer exists");
+    } else if (a.staleness === "unlinked") s *= 0.8;
+    if (s <= 0) continue;
+    precedentHits.push({
+      precedent_id: n.id,
+      number: a.number,
+      url: a.url,
+      title: a.title,
+      excerpt: a.excerpt,
+      labels: a.labels,
+      closed_at: a.closed_at,
+      pull: a.pull,
+      files: a.files,
+      symbols: a.symbols,
+      tests_added: a.tests_added,
+      staleness: a.staleness,
+      staleness_reasons: a.staleness_reasons,
+      relevance: s,
+      reasons,
+      evidence_id: a.evidence_id,
+      authority: "historical_precedent",
+      basis: "fact",
+    });
+  }
+  precedentHits.sort((x, y) => y.relevance - x.relevance || y.number - x.number);
+  const maxPrec = precedentHits[0]?.relevance ?? 1;
+  for (const h of precedentHits) h.relevance = Math.round((h.relevance / maxPrec) * 100) / 100;
+  const precedents = precedentHits.slice(0, opts.maxPrecedents ?? 3);
+  for (const p of precedents) {
+    if (p.staleness === "stale") conflicts.push({ kind: "stale_precedent", ids: [p.precedent_id], summary: `${p.precedent_id} (#${p.number} "${p.title}") matches the task but ${p.staleness_reasons.join("; ")}; it shows what was asked, not where to change the code now.`, resolution: "report", basis: "deterministic" });
+  }
+
   // --- history for impacted files (scoped git log)
   const history = impactedPaths.length
     ? logForPaths(repoPath, impactedPaths.slice(0, 8), 8).map((c) => ({ ...c, paths: impactedPaths.slice(0, 8) }))
@@ -451,6 +560,12 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
   const required = symbols.filter((s) => s.reuse_recommendation === "required");
   if (required.length) suggestions.push({ text: `Approved decisions name ${required.map((s) => s.qualified_name).join(", ")}; route new behaviour through them rather than adding parallel logic.`, basis: "heuristic" });
   if (!invariants.length) suggestions.push({ text: "No approved business invariant matched this task; business correctness cannot be verified beyond functional tests.", basis: "heuristic" });
+  const lead = precedents.find((p) => p.staleness === "current" || p.staleness === "partially_stale");
+  if (lead && lead.relevance >= 0.5) {
+    const where = lead.symbols.filter((x) => x.current).map(currentName);
+    const files = lead.files.filter((f) => f.current && !f.is_test).map((f) => f.renamed_to ?? f.path);
+    suggestions.push({ text: `Precedent #${lead.number} ("${lead.title}", PR #${lead.pull?.number ?? "?"}) solved a similar ticket in ${where.length ? where.join(", ") : files.join(", ") || "this repository"}${lead.tests_added.length ? ` and added ${lead.tests_added.map((t) => t.name).join(", ")}` : ""}; prefer that location and pattern unless the task says otherwise (history, not policy).`, basis: "heuristic" });
+  }
   const superseded = decisions.filter((d) => d.status === "superseded");
   if (superseded.length) suggestions.push({ text: `Decision(s) ${superseded.map((d) => d.id).join(", ")} are superseded; do not treat their documents as current instructions.`, basis: "heuristic" });
 
@@ -463,6 +578,7 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
   tests.forEach((t) => collectEv(t.evidence_id));
   docHits.forEach((d) => collectEv(d.evidence_id));
   [...invariants, ...rules, ...decisions].forEach((c) => c.evidence_ids.forEach(collectEv));
+  precedents.forEach((p) => collectEv(p.evidence_id));
 
   return {
     repo_id: repo.id,
@@ -479,6 +595,7 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
     architecture_rules: rules,
     decisions,
     conflicts,
+    precedents,
     impact: {
       probable_files: impact,
       method: "static_imports_only",
@@ -493,6 +610,7 @@ export function buildEvidencePack(store: KnowledgeStore, indexed: IndexedRepo, t
     limitations: [
       "Retrieval is lexical + graph-based; relevance scores are heuristic rankings, not probabilities.",
       "Symbols listed are facts about the indexed revision; reuse recommendations are `required` only when an approved decision names the symbol.",
+      "Precedents are historical: they show how a similar ticket was solved and whether that code still exists; they never bind a run.",
     ],
   };
 }

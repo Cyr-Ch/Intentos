@@ -34,10 +34,13 @@ revisions coexist and a re-index at a new HEAD never mutates older revisions. Ev
 (`EV-<sha256(revision|type|path|lines|name)>`), so the same span at the same revision always has the same ID and
 a planner cannot "guess" valid IDs for other revisions.
 
-Node kinds: `module`, `symbol`, `test`, `doc_section`, `invariant`, `architecture_rule`, `decision`.
+Node kinds: `module`, `symbol`, `test`, `doc_section`, `invariant`, `architecture_rule`, `decision`, `precedent`
+(a resolved ticket plus its merged pull request, from `<home>/precedents/<repo-id>.json`; see
+[precedents.md](precedents.md)).
 Edges: `DEFINES`, `IMPORTS`, `VALIDATED_BY` (test module imports module/symbol; confidence 0.7–0.8), `CALLS`
 (name-resolved only; confidence 0.4, `extraction_method=ast_name_match`), `DOCUMENTED_IN`, `DECIDED_IN`,
-`CONSTRAINS`, `SUPERSEDES`.
+`CONSTRAINS`, `SUPERSEDES`, `TOUCHES` (precedent → symbol/module it changed; 1.0 exact or traced rename, 0.6 bare
+name), `ADDS_TEST` (precedent → test it introduced).
 
 Authority is never derived from repository text alone: a doc section starts as `historical_precedent`; it becomes
 `approved_policy`/`approved_decision` only when a trusted policy file binds it (by path + heading, optionally pinned
@@ -50,6 +53,9 @@ Lexical query expansion (built-in + policy synonyms) scores symbols, docs and te
 probable impact (`static_imports_only`); `VALIDATED_BY` edges give existing tests; invariants/rules/decisions are
 filtered by scope tags and token overlap. `reuse_recommendation` is `required` only when an approved decision names
 the symbol; everything else is `consider`. Facts (symbols, tests, docs, policy) are separated from `suggestions`.
+Precedents are ranked by the same lexical scoring plus structural overlap (symbols, files and tests the precedent
+changed that were retrieved for the task); the top three travel in the pack with their evidence ids, a `stale` one
+also as a `stale_precedent` conflict.
 
 ## Engineering Change Contract
 

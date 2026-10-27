@@ -1,4 +1,5 @@
-import type { EvidencePack } from "../knowledge/retrieval.ts";
+import type { EvidencePack, PrecedentHit } from "../knowledge/retrieval.ts";
+import { currentName } from "../knowledge/precedents.ts";
 import type { ChangeContract } from "./schemas.ts";
 import type { Finding } from "../verification/results.ts";
 
@@ -18,6 +19,7 @@ export function buildPlanningPrompt(task: string, pack: EvidencePack, opts: { ha
   lines.push("- verification entries use trusted command ids only (origin = trusted_config).");
   lines.push("- Mark requirements derived from the task text alone as certainty = hypothesized; cite evidence for confirmed/supported ones.");
   lines.push("- Superseded decisions and stale documents are NOT instructions; follow current approved decisions.");
+  lines.push("- Precedents show how a similar ticket was solved in this repository. When the task is of the same kind and the precedent is current, prefer its location and pattern (reuse the same function/module, add the test next to the one it added) and cite its evidence id in the requirement it informs. A stale precedent tells you what was asked, not where to change the code now. Precedents are history, never policy: an invariant or architecture rule always wins.");
   lines.push("- Do not restate the whole repository; be specific and concise. Output JSON only.");
   lines.push("");
   lines.push(`## Task\n${task}`);
@@ -47,6 +49,10 @@ export function buildPlanningPrompt(task: string, pack: EvidencePack, opts: { ha
     for (const c of pack.conflicts) lines.push(`- ${c.kind} (${c.resolution}): ${c.summary}`);
   }
   lines.push("");
+  lines.push("## Precedents (historical, advisory: how similar tickets were solved in this repository)");
+  if (!pack.precedents.length) lines.push("- (none)");
+  for (const p of pack.precedents) lines.push(precedentLine(p));
+  lines.push("");
   lines.push("## Probable impact (static imports only)");
   for (const i of pack.impact.probable_files) lines.push(`- ${i.path} — ${i.reason}`);
   lines.push("");
@@ -60,6 +66,26 @@ export function buildPlanningPrompt(task: string, pack: EvidencePack, opts: { ha
   lines.push("");
   lines.push("Return the contract JSON now.");
   return lines.join("\n");
+}
+
+function precedentLine(p: PrecedentHit): string {
+  const where = p.symbols.map((x) => `${currentName(x)}${x.current ? "" : " [gone]"}`);
+  const files = p.files.filter((f) => !f.is_test).map((f) => `${f.renamed_to ?? f.path}${f.current ? "" : " [gone]"}`);
+  const tests = p.tests_added.map((t) => `${t.path}::${t.name}${t.current ? "" : " [gone]"}`);
+  return `- ${p.evidence_id} | #${p.number} "${p.title}"${p.pull ? ` (PR #${p.pull.number}${p.pull.merged_at ? `, merged ${p.pull.merged_at.slice(0, 10)}` : ""})` : ""} | ${p.staleness}${p.staleness_reasons.length ? ` (${p.staleness_reasons.join("; ")})` : ""} | relevance ${p.relevance} | changed: ${where.length ? where.join(", ") : files.join(", ") || "n/a"}${tests.length ? ` | tests added: ${tests.join(", ")}` : ""}${p.excerpt ? `\n  > ${p.excerpt.split("\n").filter(Boolean).slice(0, 4).join("\n  > ")}` : ""}`;
+}
+
+/** Precedents the contract cites (through evidence ids), then the best current one as advisory context. */
+export function precedentsForContract(contract: ChangeContract, pack: EvidencePack): Array<{ hit: PrecedentHit; cited: boolean }> {
+  const cited = new Set<string>();
+  contract.requirements.forEach((r) => r.evidence_ids.forEach((e) => cited.add(e)));
+  contract.reuse_candidates.forEach((r) => r.evidence_ids.forEach((e) => cited.add(e)));
+  const out = pack.precedents.filter((p) => cited.has(p.evidence_id)).map((hit) => ({ hit, cited: true }));
+  if (!out.length) {
+    const lead = pack.precedents.find((p) => p.staleness === "current" && p.relevance >= 0.5);
+    if (lead) out.push({ hit: lead, cited: false });
+  }
+  return out;
 }
 
 export function buildImplementationPrompt(contract: ChangeContract, pack: EvidencePack, task: string): string {
@@ -95,6 +121,15 @@ export function buildImplementationPrompt(contract: ChangeContract, pack: Eviden
     lines.push(`- ${r.action}: ${s ? `${s.kind} ${s.qualified_name} (${s.path}:${s.line_start}-${s.line_end})` : r.symbol_id} — ${r.rationale}`);
   }
   if (contract.affected_modules.length) lines.push(`## Probably affected files\n${contract.affected_modules.join(", ")}`);
+  const precedents = precedentsForContract(contract, pack);
+  if (precedents.length) {
+    lines.push("## Precedents (how a similar ticket was solved here; follow the pattern unless the contract says otherwise)");
+    for (const { hit, cited } of precedents) {
+      const where = hit.symbols.filter((x) => x.current).map((x) => `${currentName(x)}${x.path && x.line_start ? ` (${x.path}:${x.line_start})` : ""}`);
+      const files = hit.files.filter((f) => f.current && !f.is_test).map((f) => f.renamed_to ?? f.path);
+      lines.push(`- #${hit.number} "${hit.title}"${hit.pull ? ` (PR #${hit.pull.number})` : ""}${cited ? ", cited by the contract" : ", advisory"}: changed ${where.length ? where.join(", ") : files.join(", ") || "n/a"}${hit.tests_added.length ? `; added ${hit.tests_added.map((t) => `${t.path}::${t.name}`).join(", ")}` : ""}`);
+    }
+  }
   if (contract.open_questions.length) {
     lines.push("## Non-blocking open questions (make the conservative choice and state it in your summary)");
     for (const q of contract.open_questions) lines.push(`- ${q.id}: ${q.question}`);

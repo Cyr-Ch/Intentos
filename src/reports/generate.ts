@@ -36,6 +36,8 @@ export interface ReportJson {
   changed_files: VerificationResult["changed_files"];
   /** Review-only architectural-surprise signals (rule ids SURPRISE-*): risk triage, never blocking. */
   architectural_surprise: Array<{ id: string; rule_id: string; location: string | null; message: string }>;
+  /** How similar tickets were solved before, and what this run did with that: cited by the contract, followed or diverged in the diff. */
+  precedents: Array<{ precedent_id: string; number: number; url: string; title: string; pull_url: string | null; staleness: string; relevance: number; cited: boolean; outcome: "followed" | "diverged" | "not_compared"; where: string[] }>;
   evidence: Array<{ id: string; path: string | null; lines: string | null; authority: string; status: string; summary: string | null }>;
   injected_by_compiler: CompiledContract["injected"] | null;
   compiler_warnings: string[];
@@ -106,6 +108,10 @@ export function generateReport(store: KnowledgeStore, runId: string): { json: Re
       : null,
     changed_files: verification?.changed_files ?? [],
     architectural_surprise: (verification?.findings ?? []).filter((f) => f.rule_id?.startsWith("SURPRISE-")).map((f) => ({ id: f.id, rule_id: f.rule_id!, location: f.location, message: f.message })),
+    precedents: (pack?.precedents ?? []).map((p) => {
+      const f = (verification?.findings ?? []).find((x) => x.rule_id?.startsWith("PRECEDENT-") && x.source_evidence_ids.includes(p.evidence_id));
+      return { precedent_id: p.precedent_id, number: p.number, url: p.url, title: p.title, pull_url: p.pull?.url ?? null, staleness: p.staleness, relevance: p.relevance, cited: citedEvidence.has(p.evidence_id), outcome: f?.rule_id === "PRECEDENT-FOLLOWED" ? "followed" : f?.rule_id === "PRECEDENT-DIVERGENCE" ? "diverged" : "not_compared", where: p.symbols.filter((x) => x.current).map((x) => x.qualified_name) };
+    }),
     evidence: [...citedEvidence].sort().map((id) => {
       const e = evidenceIndex[id];
       return { id, path: e?.path ?? null, lines: e?.line_start ? `${e.line_start}-${e.line_end}` : null, authority: e?.authority ?? "unknown", status: e?.status ?? "unknown", summary: e?.summary ?? null };
@@ -214,6 +220,13 @@ function renderMarkdown(r: ReportJson, contract: ChangeContract | null, pack: Ev
     }
   }
   L.push("");
+  L.push("## Precedents (how similar tickets were solved here)");
+  if (!r.precedents.length) L.push("- none matched this task (history, not policy; `intentos precedents sync` loads the ticket history)");
+  for (const p of r.precedents) {
+    const verdict = p.outcome === "followed" ? "**followed**" : p.outcome === "diverged" ? "**diverged** (review signal)" : p.staleness === "stale" ? "stale, not compared" : "not compared";
+    L.push(`- [#${p.number}](${p.url}) ${p.title}${p.pull_url ? ` ([PR](${p.pull_url}))` : ""} — ${p.staleness}, relevance ${p.relevance}${p.cited ? ", cited by the contract" : ""}; ${verdict}${p.where.length ? ` — changed ${p.where.join(", ")}` : ""}`);
+  }
+  L.push("");
   L.push("## Architectural surprise (review signals)");
   if (!r.verification) L.push("- not evaluated (no verification)");
   else if (!r.architectural_surprise.length) L.push("- none detected — risk triage only; absence is not a design approval");
@@ -222,7 +235,7 @@ function renderMarkdown(r: ReportJson, contract: ChangeContract | null, pack: Ev
   L.push("## Evidence");
   L.push(`- Base revision: \`${r.base_sha}\``);
   L.push("- Sources cited by the contract and findings:");
-  for (const e of r.evidence) L.push(`  - ${e.id} ${e.path ?? "(policy)"}${e.lines ? `:${e.lines}` : ""} [${e.authority}, ${e.status}] ${e.summary ?? ""}`);
+  for (const e of r.evidence) L.push(`  - ${e.id} ${e.path ?? (e.authority === "historical_precedent" ? "(precedent)" : "(policy)")}${e.lines ? `:${e.lines}` : ""} [${e.authority}, ${e.status}] ${e.summary ?? ""}`);
   L.push(`- Changed files (${r.changed_files.length}):`);
   for (const c of r.changed_files) L.push(`  - ${c.status} ${c.path}${c.in_scope ? "" : " **OUT OF SCOPE**"}${c.protected ? " **PROTECTED**" : ""}`);
   L.push(`- Diff: ${r.artifacts["diff.patch"] ?? "n/a"}`);

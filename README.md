@@ -57,6 +57,7 @@ machine-readable output; every command exits non-zero on critical failure.
 | `mcp` | IntentOS as an MCP server on stdio: `status` and `onboard` let the agent bring a repository under IntentOS itself (the CLI runs in a child process; the agent polls `status`); `explain` and `policy` give a coding agent the evidence pack and the approved rules from inside its session; `review_start` opens the policy review as an MCP Apps widget in hosts that render it (Claude, VS Code, …), `review_next` / `review_close` run it through the host's own elicitation prompts (Codex), and the token-protected local URL is the fallback. The tools that change the policy are app-only and require a widget token, so the model cannot approve. `--print-codex-config` prints the `codex mcp add` line; `.intentos/mcp.log` records the client's declared capabilities |
 | `propose <repo> --file <json>` | validates host-authored candidates (the `intentos-policy-mining` skill's output): references checked against the repository, existing tests lifted and run, written tests run in the repository's venv; writes the review files with `authored_by: codex` (`--append` keeps an earlier list) |
 | `mine <repo> --model <slug>` | the independent miner: runs the `intentos-policy-mining` skill in a separate read-only Codex thread with the named model (`INTENTOS_MINING_MODEL` as the default), takes the answer through the same checks as `propose`, sends the rejections back to that thread once, and writes the review files with the author recorded (`author: {via: side_thread, model, thread_id}`); `--append` keeps the current list; `--reasoning`, `--rounds`; `--replay <dir>` re-checks saved answers (`<out>/mine/round-N.json`) without Codex |
+| `precedents sync <repo> --issues owner/name [--pulls owner/name]` / `precedents show <repo>` | `.intentos/precedents/<repo-id>.json`: the tracker's closed issues and the merged pull request that resolved each one (found through links in the ticket text and the issue timeline), with the pull request's diff read from the local history (files, Python definitions containing changed lines, test functions added); then a re-index, which links every precedent to the current graph (`TOUCHES` symbols/modules, `ADDS_TEST` tests) and marks it `current`, `partially_stale` or `stale` after following renames. `explain`, the planner prompt, the implementer prompt and the report then show how similar tickets were solved here. History, never policy: see [docs/precedents.md](docs/precedents.md) |
 | `skill install` / `skill show` | symlinks `skills/intentos-policy-mining` into `~/.agents/skills` (`--dir` for another skills directory) / prints the skill text |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
@@ -178,6 +179,40 @@ form (approve / reject / skip, the editable rule statement, fold related tests) 
 Either way the answers travel host → server; the model only sees the outcome and cannot decide for you, and the
 instructions tell it not to invent candidates. Hosts with neither get the token-protected local link from
 `review_start`. `.intentos/mcp.log` shows what the client declared and every tool call.
+
+## Precedents: learning from the ticket history
+
+A repository's resolved tickets are the closest thing to a record of *how this team solves this kind of task*.
+IntentOS loads them as **precedents**: a closed issue, the merged pull request that resolved it, and what that
+pull request changed, linked to the code as it is now.
+
+```bash
+# tickets on a fork, pull requests merged upstream (works for a plain repository too: omit --pulls)
+intentos precedents sync /abs/path/oemof-demand --issues Cyr-Ch/oemof-demand --pulls oemof/oemof-demand
+intentos precedents show /abs/path/oemof-demand            # every precedent, where it landed, staleness
+intentos explain /abs/path/oemof-demand "Raise an error instead of a warning when a profile is created without holidays"
+```
+
+The evidence pack then carries a `Precedents` section:
+
+```
+[EV-9500bc7d4c] #43 "Warn when a profile is created without holidays" ← PR #100 (2026-10-22)  relevance=1  current
+    changed: oemof.demand.tools.set_holidays_in_df (src/oemof/demand/tools.py:50)
+    tests added: tests/test_tools.py::test_warning_without_holidays, tests/test_tools.py::test_no_warning_with_empty_holidays
+    why: ticket title matches task terms; changed oemof.demand.tools.set_holidays_in_df, retrieved for this task; …
+```
+
+Ranking is the same lexical+IDF scoring as the rest of retrieval, plus overlap between what the precedent changed
+and the symbols, files and tests retrieved for the task. Each precedent is re-linked at every `index`: a touched
+file that moved is followed through git's rename detection (then by its path tail), a definition that moved with
+it is resolved under its new qualified name, and a precedent whose code is gone is `stale` and reported as a
+conflict ("it shows what was asked, not where to change the code now").
+
+Precedents are **evidence**, with authority `historical_precedent`: the planner may cite a precedent's evidence id
+in a requirement, the implementer prompt names the precedent's location and tests, and the verifier adds a
+review-only `PRECEDENT-FOLLOWED` (info) or `PRECEDENT-DIVERGENCE` (review) signal depending on whether the diff
+lands where the similar ticket was solved. None of this blocks a run or changes policy; an invariant or rule
+always wins. From an MCP host the same happens through the `precedents` tool followed by `explain`.
 
 ## Environment variables
 

@@ -10,6 +10,7 @@ import { resolvePaths } from "../config.ts";
 import { parseJunit } from "./junit.ts";
 import { runArchitectureRules, runScopeCheck } from "./policy.ts";
 import { runArchitecturalSurprise } from "./surprise.ts";
+import { precedentFindings } from "./precedents.ts";
 import { repoInterpreter } from "../knowledge/venv.ts";
 import { generateCounterexamples } from "./counterexamples.ts";
 import { summarizeStatus, type CommandRecord, type Finding, type VerificationResult } from "./results.ts";
@@ -202,6 +203,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
       const out = runArchitecturalSurprise({ snapshot, repoPath: input.repoPath ?? input.worktree, baseSha: input.baseSha, changed, policy: input.policy });
       findings.push(...out.findings);
       limitations.push(...out.limitations);
+      findings.push(...precedentFindings(input.pack, changed, nextId));
       const errs = out.errors.length ? `; ${out.errors.length} file(s) not analysed (${out.errors.map((e) => e.path || e.error).slice(0, 3).join(", ")})` : "";
       commands.push({ command_id: v.command_id, track: cmd.track, enforcement: "advisory", argv: null, builtin: cmd.builtin, exit_code: null, duration_ms: Date.now() - t0, status: "passed", stdout_path: null, stderr_path: null, summary: `${out.findings.length} signal(s) in ${out.checked_files} changed Python file(s)${errs}`, tests_passed: null, tests_failed: null });
       continue;
