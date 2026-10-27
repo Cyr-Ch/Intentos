@@ -47,7 +47,8 @@ export interface QueryTerms {
 export function expandQuery(task: string, policy: Policy): QueryTerms {
   const primary = tokenize(task);
   const expanded = new Set<string>();
-  const dict: Record<string, string[]> = { ...BUILTIN_SYNONYMS };
+  // Prototype-less: a task mentioning "constructor" or "toString" must not look up Object.prototype.
+  const dict: Record<string, string[]> = Object.assign(Object.create(null) as Record<string, string[]>, BUILTIN_SYNONYMS);
   for (const [k, v] of Object.entries(policy.synonyms)) dict[singular(k.toLowerCase())] = [...(dict[singular(k.toLowerCase())] ?? []), ...v];
   for (const t of primary) for (const s of dict[t] ?? []) for (const st of tokenize(s)) if (!primary.includes(st)) expanded.add(st);
   return { primary, expanded: [...expanded] };
