@@ -214,6 +214,28 @@ review-only `PRECEDENT-FOLLOWED` (info) or `PRECEDENT-DIVERGENCE` (review) signa
 lands where the similar ticket was solved. None of this blocks a run or changes policy; an invariant or rule
 always wins. From an MCP host the same happens through the `precedents` tool followed by `explain`.
 
+## Acceptance tests by another model, before implementation
+
+A ticket's acceptance tests are the oracle for "was it solved"; the implementer's own contract cannot be that oracle.
+`intentos acceptance <repo> "<ticket>" --task-id T01 --model <slug>` has a model other than the implementer write them
+in a read-only side thread, then runs them at the current revision and keeps only modules in which at least one test
+fails now (the behaviour does not exist yet; `--expect pass` for a ticket the code already satisfies, where every test
+must pass now). A module that cannot be collected or that passes before any change is sent back once with the reason.
+Survivors land in `benchmarks/hidden_tests/<policy>/tasks/<id>/` with a header naming the author model, the thread, the
+base revision and every test's status at base, plus `AUTHORED.json`; the task is bound in `benchmarks/tasks.json`, so
+`intentos run --task <id>` verifies against them and the implementer never sees them. `--tickets <yaml> [--only ids]`
+takes a ticket list (`benchmarks/demandlib/tickets.yaml`); vague tickets that should end in a clarification get none.
+
+## Policies without a review step
+
+By default the mined rules go straight into the policy: `intentos suggest --approve`, `intentos mine --approve`,
+`intentos review --auto`, and the MCP `mine` tool unless called with `review=true`. Every kept candidate that has a
+test is written as the review UI would write it (policy block, hidden test, policy notes), with
+`approved_by: auto:<model>`, and the output tells the user how many rules landed and which file to edit. An invariant
+without a test is left pending rather than approved, since the verifier could not execute it. Approved rules carry
+blocking authority: a wrong one stops every run in its scope until the file is edited, which is the trade-off of
+removing the person from the loop. The one-by-one review (`intentos review`, `review_start`) stays available.
+
 ## Coordination between runs: mergeguard
 
 Several runs share one repository, and main moves under them. mergeguard, the deterministic coordination harness in

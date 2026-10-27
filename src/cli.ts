@@ -12,12 +12,31 @@ import { registerRunCommands } from "./cli_run.ts";
 import { registerMergeCommands } from "./cli_merge.ts";
 import { onboardRepository } from "./onboard.ts";
 import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./suggest.ts";
-import { defaultReviewer, loadReviewState, startReviewServer } from "./review.ts";
+import { autoApprove, autoApprover, defaultReviewer, loadReviewState, startReviewServer, type AutoApproveResult } from "./review.ts";
+import { expectationFor, loadTicketFile, writeAcceptanceTests, type AcceptanceResult } from "./acceptance.ts";
 import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
 import { ingestProposals, installSkill, SKILL_NAME, skillText } from "./propose.ts";
 import { mineWithModel, ReplayEngine } from "./mine.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 import { currentName, precedentsFile, syncPrecedents, writePrecedentsFile, type PrecedentAttributes } from "./knowledge/precedents.ts";
+
+function printAutoApproval(a: AutoApproveResult): void {
+  console.log(`Approved ${a.approved.length} rule(s) as ${a.by} into ${a.policy_file}:`);
+  for (const r of a.approved) console.log(`  ${r.assigned_id}  ${r.title}${r.hidden_test ? `  (test ${path.relative(PROJECT_ROOT, r.hidden_test)})` : ""}`);
+  if (a.without_test.length) console.log(`  left pending, no test to verify them: ${a.without_test.map((w) => w.title).join("; ")}`);
+  for (const f of a.failed) console.log(`  not approved: ${f.title}: ${f.error}`);
+  if (a.finish.hidden_tests_needing_attention.length) console.log(`  hidden tests to finish by hand: ${a.finish.hidden_tests_needing_attention.join(", ")}`);
+  console.log(`  These rules now carry blocking authority. Edit or remove any of them in ${a.policy_file}; the hidden tests live next to it under benchmarks/hidden_tests/.`);
+}
+
+function printAcceptance(r: AcceptanceResult): void {
+  console.log(`Acceptance tests for ${r.task_id} by ${r.model ?? r.engine} at ${r.head.slice(0, 10)} (${r.expect === "fail" ? "fail at base, pass when solved" : "pass at base"}):`);
+  for (const f of r.files) console.log(`  ${f}`);
+  for (const s of r.statuses) console.log(`    ${s.status.padEnd(7)} ${s.file}::${s.test}`);
+  for (const round of r.rounds) if (round.rejected.length) console.log(`  round ${round.round} rejected: ${round.rejected.map((x) => `${x.path} (${x.reasons.join("; ")})`).join(" | ")}`);
+  if (r.notes) console.log(`  notes: ${r.notes}`);
+  console.log(`  bound as task ${r.task_id} in ${path.relative(PROJECT_ROOT, r.tasks_file)}; the implementer never sees ${path.relative(PROJECT_ROOT, r.dir)}`);
+}
 
 function printSuggestions(result: SuggestResult): void {
   console.log(`Suggestions for ${result.repo_path} (policy ${result.policy_id}, ${result.head.slice(0, 7)})`);
@@ -248,7 +267,8 @@ program
   .option("--classify-top <n>", "how many top-ranked candidates to classify", "40")
   .option("--feedback <file>", "accept/reject token weights from earlier reviews (default <out>/feedback.json)")
   .option("--record", "do not mine: compare the last suggestions with the policy file and write feedback.json for the next run", false)
-  .action(async (repo: string, opts: { policyId?: string; out?: string; writeAdrs: boolean; adrDir?: string; withCodex: boolean; maxCommits: string; minConfidence: string; minScore: string; classify: boolean; classifyTop: string; feedback?: string; record: boolean }) => {
+  .option("--approve", "write every kept candidate that has a test straight into the policy and the hidden tests, no review UI; you are told where the file is", false)
+  .action(async (repo: string, opts: { policyId?: string; out?: string; writeAdrs: boolean; adrDir?: string; withCodex: boolean; maxCommits: string; minConfidence: string; minScore: string; classify: boolean; classifyTop: string; feedback?: string; record: boolean; approve: boolean }) => {
     const json = program.opts().json as boolean;
     try {
       if (opts.record) {
@@ -273,8 +293,21 @@ program
       const minScore = Number(opts.minScore);
       if (!(minScore >= 0 && minScore <= 1)) fail(`--min-score must be between 0 and 1 (got ${opts.minScore})`);
       const result = await suggestPolicy(repo, { policyId: opts.policyId, outDir: opts.out, writeAdrs: opts.writeAdrs, adrDir: opts.adrDir, withCodex: opts.withCodex, maxCommits: Number(opts.maxCommits), minConfidence: level, minScore, classify: opts.classify, classifyTop: Number(opts.classifyTop), feedbackFile: opts.feedback }, (line) => console.error(`[suggest] ${line}`));
-      if (json) console.log(JSON.stringify(result, null, 2));
-      else printSuggestions(result);
+      let approved: AutoApproveResult | null = null;
+      if (opts.approve) {
+        const store = openStore();
+        try {
+          const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, by: autoApprover(result.classification.model ? { via: "side_thread", model: result.classification.model } : null), store, log: (line) => console.error(`[approve] ${line}`) });
+          approved = autoApprove(state);
+        } finally {
+          store.close();
+        }
+      }
+      if (json) console.log(JSON.stringify({ ...result, approved }, null, 2));
+      else {
+        printSuggestions(result);
+        if (approved) printAutoApproval(approved);
+      }
     } catch (err) {
       fail((err as Error).message);
     }
@@ -292,10 +325,18 @@ program
   .option("--port <n>", "port for the local server (default: random)")
   .option("--no-open", "print the URL instead of opening the browser")
   .option("--include-filtered", "also show candidates the classifier set aside", false)
-  .action(async (repo: string, opts: { policyId?: string; out?: string; policyFile?: string; by?: string; docFile: string; port?: string; open: boolean; includeFiltered: boolean }) => {
+  .option("--auto", "no UI: approve every pending candidate that has a test, write the policy and hidden tests, and say where the file is", false)
+  .action(async (repo: string, opts: { policyId?: string; out?: string; policyFile?: string; by?: string; docFile: string; port?: string; open: boolean; includeFiltered: boolean; auto: boolean }) => {
     const store = openStore();
     try {
-      const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, policyFile: opts.policyFile, by: opts.by ?? defaultReviewer(), docFile: opts.docFile, includeFiltered: opts.includeFiltered, store, log: (line) => console.error(`[review] ${line}`) });
+      const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, policyFile: opts.policyFile, by: opts.by ?? (opts.auto ? "auto" : defaultReviewer()), docFile: opts.docFile, includeFiltered: opts.includeFiltered, store, log: (line) => console.error(`[review] ${line}`) });
+      if (opts.auto) {
+        if (!opts.by) state.by = autoApprover(state.author);
+        const approved = autoApprove(state);
+        if (program.opts().json) console.log(JSON.stringify(approved, null, 2));
+        else printAutoApproval(approved);
+        return;
+      }
       const pending = state.candidates.filter((c) => !state.decisions.some((d) => d.id === c.id)).length;
       console.log(`Review ${state.policy_id}: ${state.candidates.length} candidate(s), ${pending} pending; approvals go to ${state.policy_file}`);
       const server = await startReviewServer(state, { port: opts.port ? Number(opts.port) : 0, open: opts.open, log: (line) => console.log(`  ${line}`) });
@@ -377,14 +418,26 @@ program
   .option("--policy-file <file>", "policy file (default policies/<policy-id>.yaml)")
   .option("--out <dir>", "directory of the review files (default .intentos/onboard/<repo-id>)")
   .option("--replay <dir>", "re-check the saved answers of an earlier run (round-N.json in that directory) instead of calling Codex")
-  .action(async (repo: string, opts: { model?: string; reasoning?: string; rounds: string; append: boolean; policyId?: string; policyFile?: string; out?: string; replay?: string }) => {
+  .option("--approve", "write the accepted rules straight into the policy and the hidden tests (approved_by auto:<model>); you are told where the file is", false)
+  .action(async (repo: string, opts: { model?: string; reasoning?: string; rounds: string; append: boolean; policyId?: string; policyFile?: string; out?: string; replay?: string; approve: boolean }) => {
     const json = program.opts().json as boolean;
     try {
       const r = await mineWithModel(repo, { model: opts.model, reasoningEffort: opts.reasoning, rounds: Number(opts.rounds), append: opts.append, policyId: opts.policyId, policyFile: opts.policyFile, outDir: opts.out, engine: opts.replay ? new ReplayEngine(path.resolve(opts.replay), opts.model ?? null) : undefined }, (line) => console.error(`[mine] ${line}`));
+      let approved: AutoApproveResult | null = null;
+      if (opts.approve) {
+        const store = openStore();
+        try {
+          const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, policyFile: opts.policyFile, by: autoApprover({ via: "side_thread", model: r.model, engine: r.engine, thread_id: r.thread_id }), store, log: (line) => console.error(`[approve] ${line}`) });
+          approved = autoApprove(state);
+        } finally {
+          store.close();
+        }
+      }
       if (json) {
-        console.log(JSON.stringify(r, null, 2));
+        console.log(JSON.stringify({ ...r, approved }, null, 2));
         return;
       }
+      if (approved) printAutoApproval(approved);
       console.log(`mined by ${r.model ?? r.engine} (${r.engine}), ${r.rounds.length} round(s): ${r.accepted.length} accepted, ${r.rejected.length} still rejected; review list: ${r.candidates.length} candidate(s) in ${r.files.json}`);
       for (const a of r.accepted) console.log(`  ${a.id}  ${a.title}  [${a.kind}; test: ${a.verified}${a.notes.length ? `; ${a.notes.join("; ")}` : ""}]`);
       for (const x of r.rejected) console.log(`  rejected  ${x.title}\n    ${x.reasons.join("\n    ")}`);
@@ -445,6 +498,64 @@ setup
     const r3 = spawnSync(py, ["-m", "pip", "install", "-q", "-e", path.join(PROJECT_ROOT, "mergeguard")], { stdio: "inherit" });
     if (r3.status !== 0) fail("pip install of mergeguard failed");
     console.log(`python ready: ${py} (pytest, mergeguard)`);
+  });
+
+program
+  .command("acceptance")
+  .description("Write a ticket's acceptance tests before anyone implements it, with a model other than the implementer: the side thread reads the repository and answers with pytest modules; IntentOS runs them at the current revision and keeps only modules that fail now (new behaviour) or pass now (--expect pass, for a ticket the code already satisfies); survivors go to benchmarks/hidden_tests/<policy>/tasks/<id>/ and are bound in benchmarks/tasks.json, hidden from the implementer")
+  .argument("<repo>", "path to the repository root (indexed, so the evidence pack can be given as context)")
+  .argument("[ticket]", "the ticket text (or use --tickets)")
+  .option("--task-id <id>", "task id for the hidden tests and tasks.json (required with a ticket text)")
+  .option("--model <slug>", "Codex model for the side thread (default INTENTOS_ACCEPTANCE_MODEL, then INTENTOS_MINING_MODEL); one other than the implementer's")
+  .option("--reasoning <level>", "reasoning effort for the side thread")
+  .option("--expect <fail|pass>", "whether the tests must fail (new behaviour) or pass (already done) at the current revision", "fail")
+  .option("--expected-route <route>", "implement | clarify | abstain, recorded in tasks.json (default from --expect)")
+  .option("--rounds <n>", "rounds at most, the first included", "2")
+  .option("--tickets <yaml>", "a ticket list (benchmarks/demandlib/tickets.yaml shape): id, issue, expected_route; vague tickets (clarify) get no tests")
+  .option("--only <ids>", "with --tickets: comma-separated ticket ids")
+  .option("--force", "replace existing acceptance tests for the task", false)
+  .action(async (repo: string, ticket: string | undefined, opts: { taskId?: string; model?: string; reasoning?: string; expect: string; expectedRoute?: string; rounds: string; tickets?: string; only?: string; force: boolean }) => {
+    const json = program.opts().json as boolean;
+    const store = openStore();
+    try {
+      const jobs: Array<{ id: string; text: string; expect: "fail" | "pass"; route: "implement" | "clarify" | "abstain" }> = [];
+      if (opts.tickets) {
+        const wanted = opts.only ? new Set(opts.only.split(",").map((s) => s.trim())) : null;
+        for (const t of loadTicketFile(path.resolve(opts.tickets))) {
+          if (wanted && !wanted.has(t.id)) continue;
+          const expect = expectationFor(t.expected_route);
+          if (!expect) {
+            console.error(`[acceptance] ${t.id}: expected route ${t.expected_route}; no acceptance tests (the right answer is a question)`);
+            continue;
+          }
+          jobs.push({ id: t.id, text: `${t.title}\n\n${t.issue}`.trim(), expect, route: t.expected_route });
+        }
+      } else {
+        if (!ticket) fail("give the ticket text, or --tickets <yaml>");
+        if (!opts.taskId) fail("--task-id is required with a ticket text");
+        if (opts.expect !== "fail" && opts.expect !== "pass") fail("--expect must be fail or pass");
+        jobs.push({ id: opts.taskId!, text: ticket!, expect: opts.expect, route: (opts.expectedRoute as "implement" | "clarify" | "abstain") ?? (opts.expect === "pass" ? "abstain" : "implement") });
+      }
+      const results: AcceptanceResult[] = [];
+      const failures: Array<{ id: string; error: string }> = [];
+      for (const job of jobs) {
+        try {
+          const r = await writeAcceptanceTests(repo, job.text, { taskId: job.id, model: opts.model, reasoningEffort: opts.reasoning, expect: job.expect, expectedRoute: job.route, rounds: Number(opts.rounds), force: opts.force, store }, (line) => console.error(`[acceptance ${job.id}] ${line}`));
+          results.push(r);
+          if (!json) printAcceptance(r);
+        } catch (err) {
+          failures.push({ id: job.id, error: (err as Error).message });
+          console.error(`[acceptance ${job.id}] failed: ${(err as Error).message}`);
+        }
+      }
+      if (json) console.log(JSON.stringify({ results, failures }, null, 2));
+      else if (jobs.length > 1) console.log(`${results.length} of ${jobs.length} ticket(s) have acceptance tests${failures.length ? `; failed: ${failures.map((f) => f.id).join(", ")}` : ""}`);
+      if (failures.length) process.exitCode = 1;
+    } catch (err) {
+      fail((err as Error).message);
+    } finally {
+      store.close();
+    }
   });
 
 registerRunCommands(program, { openStore, fail });

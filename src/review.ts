@@ -289,6 +289,48 @@ export function decide(state: ReviewState, input: { id: string; action: "accept"
   return decision;
 }
 
+export interface AutoApproveResult {
+  approved: Array<{ id: string; title: string; assigned_id: string; hidden_test: string | null }>;
+  /** Invariant candidates without a hidden test: left pending, since an unverifiable rule would only confuse the verifier. */
+  without_test: Array<{ id: string; title: string }>;
+  failed: Array<{ id: string; title: string; error: string }>;
+  finish: FinishResult;
+  policy_file: string;
+  by: string;
+}
+
+/**
+ * Approve every pending candidate without a person in the loop: the policy file, the hidden tests and the repository's
+ * policy notes are written as the review UI would write them, `approved_by` records who mined the rules
+ * (`auto:<model>`), and the caller tells the user where the file is so any rule can be edited or removed.
+ * An approved rule carries blocking authority, so a wrong one stops every run in its scope until the file is edited.
+ */
+export function autoApprove(state: ReviewState, opts: { requireTest?: boolean } = {}): AutoApproveResult {
+  const result: AutoApproveResult = { approved: [], without_test: [], failed: [], finish: null as unknown as FinishResult, policy_file: state.policy_file, by: state.by };
+  for (const c of state.candidates) {
+    if (state.decisions.some((d) => d.id === c.id && d.action !== "skip")) continue;
+    if (c.kind === "invariant" && !c.suggested_hidden_test && opts.requireTest !== false) {
+      result.without_test.push({ id: c.id, title: c.title });
+      state.decisions = [...state.decisions.filter((d) => d.id !== c.id), { id: c.id, title: c.title, action: "skip", reason: "no hidden test; an invariant the verifier cannot execute is not approved automatically", by: state.by, at: nowIso() }];
+      continue;
+    }
+    try {
+      const d = decide(state, { id: c.id, action: "accept" });
+      result.approved.push({ id: c.id, title: c.title, assigned_id: d.result!.assigned_id, hidden_test: d.result!.hidden_test });
+    } catch (e) {
+      result.failed.push({ id: c.id, title: c.title, error: (e as Error).message });
+    }
+  }
+  saveDecisions(state);
+  result.finish = finishReview(state);
+  return result;
+}
+
+/** How to name the automatic approver after who mined the list. */
+export function autoApprover(author: Author | null): string {
+  return `auto:${author?.model ?? (author ? "codex" : "miner")}`;
+}
+
 export function finishReview(state: ReviewState): FinishResult {
   const accepted = state.decisions.filter((d) => d.action === "accept");
   const result: FinishResult = {

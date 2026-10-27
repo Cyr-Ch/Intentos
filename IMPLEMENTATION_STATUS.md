@@ -88,6 +88,20 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 
 **Stubbed / not started:** M6 GitHub App, tenant isolation, hosted runners. Embedding-based retrieval. Plots.
 
+## Acceptance tests by a side model, and policies without a review step (2026-10-27)
+`src/acceptance.ts` / `intentos acceptance`: a model other than the implementer writes a ticket's acceptance tests in a
+read-only side thread (structured output); IntentOS runs them at the current revision with the repository's venv
+(`--continue-on-collection-errors`, absolute `pythonpath` from the policy's project command) and keeps modules that fail
+now for new behaviour or pass now for already-done tickets, sends rejections back once, writes survivors under
+`benchmarks/hidden_tests/<policy>/tasks/<id>/` with author, thread, base and per-test status, and binds the task in
+`benchmarks/tasks.json`. `tests/integration/acceptance.test.ts` (5) covers accept/reject/fix rounds, file naming,
+collection errors, `--expect pass`, `--force`, the empty case and the ticket-file mapping.
+`src/review.ts` `autoApprove`: `suggest --approve`, `mine --approve`, `review --auto`, and the MCP `mine` tool by default
+(`review=true` keeps the old flow) write every kept candidate with a test into the policy and hidden tests as
+`approved_by: auto:<model>`; testless invariants stay pending; the MCP instructions tell the host to inform the user
+where to edit the file. `tests/integration/autoapprove.test.ts` (2). Trade-off recorded in README: auto-approved rules
+carry blocking authority.
+
 ## Coordination between runs: mergeguard (2026-10-27)
 mergeguard (the deterministic coordination harness for parallel coding agents) is part of this repository under
 `mergeguard/` (package, 90 tests, design notes, demo, evaluation scripts and raw run logs; `npm run setup:python`

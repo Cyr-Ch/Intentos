@@ -381,11 +381,11 @@ describe("intentos mcp — the independent miner (mine runs the skill with a mod
       expect(notOnboarded.isError).toBe(true);
       expect(textOf(notOnboarded as never)).toMatch(/not onboarded.*Call onboard first/);
 
-      const started = await client.callTool({ name: "mine", arguments: { repo: env.repo, model: "other-model", policy_file: policyFile, out_dir: outDir } });
+      const started = await client.callTool({ name: "mine", arguments: { repo: env.repo, model: "other-model", policy_file: policyFile, out_dir: outDir, review: true } });
       expect(started.isError, textOf(started as never)).toBeFalsy();
       expect(structured(started as never).model).toBe("other-model");
       expect(textOf(started as never)).toMatch(/started .* with other-model \(job [0-9a-f]{8}\).*until phase is "done", then call review_start/s);
-      const again = await client.callTool({ name: "mine", arguments: { repo: env.repo, model: "other-model", policy_file: policyFile, out_dir: outDir } });
+      const again = await client.callTool({ name: "mine", arguments: { repo: env.repo, model: "other-model", policy_file: policyFile, out_dir: outDir, review: true } });
       expect(textOf(again as never)).toMatch(/mining of .* is already running/);
       const early = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir } });
       expect(early.isError).toBe(true);

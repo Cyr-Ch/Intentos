@@ -10,9 +10,12 @@ model's training data nor the precedents IntentOS loads can contain the answers.
   the repository's history and should end in an abstention, two resemble merged PRs so the precedent feature is
   tested on fresh work. Each entry carries the issue text the agents see and, separately, the expected route, the
   invariants in play and the acceptance tests to write. `file_issues.py` files the issue texts on the fork.
-- **Acceptance tests.** Written from each ticket's `acceptance` block into
-  `benchmarks/hidden_tests/oemof_demand/tasks/<id>/` before the first run, reviewed by a person, outside the agents'
-  reach. Tickets are added to `benchmarks/tasks.json` with those directories so `intentos run --task <id>` binds them.
+- **Acceptance tests.** Written by a model other than the implementer, before the first run:
+  `intentos acceptance <repo> --tickets benchmarks/demandlib/tickets.yaml --model <slug>` gives the side model the
+  ticket text only (never the `acceptance` plans, which stay here as the reviewer's checklist), runs its modules at the
+  base revision, keeps those that fail now for implement tickets and pass now for the already-fixed controls, and writes
+  them to `benchmarks/hidden_tests/oemof_demand/tasks/<id>/` with the author recorded, bound in `benchmarks/tasks.json`.
+  T05 (clarify) gets none. A person compares each module against the ticket's `acceptance` plan before any run.
 - **Arms.** Same worktree, same verifier, same repair budget. `baseline`: vanilla Codex with the ticket text only
   (`benchmarks/evaluate.ts --mode baseline`). `full`: the IntentOS pipeline. Ablations when credits allow: evidence
   pack without the contract compiler; full pipeline without the repair loop. Coordination: several tickets run from
