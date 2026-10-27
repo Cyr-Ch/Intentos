@@ -1,10 +1,10 @@
 #!/bin/sh
 # Rehearse Moment A from the command line (same actions the Codex session performs through the MCP tools):
 # start a live run on T12, merge the rename PR while it implements, and show the hook's note reaching the agent.
-#   demo/rehearse-moment-a.sh [--root ~/intentos-demo] [--model gpt-6-luna] [--delay 75]
+#   demo/rehearse-moment-a.sh [--root ~/intentos-demo] [--model gpt-6-luna] [--delay 35]
 # Costs one live run. Run demo/reset.sh first; run it again afterwards.
 set -eu
-ROOT="$HOME/intentos-demo"; MODEL="${INTENTOS_CODEX_MODEL:-gpt-6-luna}"; DELAY=75
+ROOT="$HOME/intentos-demo"; MODEL="${INTENTOS_CODEX_MODEL:-gpt-6-luna}"; DELAY=35
 while [ $# -gt 0 ]; do case "$1" in --root) ROOT="$2"; shift 2;; --model) MODEL="$2"; shift 2;; --delay) DELAY="$2"; shift 2;; *) echo "unknown option $1" >&2; exit 2;; esac; done
 INTENTOS="$(cd "$(dirname "$0")/.." && pwd)"
 export INTENTOS_HOME="$ROOT/home" INTENTOS_CODEX_MODEL="$MODEL"
@@ -37,6 +37,6 @@ import json,sys
 v=json.load(open(sys.argv[1]))
 print('[rehearse] verification:', v['status'], '| coordination:', v.get('coordination'))
 " "$ROOT/home/runs/$RUN/verification.json" 2>/dev/null || echo "[rehearse] no verification.json"
-grep -c "base.advanced" "$ROOT/home/runs/$RUN/codex_events.jsonl" 2>/dev/null | sed 's/^/[rehearse] base.advanced events in codex_events: /' || true
+sqlite3 "$ROOT/home/intentos.db" "select '[rehearse] runner sync: ' || event_type from run_events where run_id='$RUN' and event_type in ('coordination.synced','coordination.sync_conflict','coordination.sync_failed','base.advanced') order by rowid" 2>/dev/null || true
 echo "[rehearse] events:"; sqlite3 "$ROOT/home/intentos.db" "select event_type from run_events where run_id='$RUN' order by rowid" 2>/dev/null | tr '\n' ' '; echo
 echo "[rehearse] now: intentos merge $RUN --approve Priya   (Moment A's last sentence)"

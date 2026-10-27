@@ -19,10 +19,10 @@ import { TERMINAL_STATES, type RunState } from "./workflow.ts";
 import { resolveHiddenTests } from "./tasks.ts";
 import { ensureHome, resolvePaths, codexSettings, PROJECT_ROOT } from "../config.ts";
 import { newRunId, nowIso } from "../util/ids.ts";
-import { addWorktree, headSha, isDirty, diffAgainstBase, changedFiles } from "../util/git.ts";
+import { addWorktree, headSha, isDirty, diffAgainstBase, changedFiles, git } from "../util/git.ts";
 import { generateReport } from "../reports/generate.ts";
 import { redact } from "../util/redact.ts";
-import { coordinationEnabled, coordinationEnv, coordinationStatus, prepareCodexHome, syncedBase, type CoordinationEnv } from "../coordination/mergeguard.ts";
+import { coordinationEnabled, coordinationEnv, coordinationStatus, prepareCodexHome, syncedBase, syncCheck, type CoordinationEnv } from "../coordination/mergeguard.ts";
 
 export interface RunOptions {
   mode: "live" | "offline";
@@ -388,7 +388,35 @@ async function coordinatedTurn(rs: RunStore, coord: CoordinationEnv | null, engi
   try {
     return await turn(home ? { configOverrides: [home.trustOverride, "features.hooks=true"], env: { ...coord.env, CODEX_HOME: home.home } } : { env: coord.env });
   } finally {
+    // Codex's sandbox protects linked-worktree Git metadata even when the
+    // parent .git directory is an additional writable directory. Perform the
+    // hook-requested fast-forward here, outside the agent's sandbox.
+    if (!engine.simulated) syncAfterTurn(rs, coord, worktree, repoPath);
     advanceBase(rs, coord, worktree, repoPath);
+  }
+}
+
+function syncAfterTurn(rs: RunStore, coord: CoordinationEnv, worktree: string, repoPath: string): void {
+  try {
+    if (headSha(worktree) !== rs.row.base_sha) return;
+    const sync = syncCheck(coord, worktree);
+    if (sync.main === sync.base) return;
+    const branch = coord.mainBranch;
+    const hadChanges = isDirty(worktree);
+    if (hadChanges) git(worktree, ["stash", "push", "-u", "-q", "-m", `intentos-sync-${rs.runId}`]);
+    try {
+      git(worktree, ["merge", "--ff-only", branch]);
+    } catch (error) {
+      if (hadChanges) git(worktree, ["stash", "pop", "-q"], { allowFail: true });
+      throw error;
+    }
+    if (hadChanges) {
+      const restored = git(worktree, ["stash", "pop", "-q"], { allowFail: true });
+      if (restored.status !== 0) rs.event("coordination.sync_conflict", { detail: restored.stderr.trim() });
+    }
+    rs.event("coordination.synced", { from: sync.base, to: sync.main, issues: sync.issues.map((issue) => issue.id) });
+  } catch (error) {
+    rs.event("coordination.sync_failed", { reason: (error as Error).message, repo: repoPath });
   }
 }
 

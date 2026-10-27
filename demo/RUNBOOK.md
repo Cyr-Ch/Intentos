@@ -5,7 +5,7 @@ rehearse. The exact run ids for the sentences below are in `~/intentos-demo/stat
 
 ## Before the session
 
-1. `demo/reset.sh`, then start Codex on the demo home: `INTENTOS_HOME=~/intentos-demo/home INTENTOS_CODEX_MODEL=gpt-6-astra codex`
+1. `demo/reset.sh`, then start Codex on the demo home: `INTENTOS_HOME=~/intentos-demo/home INTENTOS_CODEX_MODEL=gpt-6-luna codex`
    (the IntentOS plugin's server reads both from the environment; without the plugin, `demo/prepare.ts --register`
    registers an `intentos-demo` server instead).
 2. Laptop on power, `caffeinate -i` in a spare terminal, Codex credits checked, network checked.
@@ -27,7 +27,7 @@ shows "implementing in …", say `sentences.momentA_during`: "Merge PR #1, appro
 `add_weekdays2df`, a public API (the old definition is gone, a deprecated alias remains), so the gate asks for two
 humans; it lands and main moves. Keep polling `status` for
 the T12 run: the log shows the hook's note reaching the implementer (the symbol, the commit, the file and line, "first
-bring main into your branch"), the agent syncing, and verification ending green against the new main with
+bring main into your branch"), the runner syncing the worktree after the agent turn, and verification ending green against the new main with
 `coordination: up to date`. Then `sentences.momentA_after`: "Merge the T12 run, approval from Priya." Tier 1, merged
 result verified, main fast-forwarded.
 
@@ -58,6 +58,7 @@ the merged-result verification refuses it before main moves; here both checks we
 
 - `demo/reset.sh` restores everything, including the two prepared runs and the red clone. Restart Codex after it.
 - Moment A spends one live run per rehearsal (T12). Moments B and C spend nothing.
+- For a timed command-line rehearsal, use `demo/rehearse-moment-a.sh --model gpt-6-luna --delay 35` after reset. The 35-second merge reached the hook during the live run; stage timing can vary, so merge as soon as status says "implementing".
 - To rebuild from scratch (new prepared runs): `demo/reset.sh --destroy`, then `demo/prepare.ts` again.
 
 ## If something fails on stage
