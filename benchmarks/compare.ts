@@ -163,10 +163,9 @@ function pytestOn(repo: string, policy: Policy, targets: string[], label: string
 }
 
 /** The project suite from the policy, run in the clone's main checkout. */
-function projectSuite(repo: string, policy: Policy, label: string, outDir: string): { status: string; failed: string[] } {
+function projectSuite(repo: string, policy: Policy, label: string, outDir: string, python = repoInterpreter(repo)): { status: string; failed: string[] } {
   const cmd = policy.commands.pytest_project;
   if (!cmd?.argv) return { status: "none", failed: [] };
-  const python = repoInterpreter(repo);
   const junit = path.join(outDir, `${label}.project.junit.xml`);
   const argv = cmd.argv.map((a) => a.replace("{python}", python).replace("{snapshot}", repo).replace("{junit}", junit)).filter((a) => !a.includes("{hidden_tests_dir}"));
   const r = spawnSync(argv[0]!, argv.slice(1), { cwd: repo, encoding: "utf8", timeout: 900_000, env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" } });
@@ -284,7 +283,8 @@ function plainMerge(clone: string, policy: Policy, rs: RunStore, ticket: string,
   if (git(worktree, ["diff", "--cached", "--quiet"], { allowFail: true }).status !== 0) git(worktree, ["-c", "user.name=baseline", "-c", "user.email=baseline@localhost", "commit", "-q", "-m", `${ticket}: baseline run ${rs.runId}`]);
   if (headSha(worktree) === rs.row.base_sha) return { attempted: true, merged: false, how: "no changes", blocked_by: ["the run produced no changes"] };
   // CI: the branch's own project suite, run in the worktree.
-  const ci = projectSuite(worktree, policy, `${ticket}.baseline-ci`, outDir);
+  // The worktree is not an onboarded repository of its own: run its CI with the clone's interpreter.
+  const ci = projectSuite(worktree, policy, `${ticket}.baseline-ci`, outDir, repoInterpreter(clone));
   if (ci.status !== "pass") return { attempted: true, merged: false, how: "branch CI red", blocked_by: [`branch CI failed: ${ci.failed.slice(0, 5).join(", ")}`] };
   const merge = git(clone, ["-c", "user.name=baseline", "-c", "user.email=baseline@localhost", "merge", "--no-ff", "-m", `Merge ${branch}`, branch], { allowFail: true });
   if (merge.status !== 0) {

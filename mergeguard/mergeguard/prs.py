@@ -117,7 +117,8 @@ def _refresh(repo, pr: dict) -> dict:
         pr["head"] = remote_head
         pr["approvals"] = []
     pin_branch(repo, pr)
-    if (pr.get("ci") or {}).get("head") != pr["head"]:
+    # CI is cached per head; an "error" outcome is infrastructure, not a verdict on the code, so it is re-run.
+    if (pr.get("ci") or {}).get("head") != pr["head"] or (pr.get("ci") or {}).get("outcome") == "error":
         pr["ci"] = ci_result(repo, pr["head"])
     main = sha(repo, main_ref())
     base = merge_base(repo, pr["head"], main)

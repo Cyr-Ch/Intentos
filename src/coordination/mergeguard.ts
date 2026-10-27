@@ -22,6 +22,7 @@ import { resolvePaths, resolvePython } from "../config.ts";
 import { currentBranch, git, repoToplevel } from "../util/git.ts";
 import { ensureDir } from "../util/paths.ts";
 import { repoIdFor } from "../knowledge/indexer.ts";
+import { repoInterpreter } from "../knowledge/venv.ts";
 
 export interface CoordinationEnv {
   /** Environment variables that put mergeguard in local mode for this repository. */
@@ -106,7 +107,7 @@ export function coordinationEnv(repoPath: string, policy: Policy): CoordinationE
   if (!fs.existsSync(policyFile) || fs.readFileSync(policyFile, "utf8") !== rendered) fs.writeFileSync(policyFile, rendered);
   const python = resolvePython();
   return {
-    env: { MERGEGUARD_MAIN: mainBranch, MERGEGUARD_STATE_DIR: stateDir, MERGEGUARD_POLICY_FILE: policyFile, MERGEGUARD_FETCH_INTERVAL: process.env.INTENTOS_COORDINATION_FETCH_INTERVAL ?? "15", MERGEGUARD_PYTEST_ARGS: pytestArgsFor(policy) },
+    env: { MERGEGUARD_MAIN: mainBranch, MERGEGUARD_STATE_DIR: stateDir, MERGEGUARD_POLICY_FILE: policyFile, MERGEGUARD_FETCH_INTERVAL: process.env.INTENTOS_COORDINATION_FETCH_INTERVAL ?? "15", MERGEGUARD_PYTEST_ARGS: pytestArgsFor(policy), MERGEGUARD_PYTHON: repoInterpreter(repo) },
     mainBranch,
     stateDir,
     policyFile,
