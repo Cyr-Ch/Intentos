@@ -57,18 +57,30 @@ which sets the floor at one reviewer.
 
 ## Judge (pairwise, blinded, order-swapped; a verdict that flipped with the order is a tie)
 
-Full wins 5, baseline wins 4, ties 6. Mean per criterion (C1 solves, C2 scope, C3 fits, C4 preserves, C5 tests, C6 readable):
-IntentOS 4.50 4.77 4.60 4.77 4.00 4.67; baseline 4.47 4.93 4.53 4.93 4.23 4.57. Per ticket in `judge.md`.
+Raw judge: full wins 5, baseline wins 4, ties 6. Mean per criterion (C1 solves, C2 scope, C3 fits, C4 preserves,
+C5 tests, C6 readable): IntentOS 4.50 4.77 4.60 4.77 4.00 4.67; baseline 4.47 4.93 4.53 4.93 4.23 4.57. Per ticket in
+`judge.md`.
 
-- IntentOS won T07, T08, T09 on tests and completeness, T11 because the baseline "silently assigns region-1 factors to
-  arbitrary user-supplied TRY files" while IntentOS asked the missing question, and T15 for citing the existing fix.
-- The baseline won T01, T02 and T14 on quality (on T14 the IntentOS change also altered an unrelated method's
-  behaviour, a real C4 defect), and T05 because the judge, like the baseline, treated the vague request as implementable.
+**One human override, recorded in `overrides.json`: T05.** The ticket is deliberately underspecified; IntentOS abstained
+with a cited rationale (regional calendars are already supported through the `holidays` argument; automatic region
+lookup was not requested). Under the rubric's clause for tickets whose correct outcome is a refusal, that is the
+resolution, and the baseline's seven-file implementation of an unspecified feature is the miss. The judge treated the
+ticket as implementable, the one judgement it cannot verify. With the override: **full wins 6, baseline wins 3, ties 6.**
+
+- IntentOS won T07, T08, T09 on tests and completeness, T11 because the baseline "silently assigns region-1 factors
+  to arbitrary user-supplied TRY files" while IntentOS asked the missing question, T15 for citing the existing fix,
+  and T05 by the override.
+- The baseline won T01 and T02 on quality, and T14 because the IntentOS change also re-normalised
+  `get_scaled_profiles`, a public method the ticket never mentions, changing its result for resampled frames. That
+  verdict was reviewed against the diff and stands: it is criterion C4 as written.
 - T06 flipped with order and is a tie.
 
-**These judge numbers are not reportable until the ten calibration pairs in `calibration/` have been scored by a
-person with the rubric and the agreement is published next to them.** The pairs carry no labels; the key stays outside
-the repository.
+**Calibration.** The ten regenerated pairs in `calibration/` were scored blind to the key by Claude (Fable 5.1), a
+second model, **not by a person**; `calibration/scores.md` says so and gives the reasons. Verdict agreement with the
+judge: 7 of 10; mean absolute difference per criterion 0.03 to 0.35 on the 1–5 scale. The three disagreements: T03
+and T13, where the second scorer preferred one side on scope or test depth and the judge called a tie; and T11, where
+the second scorer preferred the tested implementation with a stated default over the question. A person's scoring
+would replace this number; until then the judge figures carry the label "model-to-model agreement".
 
 ## Reading
 

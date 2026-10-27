@@ -1,0 +1,285 @@
+{
+  "scorer": "Claude (Fable 5.1), blind to KEY.json; not a person",
+  "scored_at": "2026-10-27",
+  "pairs": [
+    {
+      "ticket": "T01",
+      "A_is": "full",
+      "my_verdict_arm": "baseline",
+      "judge_verdict": "baseline",
+      "agree": true,
+      "my_scores": {
+        "full": [
+          4,
+          4.5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          4.5,
+          5
+        ]
+      },
+      "deciding": "C1",
+      "reason": "B matches the ticket's inclusive window exactly and validates that both ends are given; A adds an unrequested rule that keeps am/pm stamps on the day factor even inside the break."
+    },
+    {
+      "ticket": "T02",
+      "A_is": "full",
+      "my_verdict_arm": "baseline",
+      "judge_verdict": "baseline",
+      "agree": true,
+      "my_scores": {
+        "full": [
+          5,
+          5,
+          5,
+          5,
+          4,
+          5
+        ],
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ]
+      },
+      "deciding": "C5",
+      "reason": "Same change; B's tests add 30-minute and daily steps, a leap year, shape preservation and a sub-year excerpt."
+    },
+    {
+      "ticket": "T03",
+      "A_is": "baseline",
+      "my_verdict_arm": "baseline",
+      "judge_verdict": "tie",
+      "agree": false,
+      "my_scores": {
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "full": [
+          5,
+          4.5,
+          4.5,
+          5,
+          5,
+          5
+        ]
+      },
+      "deciding": "C2",
+      "reason": "A is the one-line idiomatic fix (normalize) with a test that compares against the date form; B also edits two unrelated existing tests."
+    },
+    {
+      "ticket": "T04",
+      "A_is": "baseline",
+      "my_verdict_arm": "tie",
+      "judge_verdict": "tie",
+      "agree": true,
+      "my_scores": {
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "full": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ]
+      },
+      "deciding": "C1",
+      "reason": "Identical copy() fix; A's test proves mutating the result leaves the input alone, B's covers more calendars; neither is better."
+    },
+    {
+      "ticket": "T07",
+      "A_is": "full",
+      "my_verdict_arm": "full",
+      "judge_verdict": "full",
+      "agree": true,
+      "my_scores": {
+        "full": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          1,
+          5
+        ]
+      },
+      "deciding": "C5",
+      "reason": "Identical one-line fix; A adds the regression tests under warnings-as-errors, B adds none."
+    },
+    {
+      "ticket": "T09",
+      "A_is": "full",
+      "my_verdict_arm": "full",
+      "judge_verdict": "full",
+      "agree": true,
+      "my_scores": {
+        "full": [
+          5,
+          5,
+          4.5,
+          5,
+          5,
+          4.5
+        ],
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          4.5,
+          5
+        ]
+      },
+      "deciding": "C5",
+      "reason": "Both validate all three parameters; A rejects bool, float and string classes explicitly and tests them, B's messages are nicer and its test module is better placed."
+    },
+    {
+      "ticket": "T10",
+      "A_is": "baseline",
+      "my_verdict_arm": "tie",
+      "judge_verdict": "tie",
+      "agree": true,
+      "my_scores": {
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "full": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          4.5
+        ]
+      },
+      "deciding": "C5",
+      "reason": "Identical check; A documents it and tests the constructor path, B tests the load curves after adding; parity."
+    },
+    {
+      "ticket": "T11",
+      "A_is": "baseline",
+      "my_verdict_arm": "baseline",
+      "judge_verdict": "full",
+      "agree": false,
+      "my_scores": {
+        "baseline": [
+          4,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "full": [
+          4,
+          5,
+          3,
+          5,
+          1,
+          5
+        ]
+      },
+      "deciding": "C5",
+      "reason": "A implements the path with a documented default for the energy factors and tests it; B's question about those factors is the right question, but the ticket was answerable with a stated assumption and B ships no tests."
+    },
+    {
+      "ticket": "T13",
+      "A_is": "full",
+      "my_verdict_arm": "full",
+      "judge_verdict": "tie",
+      "agree": false,
+      "my_scores": {
+        "full": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          4.5
+        ],
+        "baseline": [
+          5,
+          5,
+          5,
+          5,
+          4.5,
+          5
+        ]
+      },
+      "deciding": "C5",
+      "reason": "Same guard; A's positive-demand test pins the exact expected series at two resolutions, B's checks proportionality only."
+    },
+    {
+      "ticket": "T14",
+      "A_is": "full",
+      "my_verdict_arm": "baseline",
+      "judge_verdict": "baseline",
+      "agree": true,
+      "my_scores": {
+        "full": [
+          5,
+          4,
+          4.5,
+          2,
+          5,
+          5
+        ],
+        "baseline": [
+          5,
+          5,
+          4.5,
+          5,
+          5,
+          4.5
+        ]
+      },
+      "deciding": "C4",
+      "reason": "A re-normalises inside get_scaled_profiles, changing that public method's result for resampled frames; B confines the change to the power profiles the ticket names."
+    }
+  ],
+  "agreement": "7/10",
+  "mean_abs_diff_per_criterion": {
+    "C1": 0.2,
+    "C2": 0.12,
+    "C3": 0.35,
+    "C4": 0.03,
+    "C5": 0.15,
+    "C6": 0.15
+  }
+}
