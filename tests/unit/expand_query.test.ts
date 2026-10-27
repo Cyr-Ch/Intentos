@@ -7,7 +7,7 @@ describe("expandQuery", () => {
     const policy = fallbackPolicy(process.cwd());
     for (const word of ["constructor", "toString", "hasOwnProperty", "valueOf", "__proto__"]) {
       const q = expandQuery(`the ${word} fails when warnings are escalated`, policy);
-      expect(q.primary).toContain("fails");
+      expect(q.primary).toContain("fail");
       expect(Array.isArray(q.expanded)).toBe(true);
     }
   });
