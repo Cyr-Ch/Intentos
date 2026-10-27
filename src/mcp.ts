@@ -19,6 +19,11 @@ import { autoApprove, autoApprover, decide, defaultReviewer, finishReview, loadR
 import type { Candidate } from "./suggest.ts";
 import { describeAuthor, ingestProposals, loadMined, minedRows, SKILL_NAME, skillText, type Author } from "./propose.ts";
 import { mineWithModel, resolveMiningModel } from "./mine.ts";
+import { createRun, executeRun, type RunOptions } from "./orchestrator/runner.ts";
+import { RunStore } from "./orchestrator/store.ts";
+import type { VerificationResult } from "./verification/results.ts";
+import { guardRepo, mergeNumberedPr, mergeRun, type MergeOutcome } from "./coordination/merge.ts";
+import { coordinationStatus } from "./coordination/mergeguard.ts";
 import type { CodingEngine } from "./codex/adapter.ts";
 import { nowIso } from "./util/ids.ts";
 import crypto from "node:crypto";
@@ -51,7 +56,7 @@ import crypto from "node:crypto";
 
 const SERVER_INSTRUCTIONS = [
   "IntentOS keeps a repository's business rules as an approved policy (invariants, architecture rules, decisions) backed by hidden tests, and gives you an evidence pack before you plan a change. Always pass absolute repository paths.",
-  `Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) Mine the business rules, one of two ways. (a) The independent miner: call mine with a model other than yourself, when the user asks for an independent, second or unbiased opinion, names a model, or when status says INTENTOS_MINING_MODEL is set; it runs the ${SKILL_NAME} skill in a separate read-only Codex thread with that model, checks and tests the result like propose, sends rejections back once, and writes the review list in the background: poll status until phase is "done". The review list then records that model as its author; do not resubmit its candidates with propose (that would record you as the author) and do not rewrite its tests: IntentOS already ran them. (b) Yourself: follow the skill (call mining_guide if it is not installed in this host): read the tests, the git history, the documents and the structure; state each rule with evidence; pick an existing test or write one that proves it; submit the list with propose. mined gives the deterministic miner's raw list as a starting point. IntentOS checks every reference and runs every test; fix the rejected ones and call propose again with append=true. (4) After mine, IntentOS has already written the accepted rules into the policy file and the hidden tests (approved_by auto:<model>); status reports how many and the file. Tell the user that the rules were created, where the file is, and that any rule can be edited or removed there; do not review them yourself. Only when the user asks to review candidates one by one (or called mine with review=true): review_start. If its result says ui=widget, the reviewer works inside the inline widget: do not call review_next (it would show the same candidate again as a form); wait for the reviewer to say they are done. If it says ui=link, give the reviewer the link. Otherwise call review_next repeatedly: each call shows the reviewer one candidate through this host's own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never submit a candidate without evidence from the repository. (5) review_close when no candidates remain, or when the reviewer says they are done and the widget did not finish.`,
+  `Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) Mine the business rules, one of two ways. (a) The independent miner: call mine with a model other than yourself, when the user asks for an independent, second or unbiased opinion, names a model, or when status says INTENTOS_MINING_MODEL is set; it runs the ${SKILL_NAME} skill in a separate read-only Codex thread with that model, checks and tests the result like propose, sends rejections back once, and writes the review list in the background: poll status until phase is "done". The review list then records that model as its author; do not resubmit its candidates with propose (that would record you as the author) and do not rewrite its tests: IntentOS already ran them. (b) Yourself: follow the skill (call mining_guide if it is not installed in this host): read the tests, the git history, the documents and the structure; state each rule with evidence; pick an existing test or write one that proves it; submit the list with propose. mined gives the deterministic miner's raw list as a starting point. IntentOS checks every reference and runs every test; fix the rejected ones and call propose again with append=true. (4) After mine, IntentOS has already written the accepted rules into the policy file and the hidden tests (approved_by auto:<model>); status reports how many and the file. Tell the user that the rules were created, where the file is, and that any rule can be edited or removed there; do not review them yourself. Only when the user asks to review candidates one by one (or called mine with review=true): review_start. If its result says ui=widget, the reviewer works inside the inline widget: do not call review_next (it would show the same candidate again as a form); wait for the reviewer to say they are done. If it says ui=link, give the reviewer the link. Otherwise call review_next repeatedly: each call shows the reviewer one candidate through this host's own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never submit a candidate without evidence from the repository. (5) review_close when no candidates remain, or when the reviewer says they are done and the widget did not finish. (6) Implementing a ticket under IntentOS: call run with the ticket text (and task_id when the user names a benchmark ticket id) on an indexed repository; it starts the pipeline in the background (evidence pack, planner, compiled contract, a separate implementer thread in a git worktree with coordination hooks, independent verification with hidden tests, bounded repairs): poll status about every 20 seconds until phase is "done", then report job.result.run to the user: the state, the verification (acceptance tests, invariants, architecture, scope, coordination, findings) and the report path. Never claim success the verifier did not record. (7) Merging: only when the user asks, call merge with the run_id (or pr for a PR the guardian opened) and the approver names the user gives you; never invent approvers, never approve on their behalf. It opens a PR with a review tier, runs the branch's CI and the sync check against main, verifies the branch merged onto current main with the hidden tests, and fast-forwards main only when everything holds; poll status until done and report job.result.merge, including why a merge was refused. (8) When main is red, call guard: it reruns, bisects to the culprit merge, finds its partner and opens a validated undo PR; report job.result.guard. runs lists this repository's runs.`,
   "Before planning or implementing a change: explain for the evidence pack, policy for the approved rules. explain also lists precedents, resolved tickets and the pull requests that solved them, linked to the code they changed; when the task is of the same kind and the precedent is current, follow its location and pattern. Load them once per repository with precedents (owner/name of the issue tracker; pulls=owner/name when the pull requests live upstream).",
 ].join("\n");
 
@@ -177,18 +182,18 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
   // ---- Background jobs: onboarding (the CLI in a child process) and the independent miner (a Codex side thread); the model polls status.
   interface Job {
     id: string;
-    kind: "onboard" | "mine";
+    kind: "onboard" | "mine" | "run" | "merge" | "guard";
     repo: string;
-    phase: "onboarding" | "mining" | "classifying" | "checking" | "done" | "failed";
+    phase: "onboarding" | "mining" | "classifying" | "checking" | "running" | "merging" | "guarding" | "done" | "failed";
     started_at: string;
     finished_at: string | null;
     log: string[];
-    result: { policy_id: string | null; policy_file: string | null; suite: string | null; index: string | null; candidates: number | null; kept: number | null; filtered: number | null; note: string | null; model: string | null; accepted: number | null; rejected: number | null; rounds: number | null; approved?: number | null; without_test?: number | null };
+    result: { policy_id: string | null; policy_file: string | null; suite: string | null; index: string | null; candidates: number | null; kept: number | null; filtered: number | null; note: string | null; model: string | null; accepted: number | null; rejected: number | null; rounds: number | null; approved?: number | null; without_test?: number | null; run?: Record<string, unknown>; merge?: Record<string, unknown>; guard?: Record<string, unknown> };
     error: string | null;
   }
   const jobs = new Map<string, Job>();
   const running = (j: Job | undefined): j is Job => !!j && j.phase !== "done" && j.phase !== "failed";
-  const kindOf = (j: Job): string => (j.kind === "mine" ? "mining" : "onboarding");
+  const kindOf = (j: Job): string => ({ mine: "mining", onboard: "onboarding", run: "a run", merge: "a merge", guard: "the guardian" })[j.kind];
   const newJob = (kind: Job["kind"], repo: string, phase: Job["phase"]): Job => ({ id: crypto.randomBytes(4).toString("hex"), kind, repo, phase, started_at: nowIso(), finished_at: null, log: [], result: { policy_id: null, policy_file: null, suite: null, index: null, candidates: null, kept: null, filtered: null, note: null, model: null, accepted: null, rejected: null, rounds: null }, error: null });
   const push = (job: Job, line: string) => {
     job.log.push(line);
@@ -248,6 +253,62 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       job.finished_at = nowIso();
     }
   };
+  const summarizeVerification = (rs: RunStore) => {
+    const v = rs.readJson<VerificationResult>("verification");
+    if (!v) return null;
+    const cmd = v.commands.find((c) => c.command_id === "pytest_hidden_task");
+    return { status: v.status, attempt: v.attempt, blocking: v.findings.filter((f) => f.severity === "blocking").length, review: v.findings.filter((f) => f.severity === "review").length, acceptance: cmd ? (cmd.status === "passed" && (cmd.tests_passed ?? 0) > 0 ? "pass" : "fail") : "none bound", invariants: v.tracks.business_invariant?.status ?? "not_run", architecture: v.tracks.architecture?.status ?? "not_run", scope: v.tracks.scope?.status ?? "not_run", coordination: v.coordination ? (v.coordination.stale ? "stale" : "up to date") : "off", findings: v.findings.filter((f) => f.severity !== "info").slice(0, 8).map((f) => `${f.severity} ${f.rule_id ?? f.id}: ${f.message.slice(0, 140)}`) };
+  };
+  /** A ticket through the pipeline: contract, implementer thread, verifier. The host narrates; status carries the log. */
+  const runRunJob = async (job: Job, a: { task: string; task_id?: string; require_approval?: boolean; offline_patch?: string }): Promise<void> => {
+    try {
+      job.phase = "running";
+      const indexed = loadIndexedRepo(opts.store, job.repo);
+      const runOpts: RunOptions = { mode: a.offline_patch ? "offline" : "live", taskId: a.task_id ?? null, requireApproval: a.require_approval ?? false, log: (l) => push(job, l), ...(a.offline_patch ? { offline: { route: "implement", patchFile: path.resolve(a.offline_patch), claimSuccess: false, fabricateEvidence: false, repairPatchFile: null } as never } : {}) };
+      const rs = createRun(opts.store, indexed, a.task, runOpts);
+      job.result.run = { run_id: rs.runId, state: rs.state, run_dir: rs.runDir };
+      const outcome = await executeRun(opts.store, rs, runOpts);
+      job.result.run = { run_id: rs.runId, state: outcome.state, reason: outcome.reason, run_dir: rs.runDir, worktree: rs.row.worktree_path, report: rs.path("reportMd"), verification: summarizeVerification(rs), contract: rs.row.contract_json ? JSON.parse(rs.row.contract_json) : null };
+      job.phase = "done";
+      log(`run ${job.repo}: job ${job.id} done (${rs.runId}: ${outcome.state})`);
+    } catch (e) {
+      job.phase = "failed";
+      job.error = (e as Error).message;
+      log(`run ${job.repo}: job ${job.id} failed: ${job.error}`);
+    } finally {
+      job.finished_at = nowIso();
+    }
+  };
+  const runMergeJob = async (job: Job, a: { run_id?: string; pr?: number; approve: string[]; by?: string }): Promise<void> => {
+    try {
+      job.phase = "merging";
+      const out: MergeOutcome = a.run_id ? mergeRun(opts.store, a.run_id, { approve: a.approve, by: a.by ?? null, log: (l) => push(job, l) }) : mergeNumberedPr(opts.store, job.repo, a.pr!, { approve: a.approve, by: a.by ?? null, log: (l) => push(job, l) });
+      job.result.merge = { merged: out.merged, pr: out.pr.number, branch: out.branch, tier: out.pr.decision.tier, approvals_needed: out.pr.decision.required_approvals, approvals: out.pr.approvals.map((x) => x.user), reasons: out.pr.decision.reasons, proofs: out.pr.decision.proofs, ci: out.pr.ci?.outcome ?? null, sync_clean: out.pr.sync?.clean ?? null, blocked_by: out.blocked_by, merged_verification: out.merged_verification ? { status: out.merged_verification.status, blocking: out.merged_verification.blocking, review: out.merged_verification.review } : null, merged_tests: out.pr.merge_check ? `${out.pr.merge_check.outcome}: ${out.pr.merge_check.summary}` : null, merge_commit: out.merge_commit, main_branch: out.main_branch, reindexed: out.reindexed };
+      job.phase = "done";
+      log(`merge ${job.repo}: job ${job.id} done (PR #${out.pr.number}: ${out.merged ? `merged as ${out.merge_commit?.slice(0, 10)}` : `refused: ${out.blocked_by[0] ?? ""}`})`);
+    } catch (e) {
+      job.phase = "failed";
+      job.error = (e as Error).message;
+      log(`merge ${job.repo}: job ${job.id} failed: ${job.error}`);
+    } finally {
+      job.finished_at = nowIso();
+    }
+  };
+  const runGuardJob = async (job: Job, a: { good?: string; undo?: boolean }): Promise<void> => {
+    try {
+      job.phase = "guarding";
+      const out = guardRepo(opts.store, job.repo, { good: a.good ?? null, undo: a.undo ?? true, log: (l) => push(job, l) });
+      job.result.guard = { status: out.guardian.status, message: out.guardian.message ?? null, culprit_pr: out.guardian.pr ?? null, partner_pr: out.guardian.partner_pr ?? null, undo_pr: out.undo_pr, main: out.main, good: out.good, floors: out.breaker.folders ?? {} };
+      job.phase = "done";
+      log(`guard ${job.repo}: job ${job.id} done (${out.guardian.status}${out.undo_pr !== null ? `, undo PR #${out.undo_pr}` : ""})`);
+    } catch (e) {
+      job.phase = "failed";
+      job.error = (e as Error).message;
+      log(`guard ${job.repo}: job ${job.id} failed: ${job.error}`);
+    } finally {
+      job.finished_at = nowIso();
+    }
+  };
   const inspect = (repoInput: string, policyIdOverride?: string, policyFileOverride?: string, outDirOverride?: string) => {
     const repo = path.resolve(repoInput);
     if (!fs.existsSync(repo) || !isGitRepo(repo)) throw new Error(`${repo} is not a Git repository`);
@@ -281,8 +342,15 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     const failed = job && job.phase === "failed" ? job : null;
     const miningModel = resolveMiningModel();
     const mineHint = miningModel ? `call mine (INTENTOS_MINING_MODEL=${miningModel} is set: a model other than you does the mining)` : "call mine with model=<slug> for the independent miner (a model other than you)";
+    const finishedWork = job && job.phase === "done" && (job.kind === "run" || job.kind === "merge" || job.kind === "guard") ? job : null;
     const next = running(job)
       ? `${kindOf(job)} in progress (${job.phase}); call status again in about 20 seconds`
+      : finishedWork
+        ? finishedWork.kind === "run"
+          ? `run ${String((finishedWork.result.run as { run_id?: string })?.run_id ?? "")} ended ${String((finishedWork.result.run as { state?: string })?.state ?? "")}: report the verification to the user (job.result.run.verification); if it is REVIEW_READY or HUMAN_REVIEW and the user wants it merged, call merge with run_id and the approver names the user gives you`
+          : finishedWork.kind === "merge"
+            ? `merge finished: ${(finishedWork.result.merge as { merged?: boolean })?.merged ? "merged; the repository's main moved and was re-indexed" : "refused; report job.result.merge.blocked_by to the user; a new head needs new approvals"}`
+            : `guardian finished: ${String((finishedWork.result.guard as { status?: string })?.status ?? "")}; report job.result.guard; an undo PR merges with merge(pr=<n>) and the approver names the user gives`
       : failed
         ? `${kindOf(failed)} failed: ${failed.error}; fix the cause and call ${failed.kind} again${failed.kind === "onboard" ? " (force=true if the draft policy was already written)" : ""}`
         : !policyExists
@@ -347,6 +415,115 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         log(`onboard ${repo}: job ${job.id} started (classify=${classify}, install=${a.install ?? true}, run_tests=${a.run_tests ?? true}, force=${a.force ?? false})`);
         void runJob(job, { policy_id: a.policy_id, policy_file: a.policy_file, classify, install: a.install ?? true, run_tests: a.run_tests ?? true, force: a.force ?? false });
         return text(`Onboarding started for ${repo} (job ${job.id}): venv and dependencies, draft policy ${policyFile}, one run of the suite, index, raw candidate mining${classify ? ", classification by Codex" : ""}. This takes a few minutes. Call status with repo=${repo} about every 20 seconds until phase is "done", then follow the ${SKILL_NAME} skill (mined, propose) and call review_start.`, { job_id: job.id, phase: job.phase, repo, policy_id: policyId, policy_file: policyFile });
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
+  // ---- Implementing, merging and guarding from the host: background jobs, polled through status.
+  server.registerTool(
+    "run",
+    {
+      description: 'Implement a ticket under IntentOS, in the background: evidence pack, planner, compiled contract, a separate implementer thread in an isolated git worktree with mergeguard coordination hooks, independent verification (hidden acceptance tests when task_id binds them, invariants, architecture rules, scope), bounded repairs. Returns at once with a job id; poll status until phase is "done" and report job.result.run. The run may also end in CLARIFICATION_REQUIRED or ABSTAINED with its rationale.',
+      inputSchema: z.object({
+        repo: z.string().describe("absolute path of the indexed repository root"),
+        task: z.string().min(8).describe("the ticket text, as the user gave it"),
+        task_id: z.string().optional().describe("benchmark ticket id (binds its hidden acceptance tests), e.g. T03"),
+        require_approval: z.boolean().optional().describe("pause after the contract for a human approval (default false)"),
+        offline_patch: z.string().optional().describe("evaluation only: replay a recorded patch instead of calling Codex"),
+      }),
+    },
+    async (a) => {
+      try {
+        const repo = path.resolve(a.repo);
+        if (!fs.existsSync(repo) || !isGitRepo(repo)) return fail(`${repo} is not a Git repository`);
+        const current = jobs.get(repo);
+        if (running(current)) return text(`${kindOf(current)} of ${repo} is already running (job ${current.id}, phase ${current.phase}); call status until it is done`, { job_id: current.id, phase: current.phase, repo });
+        try {
+          loadIndexedRepo(opts.store, repo);
+        } catch (e) {
+          return fail((e as Error).message);
+        }
+        const job = newJob("run", repo, "running");
+        jobs.set(repo, job);
+        log(`run ${repo}: job ${job.id} started (task_id=${a.task_id ?? "none"}, offline=${!!a.offline_patch})`);
+        void runRunJob(job, a);
+        return text(`Run started for ${repo} (job ${job.id}): evidence pack, planner, contract, implementer in a worktree${coordinationStatus().ok ? " with coordination hooks" : ""}, verification. This takes a few minutes. Call status with repo=${repo} about every 20 seconds until phase is "done", then report job.result.run (state, verification, report path) to the user.`, { job_id: job.id, phase: job.phase, repo, task_id: a.task_id ?? null });
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
+  server.registerTool(
+    "runs",
+    {
+      description: "This repository's IntentOS runs, newest first: id, state, task, worktree. Use it to find the run_id to merge or to report on.",
+      inputSchema: z.object({ repo: z.string().describe("absolute path of the repository root"), limit: z.number().int().positive().optional() }),
+    },
+    async ({ repo, limit }) => {
+      try {
+        const rows = opts.store.listRuns(repoIdFor(path.resolve(repo))).slice(0, limit ?? 20);
+        const items = rows.map((r) => ({ run_id: r.id, state: r.state, mode: r.mode, task: (JSON.parse(r.task_json) as { task: string }).task.slice(0, 120), base: r.base_sha.slice(0, 10), worktree: r.worktree_path, started_at: r.started_at, merge: r.result_json ? ((JSON.parse(r.result_json) as { merge?: unknown }).merge ?? null) : null }));
+        return text(items.length ? items.map((i) => `${i.run_id}  ${i.state.padEnd(22)} ${i.started_at}  ${i.task}${i.merge && (i.merge as { merged?: boolean }).merged ? "  [merged]" : ""}`).join("\n") : "no runs for this repository", { runs: items });
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
+  server.registerTool(
+    "merge",
+    {
+      description: 'Merge a verified run (REVIEW_READY or HUMAN_REVIEW) into the repository\'s main through mergeguard, in the background: branch, PR with a review tier (0, 1 or 2 humans; at least 1 when IntentOS asked for a human), head-bound approvals, the branch\'s CI, the sync check against main, the branch merged onto the main of right now verified with the hidden tests, mergeguard\'s merged-tree test run, fast-forward of main, re-index. With pr instead of run_id, merges a PR the guardian opened. Only on the user\'s request, with approver names the user gives. Poll status until done and report job.result.merge.',
+      inputSchema: z.object({
+        repo: z.string().describe("absolute path of the repository root"),
+        run_id: z.string().optional().describe("the run to merge"),
+        pr: z.number().int().positive().optional().describe("a mergeguard PR number (an undo PR) instead of a run"),
+        approve: z.array(z.string()).optional().describe("human approvals to record on the current head, names the user gave; the author and bots never count"),
+        by: z.string().optional().describe("who asked for the merge (recorded as the PR's prompter, never a reviewer)"),
+      }),
+    },
+    async (a) => {
+      try {
+        const repo = path.resolve(a.repo);
+        if (!fs.existsSync(repo) || !isGitRepo(repo)) return fail(`${repo} is not a Git repository`);
+        if (!a.run_id && !a.pr) return fail("give run_id (a run to merge) or pr (a PR number)");
+        const status = coordinationStatus();
+        if (!status.ok) return fail(`coordination is unavailable: ${status.reason}`);
+        const current = jobs.get(repo);
+        if (running(current)) return text(`${kindOf(current)} of ${repo} is already running (job ${current.id}, phase ${current.phase}); call status until it is done`, { job_id: current.id, phase: current.phase, repo });
+        const job = newJob("merge", repo, "merging");
+        jobs.set(repo, job);
+        log(`merge ${repo}: job ${job.id} started (${a.run_id ? `run ${a.run_id}` : `PR #${a.pr}`}, approvals=${(a.approve ?? []).join(",") || "none"})`);
+        void runMergeJob(job, { run_id: a.run_id, pr: a.pr, approve: a.approve ?? [], by: a.by });
+        return text(`Merge started for ${a.run_id ? `run ${a.run_id}` : `PR #${a.pr}`} (job ${job.id}): PR and review tier, branch CI, sync check against main, merged-result verification, mergeguard's merged-tree tests, then main. Call status with repo=${repo} every 20 seconds until phase is "done" and report job.result.merge, merged or refused and why.`, { job_id: job.id, phase: job.phase, repo });
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
+  server.registerTool(
+    "guard",
+    {
+      description: "When the repository's main is red: rerun the failing tests to rule out flaky ones, bisect first-parent over the merges to the culprit, check whether it fails alone, find the partner merge it clashed with, open a validated undo PR, and report the breaker's review floors. Background; poll status until done and report job.result.guard.",
+      inputSchema: z.object({ repo: z.string().describe("absolute path of the repository root"), good: z.string().optional().describe("a known-good commit on main (default: the parent of the first merge in the ledger)"), undo: z.boolean().optional().describe("open the undo PR (default true)") }),
+    },
+    async (a) => {
+      try {
+        const repo = path.resolve(a.repo);
+        if (!fs.existsSync(repo) || !isGitRepo(repo)) return fail(`${repo} is not a Git repository`);
+        const status = coordinationStatus();
+        if (!status.ok) return fail(`coordination is unavailable: ${status.reason}`);
+        const current = jobs.get(repo);
+        if (running(current)) return text(`${kindOf(current)} of ${repo} is already running (job ${current.id}, phase ${current.phase}); call status until it is done`, { job_id: current.id, phase: current.phase, repo });
+        const job = newJob("guard", repo, "guarding");
+        jobs.set(repo, job);
+        log(`guard ${repo}: job ${job.id} started`);
+        void runGuardJob(job, { good: a.good, undo: a.undo });
+        return text(`Guardian started for ${repo} (job ${job.id}). Call status every 20 seconds until phase is "done" and report job.result.guard.`, { job_id: job.id, phase: job.phase, repo });
       } catch (e) {
         return fail((e as Error).message);
       }

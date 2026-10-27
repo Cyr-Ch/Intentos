@@ -88,6 +88,14 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 
 **Stubbed / not started:** M6 GitHub App, tenant isolation, hosted runners. Embedding-based retrieval. Plots.
 
+## run, runs, merge and guard as MCP tools (2026-10-27)
+A Codex session can now implement a ticket (`run`, background job polled through `status`, reports state and the
+verification summary), list runs (`runs`), merge a verified run or a guardian's undo PR through mergeguard with the
+user's approver names (`merge`), and investigate a red main (`guard`). The server instructions (steps 6–8) tell the host
+to report only what the verifier recorded, to merge only on request, and never to invent approvers. Observed:
+`tests/integration/mcp_run.test.ts` (offline run of task A → REVIEW_READY with acceptance pass → merge with one
+approval, tier 1, merged-result verification passed, main fast-forwarded and re-indexed → guardian "healthy").
+
 ## Acceptance tests by a side model, and policies without a review step (2026-10-27)
 `src/acceptance.ts` / `intentos acceptance`: a model other than the implementer writes a ticket's acceptance tests in a
 read-only side thread (structured output); IntentOS runs them at the current revision with the repository's venv

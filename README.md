@@ -214,6 +214,15 @@ review-only `PRECEDENT-FOLLOWED` (info) or `PRECEDENT-DIVERGENCE` (review) signa
 lands where the similar ticket was solved. None of this blocks a run or changes policy; an invariant or rule
 always wins. From an MCP host the same happens through the `precedents` tool followed by `explain`.
 
+## Implementing, merging and guarding from inside Codex
+
+The MCP server also carries the pipeline, so a Codex session drives the whole flow: `run` implements a ticket in the
+background (evidence pack, planner, contract, a separate implementer thread in a worktree with coordination hooks,
+independent verification) and `status` reports the verification; `merge` takes a verified run through mergeguard with
+the approver names the user gives, never invented by the model; `guard` investigates a red main and opens the undo PR;
+`runs` lists the repository's runs. The server's instructions tell the host to report what the verifier recorded and
+to merge only on the user's request. `tests/integration/mcp_run.test.ts` walks run → status → merge → guard offline.
+
 ## Acceptance tests by another model, before implementation
 
 A ticket's acceptance tests are the oracle for "was it solved"; the implementer's own contract cannot be that oracle.
