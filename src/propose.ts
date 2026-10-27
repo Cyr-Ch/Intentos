@@ -20,14 +20,18 @@ import { isGitRepo } from "./util/git.ts";
  */
 
 export const SKILL_NAME = "intentos-policy-mining";
-export const skillDir = (): string => path.join(PROJECT_ROOT, "skills", SKILL_NAME);
-export const skillText = (): string => fs.readFileSync(path.join(skillDir(), "SKILL.md"), "utf8");
+export const SETUP_SKILL_NAME = "intentos-setup";
+/** Skills shipped with IntentOS: mining the rules (followed by the host), and setting IntentOS up for a repository. */
+export const SKILL_NAMES = [SKILL_NAME, SETUP_SKILL_NAME] as const;
+export const skillDir = (name: string = SKILL_NAME): string => path.join(PROJECT_ROOT, "skills", name);
+export const skillText = (name: string = SKILL_NAME): string => fs.readFileSync(path.join(skillDir(name), "SKILL.md"), "utf8");
 
 /** Symlink the skill into a Codex skills directory (default `~/.agents/skills`, scanned by Codex for every project). */
-export function installSkill(opts: { dir?: string; force?: boolean } = {}): { link: string; target: string; created: boolean } {
+export function installSkill(opts: { dir?: string; force?: boolean; name?: string } = {}): { link: string; target: string; created: boolean; name: string } {
+  const name = opts.name ?? SKILL_NAME;
   const dir = path.resolve(opts.dir ?? path.join(os.homedir(), ".agents", "skills"));
-  const link = path.join(dir, SKILL_NAME);
-  const target = skillDir();
+  const link = path.join(dir, name);
+  const target = skillDir(name);
   fs.mkdirSync(dir, { recursive: true });
   let st: fs.Stats | null = null;
   try {
@@ -37,7 +41,7 @@ export function installSkill(opts: { dir?: string; force?: boolean } = {}): { li
   }
   if (st) {
     if (st.isSymbolicLink()) {
-      if (path.resolve(path.dirname(link), fs.readlinkSync(link)) === target) return { link, target, created: false };
+      if (path.resolve(path.dirname(link), fs.readlinkSync(link)) === target) return { link, target, created: false, name };
       fs.unlinkSync(link);
     } else if (opts.force) {
       fs.rmSync(link, { recursive: true, force: true });
@@ -46,7 +50,7 @@ export function installSkill(opts: { dir?: string; force?: boolean } = {}): { li
     }
   }
   fs.symlinkSync(target, link, "dir");
-  return { link, target, created: true };
+  return { link, target, created: true, name };
 }
 
 export const EVIDENCE_TYPES = ["test", "commit", "doc", "adr", "changelog", "import", "history"] as const;

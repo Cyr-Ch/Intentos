@@ -88,6 +88,13 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 
 **Stubbed / not started:** M6 GitHub App, tenant isolation, hosted runners. Embedding-based retrieval. Plots.
 
+## intentos-setup skill (2026-10-27)
+`skills/intentos-setup/SKILL.md`: a Codex skill that sets IntentOS up for a repository with checks at each step
+(installation and `coordination`, `codex mcp add` from `mcp --print-codex-config`, `onboard` with the suite result at
+base reported, `mine` with a model other than the session's and the rules written into the policy, optional
+precedents, `explain` to confirm a first run can start), asking the user only for the checkout path, the repository,
+the mining model and optional GitHub history. `intentos skill install` now installs both skills (`--name` for one).
+
 ## run, runs, merge and guard as MCP tools (2026-10-27)
 A Codex session can now implement a ticket (`run`, background job polled through `status`, reports state and the
 verification summary), list runs (`runs`), merge a verified run or a guardian's undo PR through mergeguard with the

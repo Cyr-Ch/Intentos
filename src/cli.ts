@@ -15,7 +15,7 @@ import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./sugge
 import { autoApprove, autoApprover, defaultReviewer, loadReviewState, startReviewServer, type AutoApproveResult } from "./review.ts";
 import { expectationFor, loadTicketFile, writeAcceptanceTests, type AcceptanceResult } from "./acceptance.ts";
 import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
-import { ingestProposals, installSkill, SKILL_NAME, skillText } from "./propose.ts";
+import { ingestProposals, installSkill, SETUP_SKILL_NAME, SKILL_NAME, SKILL_NAMES, skillText } from "./propose.ts";
 import { mineWithModel, ReplayEngine } from "./mine.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 import { currentName, precedentsFile, syncPrecedents, writePrecedentsFile, type PrecedentAttributes } from "./knowledge/precedents.ts";
@@ -450,19 +450,22 @@ program
 const skill = program.command("skill").description(`The ${SKILL_NAME} skill: how Codex mines a repository's business rules into IntentOS candidates`);
 skill
   .command("install")
-  .description("symlink the skill into a Codex skills directory (default ~/.agents/skills, scanned by Codex for every project)")
+  .description("symlink the IntentOS skills (intentos-policy-mining, intentos-setup) into a Codex skills directory (default ~/.agents/skills, scanned by Codex for every project)")
   .option("--dir <dir>", "skills directory")
   .option("--force", "replace a non-symlink entry of the same name", false)
-  .action((opts: { dir?: string; force: boolean }) => {
+  .option("--name <skill>", "install only this skill")
+  .action((opts: { dir?: string; force: boolean; name?: string }) => {
     try {
-      const r = installSkill({ dir: opts.dir, force: opts.force });
-      console.log(`${r.created ? "installed" : "already installed"}: ${r.link} -> ${r.target}`);
-      console.log(`Codex picks it up on its next start; $${SKILL_NAME} invokes it explicitly.`);
+      for (const name of opts.name ? [opts.name] : SKILL_NAMES) {
+        const r = installSkill({ dir: opts.dir, force: opts.force, name });
+        console.log(`${r.created ? "installed" : "already installed"}: ${r.link} -> ${r.target}`);
+      }
+      console.log(`Codex picks them up on its next start; $${SKILL_NAME} mines the rules, $${SETUP_SKILL_NAME} sets IntentOS up for a repository.`);
     } catch (err) {
       fail((err as Error).message);
     }
   });
-skill.command("show").description("print the skill text").action(() => console.log(skillText()));
+skill.command("show").description("print a skill's text").option("--name <skill>", "which skill (default intentos-policy-mining)").action((opts: { name?: string }) => console.log(skillText(opts.name)));
 
 const fixture = program.command("fixture").description("Manage the demonstration fixture repository");
 fixture
