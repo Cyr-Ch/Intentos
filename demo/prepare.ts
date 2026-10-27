@@ -110,27 +110,43 @@ function projectSuite(repo: string): { status: string; failed: string[] } {
   return { status: r.status === 0 ? "pass" : "fail", failed };
 }
 
+type Prepared = { runId: string; state: string; worktree: string | null };
+const OK = (r: Prepared | undefined): r is Prepared => !!r && ["REVIEW_READY", "HUMAN_REVIEW"].includes(r.state);
+
 async function main() {
-  if (fs.existsSync(root)) throw new Error(`${root} exists; run demo/reset.sh --destroy to rebuild, or demo/reset.sh to restore the snapshot`);
+  const resume = argv.includes("--resume");
+  const stateFile = path.join(root, "state.json");
+  if (fs.existsSync(root) && !resume) throw new Error(`${root} exists; pass --resume to redo only what failed (a usage limit, say), run demo/reset.sh to restore the snapshot, or demo/reset.sh --destroy to rebuild`);
+  const previous = resume && fs.existsSync(stateFile) ? (JSON.parse(fs.readFileSync(stateFile, "utf8")) as { runs?: Record<string, Prepared>; red?: Record<string, unknown> }) : null;
+  const kept = previous?.runs ?? {};
   ensureHome(resolvePaths());
   const store = new KnowledgeStore(resolvePaths().db);
   if (!coordinationStatus().ok) throw new Error(`coordination unavailable: ${coordinationStatus().reason}`);
   const tickets = Object.fromEntries(loadTicketFile(path.join(PROJECT_ROOT, "benchmarks", "demandlib", "tickets.yaml")).map((t) => [t.id, `${t.title}\n\n${t.issue}`.trim()]));
+  const ensureClone = (dest: string): string => (fs.existsSync(dest) ? (indexRepository(store, dest), dest) : clone(store, dest));
+  const need = async (key: string, repo: string, task: string, taskId: string | null, label: string): Promise<Prepared> => {
+    if (OK(kept[key])) {
+      log(`${label}: keeping ${kept[key]!.runId} (${kept[key]!.state})`);
+      return kept[key]!;
+    }
+    return run(store, repo, task, taskId, label);
+  };
 
   // ---- the demo repository and the two prepared runs
-  const demo = clone(store, path.join(root, "demandlib"));
+  const demo = ensureClone(path.join(root, "demandlib"));
   const base = headSha(demo);
-  const p2 = await run(store, demo, tickets.T13!, "T13", "P2 (T13)");
+  const p2 = await need("P2_T13", demo, tickets.T13!, "T13", "P2 (T13)");
   const renameTicket = ["Rename add_weekdays2df to annotate_weekdays", "", "`tools.add_weekdays2df` is a poor name: it does more than add weekdays (it also tags holidays and adds the date column).", "Please rename it to `annotate_weekdays` and update every internal caller and test to the new name. Keep", "`add_weekdays2df` as a deprecated alias that calls the new function, so external code keeps working for now."].join("\n");
-  const p1 = await run(store, demo, renameTicket, null, "P1 (rename)");
+  const p1 = await need("P1_rename", demo, renameTicket, null, "P1 (rename)");
 
   // ---- the red clone: two runs that each pass alone and clash in meaning, landed with the merged-result checks off
-  const red = clone(store, path.join(root, "red", "demandlib"));
-  const a = await run(store, red, tickets.T13!, "T13", "red A (T13)");
+  const red = ensureClone(path.join(root, "red", "demandlib"));
+  const redDone = !!(previous?.red as { main?: { status?: string } } | undefined)?.main?.status;
+  const a = redDone ? kept.red_A_T13! : await need("red_A_T13", red, tickets.T13!, "T13", "red A (T13)");
   const prosumer = ["Allow negative annual demand for prosumer sites", "", "Some of our industrial sites are net generators over the year. `IndustrialLoadProfile.simple_profile` should accept a", "negative `annual_demand` and return the same profile shape scaled by that negative value, so the series integrates to", "the negative total. Add a test that a negative demand gives a profile whose sum is that negative value."].join("\n");
-  const b = await run(store, red, prosumer, null, "red B (prosumer)");
-  let redMerges: Record<string, unknown> = {};
-  if (["REVIEW_READY", "HUMAN_REVIEW"].includes(a.state) && ["REVIEW_READY", "HUMAN_REVIEW"].includes(b.state)) {
+  const b = redDone ? kept.red_B_prosumer! : await need("red_B_prosumer", red, prosumer, null, "red B (prosumer)");
+  let redMerges: Record<string, unknown> = redDone ? (previous!.red as Record<string, unknown>) : {};
+  if (!redDone && OK(a) && OK(b)) {
     const ma = mergeRun(store, a.runId, { approve: ["Priya", "Sam"], by: "demo", log: (l) => log(`  red A: ${l}`) });
     process.env.INTENTOS_COORDINATION_MERGE_CHECK = "0";
     const mb = mergeRun(store, b.runId, { approve: ["Priya", "Sam"], by: "demo", skipMergedVerification: true, log: (l) => log(`  red B: ${l}`) });
