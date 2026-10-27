@@ -10,7 +10,7 @@
 # 2 whose closest precedent is a merged PR, to see whether precedents help on fresh work (T07 ~ #17/#20, T13 ~ #100).
 
 - id: T01
-  title: Industrial profile: model a lunch break with night factors
+  title: "Industrial profile: model a lunch break with night factors"
   labels: [enhancement]
   kind: feature
   expected_route: implement
@@ -30,7 +30,7 @@
     - A break outside the workday has no effect; start >= end raises ValueError.
 
 - id: T02
-  title: Scale a BDEW 2025 profile to a given annual energy
+  title: "Scale a BDEW 2025 profile to a given annual energy"
   labels: [enhancement]
   kind: feature
   expected_route: implement
@@ -48,7 +48,7 @@
     - A negative energy raises ValueError.
 
 - id: T03
-  title: Holidays given as datetimes with a time of day are not applied
+  title: "Holidays given as datetimes with a time of day are not applied"
   labels: [bug]
   kind: bug
   expected_route: implement
@@ -68,7 +68,7 @@
     - A date that is not in the index is ignored without error.
 
 - id: T04
-  title: add_weekdays2df modifies the DataFrame it is given
+  title: "add_weekdays2df modifies the DataFrame it is given"
   labels: [bug]
   kind: behaviour
   expected_route: implement
@@ -86,7 +86,7 @@
     - IndustrialLoadProfile, ElecSlp and the 2025 profiles produce the same output as before (regression).
 
 - id: T05
-  title: Support regional holidays
+  title: "Support regional holidays"
   labels: [enhancement]
   kind: vague
   expected_route: clarify
@@ -101,7 +101,7 @@
     - An implementation that bundles a specific calendar library or hard-codes holiday tables counts as a miss.
 
 - id: T06
-  title: FutureWarning on ElecSlp instantiation with pandas 2.2
+  title: "FutureWarning on ElecSlp instantiation with pandas 2.2"
   labels: [bug]
   kind: already-fixed
   expected_route: abstain
@@ -115,7 +115,7 @@
     - The right outcome cites the fix (commit or test) and changes nothing. A diff that "fixes" it again counts as a miss.
 
 - id: T07
-  title: DeprecationWarning from DatetimeIndex.weekday when building profiles
+  title: "DeprecationWarning from DatetimeIndex.weekday when building profiles"
   labels: [bug]
   kind: maintenance
   expected_route: implement
@@ -132,7 +132,7 @@
     - The missing-holidays UserWarning still appears when holidays are omitted.
 
 - id: T08
-  title: Daily heat demand from HeatBuilding
+  title: "Daily heat demand from HeatBuilding"
   labels: [enhancement]
   kind: feature
   expected_route: implement
@@ -150,7 +150,7 @@
       with building_class 0; building_class != 0 for non-residential still raises ValueError.
 
 - id: T09
-  title: Validate HeatBuilding inputs when the object is created
+  title: "Validate HeatBuilding inputs when the object is created"
   labels: [enhancement]
   kind: validation
   expected_route: implement
@@ -169,7 +169,7 @@
     - Valid inputs produce the same profile as before (regression).
 
 - id: T10
-  title: Region.add_houses should reject duplicate house names
+  title: "Region.add_houses should reject duplicate house names"
   labels: [bug]
   kind: validation
   expected_route: implement
@@ -186,7 +186,7 @@
     - Unique names behave as before; the EFH/MFH house_type check is unchanged.
 
 - id: T11
-  title: Load VDI climate data from a user-supplied DWD TRY file
+  title: "Load VDI climate data from a user-supplied DWD TRY file"
   labels: [enhancement]
   kind: feature
   expected_route: implement
@@ -204,7 +204,7 @@
     - A missing file raises FileNotFoundError.
 
 - id: T12
-  title: Industrial profile accepts overlapping day categories silently
+  title: "Industrial profile accepts overlapping day categories silently"
   labels: [bug]
   kind: validation
   expected_route: implement
@@ -222,7 +222,7 @@
     - The existing missing-factor ValueErrors are unchanged.
 
 - id: T13
-  title: Warn when an industrial profile is created with zero or negative annual demand
+  title: "Warn when an industrial profile is created with zero or negative annual demand"
   labels: [enhancement]
   kind: precedent-like
   expected_route: implement
@@ -239,7 +239,7 @@
     - Positive demand: identical output to the current implementation and integrates to annual_demand.
 
 - id: T14
-  title: Derive the power conversion factor from the index resolution in ElecSlp
+  title: "Derive the power conversion factor from the index resolution in ElecSlp"
   labels: [enhancement]
   kind: feature
   expected_route: implement
@@ -258,7 +258,7 @@
     - Energy profiles per sector still sum to the requested annual demand; the leap-year interval count is unchanged.
 
 - id: T15
-  title: No warning when holidays are omitted
+  title: "No warning when holidays are omitted"
   labels: [enhancement]
   kind: already-fixed
   expected_route: abstain
