@@ -1,0 +1,30 @@
+{
+  "task_id": "T09",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d25-d1c3-7b22-b388-cf98f90c9b07",
+  "written_at": "2026-10-27T11:37:43.799Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T09/test_heat_building_input_validation.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 85380,
+        "cached_input_tokens": 56576,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2236,
+        "reasoning_output_tokens": 977
+      }
+    }
+  ],
+  "notes": "The tests use the existing HeatBuilding constructor only. Accepted SHLP types are the 14 types documented in docs/bdew.rst and represented by the packaged BDEW data. Error-message assertions require the ticket's parameter names (shlp_type, wind_class, building_class) and representative/all accepted values, without prescribing exact wording."
+}

@@ -1,0 +1,30 @@
+{
+  "task_id": "T10",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d26-e701-7312-b098-24788482f0a6",
+  "written_at": "2026-10-27T11:38:05.640Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T10/test_region_add_houses_duplicate_names.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 82023,
+        "cached_input_tokens": 55552,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1262,
+        "reasoning_output_tokens": 526
+      }
+    }
+  ],
+  "notes": "The ticket names Region.add_houses, so both tests invoke that public method directly. They only require the documented name and house_type fields because validation must occur during addition, before profile generation."
+}

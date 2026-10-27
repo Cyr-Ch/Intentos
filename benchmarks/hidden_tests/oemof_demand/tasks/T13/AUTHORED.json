@@ -1,0 +1,30 @@
+{
+  "task_id": "T13",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d29-8ee0-7291-9dad-12fae4db73bf",
+  "written_at": "2026-10-27T11:41:22.149Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T13/test_industrial_profile_annual_demand_validation.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 33366,
+        "cached_input_tokens": 14080,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1098,
+        "reasoning_output_tokens": 537
+      }
+    }
+  ],
+  "notes": "Uses the existing public IndustrialLoadProfile.simple_profile entry point named by the ticket. The ticket does not prescribe warning or exception message text, so the tests intentionally do not constrain it."
+}

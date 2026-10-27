@@ -1,0 +1,30 @@
+{
+  "task_id": "T02",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d21-7926-7a20-9e54-c56506298ed1",
+  "written_at": "2026-10-27T11:32:26.348Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T02/test_bdew25_annual_energy.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 162597,
+        "cached_input_tokens": 132608,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2643,
+        "reasoning_output_tokens": 1276
+      }
+    }
+  ],
+  "notes": "The ticket does not prescribe an API name, so these tests assume a keyword-only-or-positional optional constructor argument named `annual_energy`, expressed in kWh, on the existing public G25/H25/L25/P25/S25 classes. Integration is calculated from the profile's index frequency, so it verifies the non-quarter-hourly requirement without relying on internal resampling or normalization details."
+}

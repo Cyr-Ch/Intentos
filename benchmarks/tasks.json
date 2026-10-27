@@ -63,6 +63,160 @@
         "already fixed in commit 'Fix: cancelled contracts received volume discounts' with test_cancelled_contract_gets_no_discount"
       ],
       "offline_patches": {}
+    },
+    {
+      "id": "T01",
+      "fixture": "oemof_demand",
+      "title": "Industrial profile: model a lunch break with night factors",
+      "request": "Industrial profile: model a lunch break with night factors\n\nOur plants stop between 12:00 and 13:00. `IndustrialLoadProfile.simple_profile` only knows a workday from `am`\nto `pm`, so the break hour gets the \"day\" factor and the profile is too high around noon.\n\nCould `simple_profile` take an optional break window (start and end time, like `am`/`pm`) during which the\n\"night\" factors apply on workdays? Nothing should change when no break is given, and the result should still\nintegrate to the `annual_demand` I pass in, as it does today.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T01",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:31:47.861Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T02",
+      "fixture": "oemof_demand",
+      "title": "Scale a BDEW 2025 profile to a given annual energy",
+      "request": "Scale a BDEW 2025 profile to a given annual energy\n\nThe new `G25`/`H25`/... profiles come normalised to 1 GWh per year in kW. Every user has to do the scaling by hand\nand it is easy to get the factor wrong for non-quarter-hourly indexes.\n\nPlease add a way to get a 2025 profile scaled so that it integrates to an annual energy I specify (in kWh),\nfor any constant-step index the class already accepts. The unscaled behaviour must stay exactly as it is.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T02",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:32:26.348Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T03",
+      "fixture": "oemof_demand",
+      "title": "Holidays given as datetimes with a time of day are not applied",
+      "request": "Holidays given as datetimes with a time of day are not applied\n\nI build my holiday list from a calendar library that returns `datetime.datetime` objects at noon. Passing that\nlist as `holidays` to `add_weekdays2df` (or any of the profile classes) silently applies nothing: every holiday\nkeeps its ordinary weekday number and no warning is given.\n\nExample: `holidays=[datetime.datetime(2024, 1, 1, 12, 0)]` on a 2024 index leaves 1 January as weekday 1.\nPassing `datetime.date(2024, 1, 1)` works. Holidays should match by date regardless of the time component,\nfor lists and for dicts.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T03",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:32:55.865Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T04",
+      "fixture": "oemof_demand",
+      "title": "add_weekdays2df modifies the DataFrame it is given",
+      "request": "add_weekdays2df modifies the DataFrame it is given\n\n`tools.add_weekdays2df(df, ...)` adds the `weekday` and `date` columns to the DataFrame I pass in, not only to\nthe one it returns. I reuse one frame for several scenarios with different holiday calendars and the columns\nleak between them.\n\nI would expect the input to be left alone and the result to be a new frame, or at least a documented way to\nopt out of the in-place change. Existing callers inside the package must keep working.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T04",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:33:54.397Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T06",
+      "fixture": "oemof_demand",
+      "title": "FutureWarning on ElecSlp instantiation with pandas 2.2",
+      "request": "FutureWarning on ElecSlp instantiation with pandas 2.2\n\nCreating `ElecSlp(2024)` with pandas 2.2 prints a FutureWarning about an incompatible dtype assignment and, in\nenvironments that escalate warnings to errors, the constructor fails. Please fix the dtype handling.",
+      "expected_route": "abstain",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T06",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:34:55.166Z); pass at base"
+    },
+    {
+      "id": "T07",
+      "fixture": "oemof_demand",
+      "title": "DeprecationWarning from DatetimeIndex.weekday when building profiles",
+      "request": "DeprecationWarning from DatetimeIndex.weekday when building profiles\n\nWith the current pandas, building any profile prints\n`DatetimeIndex.weekday is deprecated and will be removed in a future version`, coming from the weekday\nassignment in `tools.add_weekdays2df`. Our CI runs with warnings as errors, so this breaks the build.\n\nPlease use the supported accessor. Weekday numbering (1 = Monday ... 7 = Sunday, 0 = holiday) must not change.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T07",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:35:48.862Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T08",
+      "fixture": "oemof_demand",
+      "title": "Daily heat demand from HeatBuilding",
+      "request": "Daily heat demand from HeatBuilding\n\nFor reporting I need the BDEW heat profile aggregated per day. Today I call `get_bdew_profile()` and resample\nmyself, and colleagues keep doing it differently (sum vs mean).\n\nPlease add a daily accessor on `HeatBuilding` that returns one value per calendar day, in the same unit as the\nhourly profile, so the daily values add up to the annual heat demand.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T08",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:36:32.826Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T09",
+      "fixture": "oemof_demand",
+      "title": "Validate HeatBuilding inputs when the object is created",
+      "request": "Validate HeatBuilding inputs when the object is created\n\nA typo in `shlp_type` (say \"EFG\") or a `wind_class` of 2 only blows up much later inside the sigmoid/weekday\nparameter lookups with a KeyError or an empty-selection message that does not name the parameter.\n\nPlease check `shlp_type`, `wind_class` and `building_class` when `HeatBuilding` is constructed and raise a\nValueError that names the offending parameter and the accepted values. The existing rule that non-residential\ntypes must use building class 0 must stay.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T09",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:37:43.799Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T10",
+      "fixture": "oemof_demand",
+      "title": "Region.add_houses should reject duplicate house names",
+      "request": "Region.add_houses should reject duplicate house names\n\nThe VDI 4655 `Region.add_houses` docs say the house name is a unique identifier, but adding two houses with the\nsame name is accepted and one of them silently disappears from the results, which took me a while to notice.\n\nPlease raise a ValueError naming the duplicate when a house list contains a repeated name, or when a name is\nalready present in the region.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T10",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:38:05.640Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T11",
+      "fixture": "oemof_demand",
+      "title": "Load VDI climate data from a user-supplied DWD TRY file",
+      "request": "Load VDI climate data from a user-supplied DWD TRY file\n\n`Climate.from_try_data(try_region)` only loads the TRY files shipped with the package. We have newer TRY 2045\nfiles from the DWD in the same format and want to use them.\n\nPlease allow passing a path to a DWD TRY file instead of a region number. The existing header check and the\nregion-number validation should keep behaving the same when a number is given.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T11",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:39:56.315Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T12",
+      "fixture": "oemof_demand",
+      "title": "Industrial profile accepts overlapping day categories silently",
+      "request": "Industrial profile accepts overlapping day categories silently\n\nCalling `simple_profile` with `week=[1,2,3,4,5,6]` and `weekend=[6,7]` is accepted. Saturday then gets whichever\nfactor the implementation happens to apply last, and the documentation says nothing about it.\n\nPlease raise a ValueError when `week`, `weekend` and `holiday` overlap, and when a weekday number outside 0..7 is\ngiven. The default categories must keep working unchanged.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T12",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:40:37.739Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T13",
+      "fixture": "oemof_demand",
+      "title": "Warn when an industrial profile is created with zero or negative annual demand",
+      "request": "Warn when an industrial profile is created with zero or negative annual demand\n\nA unit mix-up gave us `annual_demand=0` and the industrial profile came back all zeros without a word; a\nnegative value produces a negative profile just as quietly.\n\nIn the spirit of the recent holidays warning, please emit a UserWarning for zero demand and raise a ValueError\nfor negative demand in `simple_profile`. Positive demand must behave exactly as before.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T13",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:41:22.149Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T14",
+      "fixture": "oemof_demand",
+      "title": "Derive the power conversion factor from the index resolution in ElecSlp",
+      "request": "Derive the power conversion factor from the index resolution in ElecSlp\n\n`get_scaled_power_profiles` multiplies by a conversion factor that defaults to 4, which is only right for\nquarter-hour data. When I resample to hourly first and forget the argument, the power is four times too high.\n\nPlease derive the factor from the profile's index frequency when it is not given explicitly (1 h → 1,\n15 min → 4, 1 min → 60). Passing the factor explicitly must keep overriding it, and the quarter-hourly default\nbehaviour must not change.",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T14",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:41:43.602Z); fail at base, pass when solved"
+    },
+    {
+      "id": "T15",
+      "fixture": "oemof_demand",
+      "title": "No warning when holidays are omitted",
+      "request": "No warning when holidays are omitted\n\nWhen I forget to pass `holidays`, public holidays are silently treated as normal weekdays. A warning telling me\nthat no holidays were given would have saved me a wrong annual result. An empty list should stay silent.",
+      "expected_route": "abstain",
+      "hidden_tests": "benchmarks/hidden_tests/oemof_demand/tasks/T15",
+      "hazards": [],
+      "offline_patches": {},
+      "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:42:34.959Z); pass at base"
     }
   ]
 }

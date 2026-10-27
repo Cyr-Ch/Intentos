@@ -1,0 +1,30 @@
+{
+  "task_id": "T04",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d22-829d-73d0-982b-c6fc14dd9c1d",
+  "written_at": "2026-10-27T11:33:54.397Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T04/test_add_weekdays2df.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 50250,
+        "cached_input_tokens": 31232,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1725,
+        "reasoning_output_tokens": 688
+      }
+    }
+  ],
+  "notes": "Uses only the existing add_weekdays2df interface and its existing holidays argument; no new parameter or API name is assumed."
+}

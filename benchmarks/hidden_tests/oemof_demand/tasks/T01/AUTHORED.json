@@ -1,0 +1,30 @@
+{
+  "task_id": "T01",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d20-3079-71a2-8098-7079d52e6a92",
+  "written_at": "2026-10-27T11:31:47.861Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T01/test_industrial_profile_lunch_break.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 54789,
+        "cached_input_tokens": 33280,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2485,
+        "reasoning_output_tokens": 1120
+      }
+    }
+  ],
+  "notes": "Assumed the optional keyword names `break_start` and `break_end`, since the ticket specifies start and end times but not parameter names. The break boundaries are asserted inclusive because existing `am` and `pm` boundaries are documented and implemented as inclusive, and the ticket says the new times are like `am`/`pm`."
+}

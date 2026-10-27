@@ -1,0 +1,30 @@
+{
+  "task_id": "T11",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d27-3c45-7300-b181-e527453e55f0",
+  "written_at": "2026-10-27T11:39:56.315Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T11/test_climate_from_try_file.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 108883,
+        "cached_input_tokens": 73984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3704,
+        "reasoning_output_tokens": 2136
+      }
+    }
+  ],
+  "notes": "The existing Climate.from_try_data(try_region) entry point is used; no new API name is assumed. The synthetic DWD file encodes TRY region 4 in its RG column, which is needed to select VDI energy factors when no region number is supplied."
+}

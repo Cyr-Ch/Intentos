@@ -1,0 +1,30 @@
+{
+  "task_id": "T14",
+  "policy_id": "oemof_demand",
+  "repo_path": "/Users/QTG2659/repos/demandlib",
+  "base": "6757f4f65901e96b397fd1381b859c87917c4c04",
+  "expect": "fail",
+  "model": "gpt-5.6-terra",
+  "engine": "codex-sdk",
+  "thread_id": "01a17d2a-3c37-78e0-9832-99e5329fc529",
+  "written_at": "2026-10-27T11:41:43.602Z",
+  "files": [
+    "benchmarks/hidden_tests/oemof_demand/tasks/T14/test_elec_slp_power_conversion.py"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "proposed": 1,
+      "accepted": 1,
+      "rejected": [],
+      "usage": {
+        "input_tokens": 54688,
+        "cached_input_tokens": 44288,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1414,
+        "reasoning_output_tokens": 589
+      }
+    }
+  ],
+  "notes": "The existing public `slp_frame` profile table is resampled before calling the ticket-named public method, reflecting the ticket's 'resample to hourly first' workflow. No new API names are assumed. The one-minute case forward-fills and divides quarter-hour energy across 15 minutes so its annual energy remains unchanged."
+}
