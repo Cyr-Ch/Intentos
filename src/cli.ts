@@ -19,6 +19,7 @@ import { ingestProposals, installSkill, SETUP_SKILL_NAME, SKILL_NAME, SKILL_NAME
 import { mineWithModel, ReplayEngine } from "./mine.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 import { currentName, precedentsFile, syncPrecedents, writePrecedentsFile, type PrecedentAttributes } from "./knowledge/precedents.ts";
+import { startDashboard } from "./dashboard.ts";
 
 function printAutoApproval(a: AutoApproveResult): void {
   console.log(`Approved ${a.approved.length} rule(s) as ${a.by} into ${a.policy_file}:`);
@@ -311,6 +312,20 @@ program
     } catch (err) {
       fail((err as Error).message);
     }
+  });
+
+program
+  .command("dashboard")
+  .description("Open a local live view of runs, policy rules, repository evidence and ticket precedents")
+  .argument("<repo>", "path to the indexed repository root")
+  .option("--port <n>", "local port (default: random)")
+  .option("--no-open", "print the URL without opening a browser")
+  .action(async (repo: string, opts: { port?: string; open: boolean }) => {
+    try {
+      const dashboard = await startDashboard(repo, { port: opts.port ? Number(opts.port) : 0, open: opts.open });
+      console.log(`IntentOS dashboard: ${dashboard.url}`);
+      console.log("Press Ctrl-C to stop.");
+    } catch (error) { fail((error as Error).message); }
   });
 
 program

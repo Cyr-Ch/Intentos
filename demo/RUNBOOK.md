@@ -9,8 +9,11 @@ rehearse. The exact run ids for the sentences below are in `~/intentos-demo/stat
    (the IntentOS plugin's server reads both from the environment; without the plugin, `demo/prepare.ts --register`
    registers an `intentos-demo` server instead).
 2. Laptop on power, `caffeinate -i` in a spare terminal, Codex credits checked, network checked.
-3. Second terminal ready at `~/intentos-demo/demandlib` for `git log --oneline --first-parent | head` and
-   `cat ~/intentos-demo/home/mcp.log`.
+3. Start the local dashboard in a second terminal:
+   `INTENTOS_HOME=~/intentos-demo/home node --disable-warning=ExperimentalWarning bin/intentos.js dashboard ~/intentos-demo/demandlib`
+   (run from the IntentOS checkout). Put its Live runs view beside the Codex chat. The Policy tab shows the
+   automatically created rules and lets the user edit their statement or enforcement; the Knowledge base tab shows
+   indexed evidence and linked ticket history.
 4. Fallback open in a browser tab: the rehearsal's `report.md`, `merge.json` and the guardian output from the last
    successful run-through (copy them out of `~/intentos-demo/home/runs/` after rehearsing).
 
