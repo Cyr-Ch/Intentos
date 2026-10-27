@@ -1,0 +1,339 @@
+{
+  "kind": "guardian",
+  "repeats": 5,
+  "results": [
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 12,
+      "harmless_before": 14,
+      "label": "clash-1",
+      "main_commits": 29,
+      "message": "Main broke at 3c135bec. Cause: PR #16 (clashed with #1). Undo PR #29 opened.",
+      "partner_ok": true,
+      "seconds": 6.4,
+      "seed": 1,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash-1"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 12,
+      "harmless_before": 11,
+      "label": "clash-2",
+      "main_commits": 26,
+      "message": "Main broke at 99e46a72. Cause: PR #13 (clashed with #1). Undo PR #26 opened.",
+      "partner_ok": true,
+      "seconds": 5.4,
+      "seed": 2,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash-2"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 14,
+      "harmless_before": 17,
+      "label": "clash-3",
+      "main_commits": 34,
+      "message": "Main broke at 6817d7f1. Cause: PR #19 (clashed with #1). Undo PR #34 opened.",
+      "partner_ok": true,
+      "seconds": 8.5,
+      "seed": 3,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash-3"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 19,
+      "harmless_before": 17,
+      "label": "clash-4",
+      "main_commits": 39,
+      "message": "Main broke at 1466c831. Cause: PR #19 (clashed with #1). Undo PR #39 opened.",
+      "partner_ok": true,
+      "seconds": 10.0,
+      "seed": 4,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash-4"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 21,
+      "harmless_before": 18,
+      "label": "clash-5",
+      "main_commits": 42,
+      "message": "Main broke at baa3f408. Cause: PR #20 (clashed with #1). Undo PR #42 opened.",
+      "partner_ok": true,
+      "seconds": 8.8,
+      "seed": 5,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash-5"
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "expected": "label flaky, blame nobody",
+      "flaky_tests": null,
+      "harmless_after": 12,
+      "harmless_before": 14,
+      "label": "flaky-1",
+      "main_commits": 29,
+      "message": "No failing tests at bad",
+      "partner_ok": false,
+      "seconds": 0.5,
+      "seed": 1,
+      "status": "healthy",
+      "tests": [],
+      "undo_opened": false,
+      "variant": "flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/flaky-1"
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "expected": "label flaky, blame nobody",
+      "flaky_tests": null,
+      "harmless_after": 12,
+      "harmless_before": 11,
+      "label": "flaky-2",
+      "main_commits": 26,
+      "message": "No failing tests at bad",
+      "partner_ok": false,
+      "seconds": 0.3,
+      "seed": 2,
+      "status": "healthy",
+      "tests": [],
+      "undo_opened": false,
+      "variant": "flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/flaky-2"
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "expected": "label flaky, blame nobody",
+      "flaky_tests": null,
+      "harmless_after": 14,
+      "harmless_before": 17,
+      "label": "flaky-3",
+      "main_commits": 34,
+      "message": "No failing tests at bad",
+      "partner_ok": false,
+      "seconds": 0.3,
+      "seed": 3,
+      "status": "healthy",
+      "tests": [],
+      "undo_opened": false,
+      "variant": "flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/flaky-3"
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "expected": "label flaky, blame nobody",
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "harmless_after": 19,
+      "harmless_before": 17,
+      "label": "flaky-4",
+      "main_commits": 39,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "partner_ok": false,
+      "seconds": 0.7,
+      "seed": 4,
+      "status": "flaky",
+      "tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "undo_opened": false,
+      "variant": "flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/flaky-4"
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "expected": "label flaky, blame nobody",
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "harmless_after": 21,
+      "harmless_before": 18,
+      "label": "flaky-5",
+      "main_commits": 42,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "partner_ok": false,
+      "seconds": 0.9,
+      "seed": 5,
+      "status": "flaky",
+      "tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "undo_opened": false,
+      "variant": "flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/flaky-5"
+    },
+    {
+      "bisect_steps": 3,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 12,
+      "harmless_before": 14,
+      "label": "clash+flaky-1",
+      "main_commits": 30,
+      "message": "Main broke at b8949d50. Cause: PR #17 (clashed with #1). Undo PR #30 opened.",
+      "partner_ok": true,
+      "seconds": 6.2,
+      "seed": 1,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash+flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash+flaky-1"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 12,
+      "harmless_before": 11,
+      "label": "clash+flaky-2",
+      "main_commits": 27,
+      "message": "Main broke at 11400bdb. Cause: PR #14 (clashed with #1). Undo PR #27 opened.",
+      "partner_ok": true,
+      "seconds": 6.1,
+      "seed": 2,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash+flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash+flaky-2"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [],
+      "harmless_after": 14,
+      "harmless_before": 17,
+      "label": "clash+flaky-3",
+      "main_commits": 35,
+      "message": "Main broke at ebabf196. Cause: PR #20 (clashed with #1). Undo PR #35 opened.",
+      "partner_ok": true,
+      "seconds": 7.6,
+      "seed": 3,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash+flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash+flaky-3"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "harmless_after": 19,
+      "harmless_before": 17,
+      "label": "clash+flaky-4",
+      "main_commits": 40,
+      "message": "Main broke at 09ed367f. Cause: PR #20 (clashed with #1). Undo PR #40 opened. Ignored as flaky: tests/test_latency.py::test_latency_budget.",
+      "partner_ok": true,
+      "seconds": 7.7,
+      "seed": 4,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash+flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash+flaky-4"
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "expected": "blame clash PR, name partner, open undo",
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "harmless_after": 21,
+      "harmless_before": 18,
+      "label": "clash+flaky-5",
+      "main_commits": 43,
+      "message": "Main broke at c6f06bc5. Cause: PR #21 (clashed with #1). Undo PR #43 opened. Ignored as flaky: tests/test_latency.py::test_latency_budget.",
+      "partner_ok": true,
+      "seconds": 5.7,
+      "seed": 5,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "undo_opened": true,
+      "variant": "clash+flaky",
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash+flaky-5"
+    }
+  ],
+  "timestamp": "20261027T012137.324709Z"
+}

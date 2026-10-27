@@ -1,0 +1,6 @@
+{
+  "id": "S2",
+  "name": "required parameter",
+  "prompt": "Add an account summary that shows the user's id.",
+  "expected_notes": 1
+}

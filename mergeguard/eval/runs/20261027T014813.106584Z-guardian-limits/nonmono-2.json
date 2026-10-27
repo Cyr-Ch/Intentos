@@ -1,0 +1,44 @@
+{
+  "culprit_ok": true,
+  "label": "nonmono-2",
+  "main_commits": 26,
+  "message": "Main broke at 192b0706. Cause: PR #25 (clashed with #15). Undo PR #26 opened.",
+  "partner_is_first_merge": false,
+  "partner_is_reapply": true,
+  "partner_pr": 15,
+  "partner_reason": null,
+  "seconds": 4.5,
+  "seed": 2,
+  "status": "clash",
+  "trials": [
+    [
+      "e2fbb2c",
+      "pass"
+    ],
+    [
+      "cf615fe",
+      "fail"
+    ],
+    [
+      "c63ef25",
+      "pass"
+    ],
+    [
+      "d9f32e2",
+      "fail"
+    ],
+    [
+      "8202147",
+      "fail"
+    ],
+    [
+      "19099d7",
+      "pass"
+    ],
+    [
+      "8b87ccd",
+      "pass"
+    ]
+  ],
+  "variant": "non-monotonic clash"
+}

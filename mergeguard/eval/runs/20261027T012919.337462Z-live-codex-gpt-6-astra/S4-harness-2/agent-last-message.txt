@@ -1,0 +1,5 @@
+Implemented `invoice_total(amounts)` in `invoices/total.py` and made `invoices` a package. It calls `payments.charge.charge` for each amount and sums the cents.
+
+Added pytest coverage for `[5, 10] → 1500`, empty input, and per-amount rounding.
+
+`python -m pytest -q`: **5 passed**.

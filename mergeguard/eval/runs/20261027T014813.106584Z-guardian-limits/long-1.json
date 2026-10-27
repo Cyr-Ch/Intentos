@@ -1,0 +1,13 @@
+{
+  "bisect_steps": 6,
+  "culprit_ok": true,
+  "label": "long-1",
+  "main_commits": 184,
+  "message": "Main broke at fb398106. Cause: PR #70 (clashed with #1). Undo PR #184 opened.",
+  "partner_ok": true,
+  "seconds": 11.2,
+  "seed": 1,
+  "status": "clash",
+  "undo_opened": true,
+  "variant": "long history clash"
+}

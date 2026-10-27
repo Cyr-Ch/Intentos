@@ -1,0 +1,5 @@
+Implemented `account_summary(7)` → `"User 7"` using `users.fetch_user`, and added `tests/test_account.py`.
+
+Applied main’s lookup rename locally because Git metadata was read-only.
+
+Validation: `python -m pytest -q` — 3 passed.

@@ -1,0 +1,5 @@
+Implemented `account_summary(7)` returning `"User 7"` using `accounts.users.get_user`, and added a pytest test.
+
+`python -m pytest -q`: **3 passed**.
+
+Git metadata was read-only, so main’s module move was applied to the working files without merging the commit.

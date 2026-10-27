@@ -1,0 +1,1 @@
+vendored from /Users/QTG2659/codex-project/mergeguard at commit a18520a; that checkout is now only a mirror, the copy here is the source of truth

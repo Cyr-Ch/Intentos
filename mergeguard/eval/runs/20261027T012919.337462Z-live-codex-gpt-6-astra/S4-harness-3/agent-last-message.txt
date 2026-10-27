@@ -1,0 +1,5 @@
+Added the `invoices` package and `invoice_total(amounts)`, using `payments.charge.charge` for each amount.
+
+Tests cover `[5, 10] → 1500`, empty input, and per-amount rounding.
+
+`python -m pytest -q`: **5 passed**.

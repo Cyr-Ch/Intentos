@@ -1,0 +1,47 @@
+{
+  "arm": "baseline",
+  "branch_after": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "branch_before": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+  },
+  "expected_checks_passed": true,
+  "final_healthy": false,
+  "guardian": null,
+  "hook_ms": 66.15,
+  "hook_output": {},
+  "hook_stderr": "",
+  "main_broken": true,
+  "merge_commit": "d72ce7fe633495dc17a10040d79d0ce0f0b52394",
+  "merged_tests": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 1,
+    "failed": [
+      "tests/test_account.py::test_summary"
+    ],
+    "missing": [],
+    "outcome": "fail",
+    "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^^^^^^\nE   TypeError: get_user() missing 1 required positional argument: 'org_id'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - TypeError: get_user() missing 1 ...\n1 failed, 2 passed in 0.05s\n"
+  },
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S2",
+  "scripted_repair": false,
+  "seconds": 6.72,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S2-baseline-2"
+}

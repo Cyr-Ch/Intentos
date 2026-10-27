@@ -1,0 +1,39 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.0840592,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 13.36,
+    "timed_out": false,
+    "tokens": {
+      "cached": 39073,
+      "input": 58289,
+      "output": 316
+    },
+    "tool_calls": 2,
+    "turns": 3
+  },
+  "agent_failed": false,
+  "category": "docs",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [],
+  "label": "changelog-1",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [
+    "CHANGELOG.md"
+  ],
+  "prompt": "Add a CHANGELOG.md with a single initial entry for version 0.1.0. Change nothing else.",
+  "proofs": {
+    "CHANGELOG.md": "documentation"
+  },
+  "reasons": [
+    "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+  ],
+  "risky": false,
+  "task": "changelog",
+  "tier": 0,
+  "under_reviewed": false
+}

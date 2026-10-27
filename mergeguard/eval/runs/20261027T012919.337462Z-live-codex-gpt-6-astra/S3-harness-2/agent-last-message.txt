@@ -1,0 +1,5 @@
+Implemented `account_summary(uid)` using `accounts.users.get_user` and added a test confirming `account_summary(7) == "User 7"`.
+
+Applied the upstream module move to working files; Git metadata restrictions prevented fast-forwarding.
+
+Validation: `python -m pytest -q` — **3 passed**.

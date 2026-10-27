@@ -1,0 +1,20 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+new file mode 100644
+index 0000000..c8e122b
+--- /dev/null
++++ b/CHANGELOG.md
+@@ -0,0 +1,14 @@
++# Changelog
++
++All notable changes to this project are documented in this file.
++
++The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
++and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
++
++## [0.1.0] - 2026-10-27
++
++### Added
++
++- Initial shop service with a health check (`account.health`).
++- User lookup stub (`users.get_user`).
++- Payment charge helper (`payments.charge.charge`) that converts dollars to cents.

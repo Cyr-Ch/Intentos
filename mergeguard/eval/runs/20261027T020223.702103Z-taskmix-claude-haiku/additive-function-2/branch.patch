@@ -1,0 +1,24 @@
+diff --git a/tests/test_list_users.py b/tests/test_list_users.py
+new file mode 100644
+index 0000000..d442663
+--- /dev/null
++++ b/tests/test_list_users.py
+@@ -0,0 +1,7 @@
++from users import list_users
++
++def test_list_users():
++    assert list_users([1, 2, 3]) == [{"id": 1}, {"id": 2}, {"id": 3}]
++
++def test_list_users_empty():
++    assert list_users([]) == []
+diff --git a/users.py b/users.py
+index 039ac6c..a245a34 100644
+--- a/users.py
++++ b/users.py
+@@ -1,2 +1,6 @@
+ def get_user(uid):
+     return {"id": uid}
++
++
++def list_users(uids):
++    return [get_user(u) for u in uids]

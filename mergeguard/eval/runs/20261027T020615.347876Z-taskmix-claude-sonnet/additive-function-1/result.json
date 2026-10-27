@@ -1,0 +1,41 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.09285009999999999,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 16.29,
+    "timed_out": false,
+    "tokens": {
+      "cached": 107325,
+      "input": 126333,
+      "output": 597
+    },
+    "tool_calls": 4,
+    "turns": 5
+  },
+  "agent_failed": false,
+  "category": "additive code",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [],
+  "label": "additive-function-1",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [
+    "tests/test_list_users.py",
+    "users.py"
+  ],
+  "prompt": "Add a function list_users(uids) to users.py that returns [get_user(u) for u in uids]. Add a test for it in a new test file. Do not change get_user.",
+  "proofs": {
+    "tests/test_list_users.py": "new module: nothing existing changed",
+    "users.py": "additive-only: adds definitions or imports, changes nothing existing"
+  },
+  "reasons": [
+    "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+  ],
+  "risky": false,
+  "task": "additive-function",
+  "tier": 0,
+  "under_reviewed": false
+}

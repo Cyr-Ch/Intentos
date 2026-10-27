@@ -1,0 +1,41 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.0678788,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 16.97,
+    "timed_out": false,
+    "tokens": {
+      "cached": 63444,
+      "input": 77518,
+      "output": 512
+    },
+    "tool_calls": 3,
+    "turns": 4
+  },
+  "agent_failed": false,
+  "category": "additive code",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [],
+  "label": "additive-account-1",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [
+    "account.py",
+    "tests/test_account.py"
+  ],
+  "prompt": "Add a function health_detail() to account.py returning {'status': health()}. Add a test in a new test file. Do not change health().",
+  "proofs": {
+    "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+    "tests/test_account.py": "new module: nothing existing changed"
+  },
+  "reasons": [
+    "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+  ],
+  "risky": false,
+  "task": "additive-account",
+  "tier": 0,
+  "under_reviewed": false
+}

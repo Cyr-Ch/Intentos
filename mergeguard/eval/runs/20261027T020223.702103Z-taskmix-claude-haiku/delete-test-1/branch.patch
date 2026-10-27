@@ -1,0 +1,9 @@
+diff --git a/tests/test_charge.py b/tests/test_charge.py
+index 59b05fb..e69de29 100644
+--- a/tests/test_charge.py
++++ b/tests/test_charge.py
+@@ -1,4 +0,0 @@
+-from payments.charge import charge
+-
+-def test_charge():
+-    assert charge(5) == 500

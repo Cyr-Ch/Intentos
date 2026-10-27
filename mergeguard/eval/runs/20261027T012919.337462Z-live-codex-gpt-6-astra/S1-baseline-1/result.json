@@ -1,0 +1,52 @@
+{
+  "a_merge": {
+    "after_seconds": 5.51,
+    "agent_events_before": 8,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 3,
+    "cost_usd": null,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 21.86,
+    "timed_out": false,
+    "tokens": {
+      "cached": 53504,
+      "input": 66536,
+      "output": 464,
+      "reasoning": 0
+    },
+    "tool_calls": 4,
+    "turns": 1
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "Implemented `account_summary(uid)` in `account.py`, reusing `users.get_user`. Added `tests/test_account.py` to verify `account_summary(7) == \"User 7\"`.\n\nRan `python -m pytest -q`: **3 passed**.",
+  "agent_name": "codex",
+  "arm": "baseline",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 0,
+  "commands_without_exit_code": 0,
+  "false_notes": 0,
+  "final_healthy": false,
+  "final_sync_clean": false,
+  "guardian": null,
+  "integrated_clean": false,
+  "label": "S1-baseline-1",
+  "main_broken": true,
+  "merge_commit": "b4767a0e82d004196966ea6c0f23c13ebf2f3b8e",
+  "merged_tests": "error",
+  "model": "gpt-6-astra",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S1",
+  "seconds": 29.02,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012919.337462Z-live-codex-gpt-6-astra/S1-baseline-1"
+}

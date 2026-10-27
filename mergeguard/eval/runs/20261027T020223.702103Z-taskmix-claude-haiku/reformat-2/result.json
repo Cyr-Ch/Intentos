@@ -1,0 +1,35 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.00555722,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 13.26,
+    "timed_out": false,
+    "tokens": {
+      "cached": 104902,
+      "input": 125196,
+      "output": 635
+    },
+    "tool_calls": 3,
+    "turns": 4
+  },
+  "agent_failed": true,
+  "category": "formatting",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [],
+  "label": "reformat-2",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [],
+  "prompt": "Reformat users.py to use double quotes consistently and two blank lines between top-level definitions, with no semantic changes.",
+  "proofs": {},
+  "reasons": [
+    "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+  ],
+  "risky": false,
+  "task": "reformat",
+  "tier": 0,
+  "under_reviewed": false
+}

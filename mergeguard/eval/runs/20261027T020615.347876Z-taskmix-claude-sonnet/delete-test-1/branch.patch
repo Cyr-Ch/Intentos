@@ -1,0 +1,10 @@
+diff --git a/tests/test_charge.py b/tests/test_charge.py
+deleted file mode 100644
+index 59b05fb..0000000
+--- a/tests/test_charge.py
++++ /dev/null
+@@ -1,4 +0,0 @@
+-from payments.charge import charge
+-
+-def test_charge():
+-    assert charge(5) == 500

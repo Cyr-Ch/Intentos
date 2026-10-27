@@ -1,0 +1,17 @@
+[
+  "claude",
+  "-p",
+  "Add a short 'Running the tests' section to README.md explaining to run python -m pytest -q. Change nothing else. Run python -m pytest -q before finishing.",
+  "--model",
+  "sonnet",
+  "--allowedTools",
+  "Bash,Read,Edit,Write,MultiEdit,Glob,Grep",
+  "--permission-mode",
+  "acceptEdits",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--max-turns",
+  "60",
+  "--no-session-persistence"
+]

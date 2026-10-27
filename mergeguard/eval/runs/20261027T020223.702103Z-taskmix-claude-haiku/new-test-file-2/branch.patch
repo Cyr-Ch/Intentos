@@ -1,0 +1,10 @@
+diff --git a/tests/test_charge_more.py b/tests/test_charge_more.py
+new file mode 100644
+index 0000000..31b1948
+--- /dev/null
++++ b/tests/test_charge_more.py
+@@ -0,0 +1,4 @@
++from payments.charge import charge
++
++def test_charge_one_dollar_is_100_cents():
++    assert charge(1) == 100

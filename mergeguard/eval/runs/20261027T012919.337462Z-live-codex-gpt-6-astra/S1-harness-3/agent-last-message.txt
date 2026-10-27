@@ -1,0 +1,5 @@
+Implemented `account_summary(uid)` using `users.fetch_user`; `account_summary(7)` returns `"User 7"`. Added `tests/test_account.py`.
+
+Applied main’s lookup rename locally because Git metadata writes prevented merging.
+
+Validation: `python -m pytest -q` — **3 passed**.

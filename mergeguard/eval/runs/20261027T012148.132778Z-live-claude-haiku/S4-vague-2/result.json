@@ -1,0 +1,57 @@
+{
+  "a_merge": {
+    "after_seconds": 5.52,
+    "agent_events_before": 7,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 3,
+    "cost_usd": 0.00644593,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 18.96,
+    "timed_out": false,
+    "tokens": {
+      "cached": 106933,
+      "input": 129032,
+      "output": 1637
+    },
+    "tool_calls": 6,
+    "turns": 7
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "I added `invoice_total(amounts)` in a new `invoices` package, with a test. `python -m pytest -q` passes: 4 tests, including the two new ones.\n\n- **`invoices/__init__.py`** makes `invoices` a package.\n- **`invoices/total.py`** sums `charge(amount)` over the amounts, so `invoice_total([5, 10])` returns `1500`.\n- **`tests/test_invoices.py`** checks `[5, 10]` \u2192 `1500` and an empty list \u2192 `0`. The empty-list case is an extra I added; drop it if you only want the one assertion.\n\nI didn't commit anything. `payments/` is in the `always_two` review list in `.mergeguard/policy.yaml`, but I didn't change it. The new files are outside that list.",
+  "agent_name": "claude",
+  "arm": "vague",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 3,
+  "commands_without_exit_code": 3,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": {
+    "culprit": "2231252580d8cd21dbd4df23bd3b4eb231c112d3",
+    "message": "Main broke at 22312525. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+    "partner_pr": 1,
+    "status": "clash",
+    "undo_pr": 3
+  },
+  "integrated_clean": false,
+  "label": "S4-vague-2",
+  "main_broken": true,
+  "merge_commit": "2231252580d8cd21dbd4df23bd3b4eb231c112d3",
+  "merged_tests": "fail",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": true,
+  "scenario": "S4",
+  "seconds": 38.05,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012148.132778Z-live-claude-haiku/S4-vague-2"
+}

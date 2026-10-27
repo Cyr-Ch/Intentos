@@ -1,0 +1,44 @@
+{
+  "culprit_ok": true,
+  "label": "nonmono-1",
+  "main_commits": 29,
+  "message": "Main broke at c83630be. Cause: PR #28 (clashed with #17). Undo PR #29 opened.",
+  "partner_is_first_merge": false,
+  "partner_is_reapply": true,
+  "partner_pr": 17,
+  "partner_reason": null,
+  "seconds": 5.0,
+  "seed": 1,
+  "status": "clash",
+  "trials": [
+    [
+      "bdfb0fc",
+      "pass"
+    ],
+    [
+      "89e65a8",
+      "fail"
+    ],
+    [
+      "17cf74b",
+      "pass"
+    ],
+    [
+      "609ca3a",
+      "fail"
+    ],
+    [
+      "ccf44d0",
+      "pass"
+    ],
+    [
+      "43b72d3",
+      "fail"
+    ],
+    [
+      "47222cd",
+      "fail"
+    ]
+  ],
+  "variant": "non-monotonic clash"
+}

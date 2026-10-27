@@ -1,0 +1,51 @@
+{
+  "a_merge": {
+    "after_seconds": 6.68,
+    "agent_events_before": 7,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 9,
+    "cost_usd": 0.011411049999999999,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 42.78,
+    "timed_out": false,
+    "tokens": {
+      "cached": 396435,
+      "input": 423081,
+      "output": 3971
+    },
+    "tool_calls": 12,
+    "turns": 14
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "The import now points at `accounts.users.get_user`, and `python -m pytest -q` passes (3 tests).\n\n- **`account.py`**: the import is `from accounts.users import get_user`. `account_summary` calls `get_user` as before, so it still returns `\"User 7\"` for `7`.\n- **Branch**: `s3/task-b` didn't have the move, so the new import failed with `ModuleNotFoundError`. I fast-forwarded the local branch to `origin/main` (8995c43). That brought in `accounts/` and the moved `tests/test_users.py`. Your uncommitted changes were stashed and restored around the merge, and nothing was lost.\n- **Uncommitted**: the `account.py` edit and the new `tests/test_account.py` are still in the working tree, not committed.",
+  "agent_name": "claude",
+  "arm": "stop-only",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 9,
+  "commands_without_exit_code": 9,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": null,
+  "integrated_clean": true,
+  "label": "S3-stop-only-3",
+  "main_broken": false,
+  "merge_commit": "6dcc37b53353f4f4133a39c2fe2fa2267a18c57c",
+  "merged_tests": "pass",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S3",
+  "seconds": 48.51,
+  "stop_blocks": 1,
+  "tier": 1,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012148.132778Z-live-claude-haiku/S3-stop-only-3"
+}

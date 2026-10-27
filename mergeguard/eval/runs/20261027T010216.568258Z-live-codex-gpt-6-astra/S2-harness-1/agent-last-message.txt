@@ -1,0 +1,5 @@
+Implemented `account_summary(7)` → `"User 7"`, reusing `get_user` and supporting its new `org_id` argument. Added tests for the summary and organization forwarding.
+
+`python -m pytest -q`: **4 passed**.
+
+Git metadata was read-only, so I applied the updated lookup and its test directly from commit `910dbfe4`.

@@ -1,0 +1,13 @@
+{
+  "bisect_steps": 6,
+  "culprit_ok": true,
+  "label": "defect-1",
+  "main_commits": 96,
+  "message": "Main broke at b4601158. Cause: PR #36. Undo PR #96 opened.",
+  "no_partner": true,
+  "seconds": 7.9,
+  "seed": 1,
+  "status": "culprit",
+  "undo_opened": true,
+  "variant": "ordinary defect, long history"
+}

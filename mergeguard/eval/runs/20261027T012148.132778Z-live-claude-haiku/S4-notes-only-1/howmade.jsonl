@@ -1,0 +1,2 @@
+{"ts": "2026-10-27T01:25:46.728205Z", "event": "command", "branch": "s4/task-b", "cmd": "cat README.md; echo ---; cat pyproject.toml; echo ---; cat .mergeguard/policy.yaml; echo ---; cat .claude/settings.json; echo ---; cat .gitignore; echo ---; git log --oneline | head -5; python -m pytest -q 2>&1 | tail -3", "exit_code": null}
+{"ts": "2026-10-27T01:25:50.946856Z", "event": "command", "branch": "s4/task-b", "cmd": "python -m pytest -q; echo \"exit=$?\"; git status --short", "exit_code": null}

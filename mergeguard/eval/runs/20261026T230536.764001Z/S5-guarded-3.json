@@ -1,0 +1,45 @@
+{
+  "arm": "guarded",
+  "branch_after": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "branch_before": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+  },
+  "expected_checks_passed": true,
+  "final_healthy": true,
+  "guardian": null,
+  "hook_ms": 425.05,
+  "hook_output": {},
+  "hook_stderr": "",
+  "main_broken": false,
+  "merge_commit": "17c75db89289994996b7f4951b76cea9d696e0d5",
+  "merged_tests": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+  },
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S5",
+  "scripted_repair": false,
+  "seconds": 7.62,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S5-guarded-3"
+}

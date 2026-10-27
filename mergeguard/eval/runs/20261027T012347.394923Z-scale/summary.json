@@ -1,0 +1,49 @@
+{
+  "kind": "scale",
+  "seeds": 1,
+  "sizes": [
+    {
+      "blind_spot_caught": 0,
+      "blind_spot_trials": 12,
+      "check_ms_mean": 383.7,
+      "check_ms_p95": 455.9,
+      "clean_trials": 18,
+      "explicit_positives": 18,
+      "false_negatives": 0,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "functions_per_module": 8,
+      "hook_ms_cached_mean": 403.5,
+      "hook_ms_with_fetch": 449.4,
+      "misclassified": [],
+      "modules": 10,
+      "precision": 1.0,
+      "python_files": 11,
+      "recall": 1.0,
+      "recall_by_change": {
+        "add_required_param": {
+          "recall": "3/3"
+        },
+        "move": {
+          "recall": "3/3"
+        },
+        "remove": {
+          "recall": "3/3"
+        },
+        "remove_param": {
+          "recall": "3/3"
+        },
+        "rename": {
+          "recall": "3/3"
+        },
+        "reorder_params": {
+          "recall": "3/3"
+        }
+      },
+      "symbols": 80,
+      "trials": 48,
+      "true_positives": 18
+    }
+  ],
+  "timestamp": "20261027T012347.394923Z"
+}

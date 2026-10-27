@@ -1,0 +1,51 @@
+{
+  "a_merge": {
+    "after_seconds": 5.9,
+    "agent_events_before": 6,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 9,
+    "cost_usd": 0.01234818,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 49.94,
+    "timed_out": false,
+    "tokens": {
+      "cached": 366628,
+      "input": 394639,
+      "output": 5895
+    },
+    "tool_calls": 13,
+    "turns": 15
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "`account.py` now calls `get_user(uid, org_id)`, and `python -m pytest -q` passes: 3 passed.\n\nTwo things changed that you should know about:\n\n- **`account_summary` now takes `org_id`.** The new `get_user` requires it, so the caller has to supply it. The signature is `account_summary(uid, org_id)`, so the earlier `account_summary(7)` example is now `account_summary(7, org_id)`. If you want `org_id` sourced some other way, such as from a session or a default, tell me and I'll change it.\n- **I pulled in the new `users.py` and `tests/test_users.py` from `origin/main`.** My branch `s2/task-b` was still on the old base, so the tests couldn't see the new signature. Those two files are staged, and nothing is committed. Local `main` is still behind `origin/main`, and I didn't touch it.\n\n`account.py` and `tests/test_account.py` are unstaged. Nothing is committed yet.",
+  "agent_name": "claude",
+  "arm": "stop-only",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 9,
+  "commands_without_exit_code": 9,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": null,
+  "integrated_clean": true,
+  "label": "S2-stop-only-2",
+  "main_broken": false,
+  "merge_commit": "6d8f2252285510efd4ccc1775885fad1595d9ac5",
+  "merged_tests": "pass",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S2",
+  "seconds": 69.45,
+  "stop_blocks": 1,
+  "tier": 2,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012148.132778Z-live-claude-haiku/S2-stop-only-2"
+}

@@ -1,0 +1,19 @@
+{
+  "bisect_steps": 0,
+  "blamed": false,
+  "culprit_ok": false,
+  "flaky_tests": [
+    "tests/test_latency.py::test_latency_budget"
+  ],
+  "label": "flaky-0.5-1",
+  "main_commits": 25,
+  "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+  "p": 0.5,
+  "partner_ok": false,
+  "seconds": 0.7,
+  "seed": 1,
+  "status": "flaky",
+  "tests": null,
+  "variant": "flaky p=0.5",
+  "wrong_blame": false
+}

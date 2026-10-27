@@ -23,7 +23,7 @@ for what is functional vs. limited, and [docs/](docs/) for architecture, securit
 
 ```bash
 npm install
-npm run setup:python          # creates .intentos/venv with pytest
+npm run setup:python          # creates .intentos/venv with pytest and the in-tree mergeguard package
 npm run fixture:build         # materializes the demo repo with Git history at .intentos/fixtures/startup_billing
 
 FIX=.intentos/fixtures/startup_billing
@@ -216,9 +216,9 @@ always wins. From an MCP host the same happens through the `precedents` tool fol
 
 ## Coordination between runs: mergeguard
 
-Several runs share one repository, and main moves under them. [mergeguard](https://github.com/Cyr-Ch/mergeguard) (a
-deterministic coordination harness, no model in it) is built in: install it into the IntentOS venv
-(`.intentos/venv/bin/python -m pip install -e <path to mergeguard>`; `intentos coordination` confirms) and every run gets
+Several runs share one repository, and main moves under them. mergeguard, the deterministic coordination harness in
+[mergeguard/](mergeguard/) (no model in it; its own README, design notes, demo and evaluation results are there), is
+part of IntentOS: `npm run setup:python` installs it into the venv (`intentos coordination` confirms) and every run gets
 
 - **hooks in its worktree** (live Codex): after each command the agent is told which symbol it uses that main just
   renamed, moved, removed or re-signed, with the commit, the file and line and the first step; it cannot finish stale.

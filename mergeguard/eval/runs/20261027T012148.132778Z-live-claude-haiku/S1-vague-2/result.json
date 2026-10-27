@@ -1,0 +1,53 @@
+{
+  "a_merge": {
+    "after_seconds": 5.85,
+    "agent_events_before": 7,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 7,
+    "cost_usd": 0.0094759,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 34.3,
+    "timed_out": false,
+    "tokens": {
+      "cached": 283530,
+      "input": 308370,
+      "output": 3080
+    },
+    "tool_calls": 8,
+    "turns": 10
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "`account_summary(7)` still returns `\"User 7\"`, and `python -m pytest -q` passes (3 tests). Nothing is committed.\n\nA teammate renamed `get_user` to `fetch_user` on `origin/main` (commit `ef9004d`), which would have broken my import. I fast-forwarded `s1/task-b` to `origin/main` so the branch includes that change, then switched `account.py` to call `fetch_user`. The branch was not otherwise changed. My edits are uncommitted: `account.py` is modified and `tests/test_account.py` is new.",
+  "agent_name": "claude",
+  "arm": "vague",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 7,
+  "commands_without_exit_code": 7,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": null,
+  "integrated_clean": true,
+  "label": "S1-vague-2",
+  "main_broken": false,
+  "merge_commit": "483079da3c26b0c1feee49cb838414b2324499e4",
+  "merged_tests": "pass",
+  "model": "haiku",
+  "note_messages": [
+    "Heads up: a teammate recently changed code on main that your branch may depend on. Make sure your changes are compatible with current main before you finish."
+  ],
+  "notes": 1,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S1",
+  "seconds": 46.7,
+  "stop_blocks": 1,
+  "tier": 1,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012148.132778Z-live-claude-haiku/S1-vague-2"
+}

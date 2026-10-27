@@ -1,0 +1,39 @@
+{
+  "agent": {
+    "commands": 3,
+    "cost_usd": 0.005335069999999999,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 16.4,
+    "timed_out": false,
+    "tokens": {
+      "cached": 122557,
+      "input": 139212,
+      "output": 1293
+    },
+    "tool_calls": 6,
+    "turns": 7
+  },
+  "agent_failed": false,
+  "category": "new test",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [],
+  "label": "parametrized-test-1",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [
+    "tests/test_users_parametrized.py"
+  ],
+  "prompt": "Add a parametrized pytest test for get_user with ids 1, 2 and 3. Put it in a new test file; do not modify existing tests.",
+  "proofs": {
+    "tests/test_users_parametrized.py": "new module: nothing existing changed"
+  },
+  "reasons": [
+    "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+  ],
+  "risky": false,
+  "task": "parametrized-test",
+  "tier": 0,
+  "under_reviewed": false
+}

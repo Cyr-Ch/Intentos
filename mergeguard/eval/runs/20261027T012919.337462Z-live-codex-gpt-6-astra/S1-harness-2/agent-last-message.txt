@@ -1,0 +1,5 @@
+Implemented `account_summary(uid)` using `users.fetch_user` and added `tests/test_account.py`. `account_summary(7)` returns `"User 7"`.
+
+Applied main’s lookup rename to the working files; Git metadata updates were blocked by filesystem permissions.
+
+Validation: `python -m pytest -q` — 3 passed.

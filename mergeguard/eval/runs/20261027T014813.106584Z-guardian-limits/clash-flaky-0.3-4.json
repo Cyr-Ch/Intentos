@@ -1,0 +1,21 @@
+{
+  "bisect_steps": 4,
+  "blamed": true,
+  "culprit_ok": true,
+  "flaky_tests": [
+    "tests/test_latency.py::test_latency_budget"
+  ],
+  "label": "clash-flaky-0.3-4",
+  "main_commits": 31,
+  "message": "Main broke at 99870a88. Cause: PR #16 (clashed with #1). Undo PR #31 opened. Ignored as flaky: tests/test_latency.py::test_latency_budget.",
+  "p": 0.3,
+  "partner_ok": true,
+  "seconds": 6.1,
+  "seed": 4,
+  "status": "clash",
+  "tests": [
+    "tests/test_invoice.py::test_invoice_total"
+  ],
+  "variant": "clash+flaky p=0.3",
+  "wrong_blame": false
+}

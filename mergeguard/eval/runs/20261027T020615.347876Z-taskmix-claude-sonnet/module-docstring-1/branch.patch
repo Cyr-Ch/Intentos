@@ -1,0 +1,14 @@
+diff --git a/users.py b/users.py
+index 039ac6c..cf15eff 100644
+--- a/users.py
++++ b/users.py
+@@ -1,2 +1,9 @@
++"""User lookup helpers.
++
++Provides ``get_user``, which returns a minimal user record (a dict
++containing the user's ``id``) for a given user identifier.
++"""
++
++
+ def get_user(uid):
+     return {"id": uid}

@@ -1,0 +1,17 @@
+{
+  "bisect_steps": 0,
+  "blamed": false,
+  "culprit_ok": false,
+  "flaky_tests": null,
+  "label": "flaky-0.3-3",
+  "main_commits": 32,
+  "message": "No failing tests at bad",
+  "p": 0.3,
+  "partner_ok": false,
+  "seconds": 0.2,
+  "seed": 3,
+  "status": "healthy",
+  "tests": null,
+  "variant": "flaky p=0.3",
+  "wrong_blame": false
+}

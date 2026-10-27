@@ -1,0 +1,47 @@
+{
+  "arm": "baseline",
+  "branch_after": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "branch_before": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+  },
+  "expected_checks_passed": true,
+  "final_healthy": false,
+  "guardian": null,
+  "hook_ms": 61.25,
+  "hook_output": {},
+  "hook_stderr": "",
+  "main_broken": true,
+  "merge_commit": "59f381a08394ae1ee46303a91a6bdb31f3c6f328",
+  "merged_tests": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 1,
+    "failed": [
+      "tests/test_invoice.py::test_invoice_total"
+    ],
+    "missing": [],
+    "outcome": "fail",
+    "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.03s\n"
+  },
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S4",
+  "scripted_repair": false,
+  "seconds": 7.38,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-baseline-2"
+}

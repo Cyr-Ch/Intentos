@@ -1,0 +1,57 @@
+{
+  "a_merge": {
+    "after_seconds": 5.88,
+    "agent_events_before": 6,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 2,
+    "cost_usd": 0.0899733,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 16.14,
+    "timed_out": false,
+    "tokens": {
+      "cached": 71102,
+      "input": 90466,
+      "output": 528
+    },
+    "tool_calls": 2,
+    "turns": 3
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "`invoice_total(amounts)` is now in `invoices/total.py`, and `invoice_total([5, 10])` returns 1500. It sums `payments.charge.charge(a)` over the amounts. I also made `invoices` a package by adding an empty `invoices/__init__.py`.\n\nThe tests are in `tests/test_invoices.py`. One checks the `[5, 10]` case, and one checks that an empty list returns 0. `python -m pytest -q` ran with 4 passed, which includes the two existing test files.\n\nI haven't committed anything.",
+  "agent_name": "claude",
+  "arm": "harness",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 2,
+  "commands_without_exit_code": 2,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": {
+    "culprit": "98de44a702b98d01e4b060258b76a3d96ea96f9b",
+    "message": "Main broke at 98de44a7. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+    "partner_pr": 1,
+    "status": "clash",
+    "undo_pr": 3
+  },
+  "integrated_clean": false,
+  "label": "S4-harness-1",
+  "main_broken": true,
+  "merge_commit": "98de44a702b98d01e4b060258b76a3d96ea96f9b",
+  "merged_tests": "fail",
+  "model": "sonnet",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": true,
+  "scenario": "S4",
+  "seconds": 40.97,
+  "stop_blocks": 0,
+  "tier": 1,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T000011.417858Z-live-claude-sonnet/S4-harness-1"
+}

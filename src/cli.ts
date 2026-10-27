@@ -441,7 +441,10 @@ setup
     }
     const r2 = spawnSync(py, ["-m", "pip", "install", "-q", "pytest"], { stdio: "inherit" });
     if (r2.status !== 0) fail("pip install pytest failed");
-    console.log(`python ready: ${py}`);
+    // mergeguard (coordination between runs) ships in-tree; an editable install keeps the hooks pointing at the sources.
+    const r3 = spawnSync(py, ["-m", "pip", "install", "-q", "-e", path.join(PROJECT_ROOT, "mergeguard")], { stdio: "inherit" });
+    if (r3.status !== 0) fail("pip install of mergeguard failed");
+    console.log(`python ready: ${py} (pytest, mergeguard)`);
   });
 
 registerRunCommands(program, { openStore, fail });

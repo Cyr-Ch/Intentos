@@ -1,0 +1,48 @@
+{
+  "arm": "baseline",
+  "branch_after": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "branch_before": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "expected_checks_passed": true,
+  "final_healthy": false,
+  "guardian": null,
+  "hook_ms": 60.16,
+  "hook_output": {},
+  "hook_stderr": "",
+  "main_broken": true,
+  "merge_commit": "89647f6d774c2a02b78002f64f50884d70b3983a",
+  "merged_tests": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 1,
+    "failed": [
+      "tests/test_account.py::test_summary"
+    ],
+    "missing": [],
+    "outcome": "fail",
+    "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^\nE   AttributeError: module 'users' has no attribute 'get_user'. Did you mean: 'fetch_user'?\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - AttributeError: module 'users' h...\n1 failed, 2 passed in 0.03s\n"
+  },
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S1",
+  "scripted_repair": false,
+  "seconds": 10.01,
+  "tool_sha256": "4c23822cdfbe17a917c561f5497d340b88bf75371096aee675ea054a31401cca",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T000034.552688Z/S1-baseline-3"
+}

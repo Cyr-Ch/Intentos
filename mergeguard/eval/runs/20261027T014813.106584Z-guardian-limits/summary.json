@@ -1,0 +1,652 @@
+{
+  "kind": "guardian-limits",
+  "results": [
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.1-1",
+      "main_commits": 25,
+      "message": "No failing tests at bad",
+      "p": 0.1,
+      "partner_ok": false,
+      "seconds": 0.2,
+      "seed": 1,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.1",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.1-2",
+      "main_commits": 33,
+      "message": "No failing tests at bad",
+      "p": 0.1,
+      "partner_ok": false,
+      "seconds": 0.5,
+      "seed": 2,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.1",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.1-3",
+      "main_commits": 32,
+      "message": "No failing tests at bad",
+      "p": 0.1,
+      "partner_ok": false,
+      "seconds": 0.3,
+      "seed": 3,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.1",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.1-4",
+      "main_commits": 30,
+      "message": "No failing tests at bad",
+      "p": 0.1,
+      "partner_ok": false,
+      "seconds": 0.6,
+      "seed": 4,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.1",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.1-5",
+      "main_commits": 38,
+      "message": "No failing tests at bad",
+      "p": 0.1,
+      "partner_ok": false,
+      "seconds": 0.9,
+      "seed": 5,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.1",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.1-6",
+      "main_commits": 41,
+      "message": "No failing tests at bad",
+      "p": 0.1,
+      "partner_ok": false,
+      "seconds": 0.2,
+      "seed": 6,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.1",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.3-1",
+      "main_commits": 25,
+      "message": "No failing tests at bad",
+      "p": 0.3,
+      "partner_ok": false,
+      "seconds": 0.2,
+      "seed": 1,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.3-2",
+      "main_commits": 33,
+      "message": "No failing tests at bad",
+      "p": 0.3,
+      "partner_ok": false,
+      "seconds": 0.4,
+      "seed": 2,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.3-3",
+      "main_commits": 32,
+      "message": "No failing tests at bad",
+      "p": 0.3,
+      "partner_ok": false,
+      "seconds": 0.2,
+      "seed": 3,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "flaky-0.3-4",
+      "main_commits": 30,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "p": 0.3,
+      "partner_ok": false,
+      "seconds": 1.4,
+      "seed": 4,
+      "status": "flaky",
+      "tests": null,
+      "variant": "flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "flaky-0.3-5",
+      "main_commits": 38,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "p": 0.3,
+      "partner_ok": false,
+      "seconds": 1.5,
+      "seed": 5,
+      "status": "flaky",
+      "tests": null,
+      "variant": "flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.3-6",
+      "main_commits": 41,
+      "message": "No failing tests at bad",
+      "p": 0.3,
+      "partner_ok": false,
+      "seconds": 0.7,
+      "seed": 6,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "flaky-0.5-1",
+      "main_commits": 25,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "p": 0.5,
+      "partner_ok": false,
+      "seconds": 0.7,
+      "seed": 1,
+      "status": "flaky",
+      "tests": null,
+      "variant": "flaky p=0.5",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.5-2",
+      "main_commits": 33,
+      "message": "No failing tests at bad",
+      "p": 0.5,
+      "partner_ok": false,
+      "seconds": 0.2,
+      "seed": 2,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.5",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "flaky-0.5-3",
+      "main_commits": 32,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "p": 0.5,
+      "partner_ok": false,
+      "seconds": 0.8,
+      "seed": 3,
+      "status": "flaky",
+      "tests": null,
+      "variant": "flaky p=0.5",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "flaky-0.5-4",
+      "main_commits": 30,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "p": 0.5,
+      "partner_ok": false,
+      "seconds": 0.7,
+      "seed": 4,
+      "status": "flaky",
+      "tests": null,
+      "variant": "flaky p=0.5",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "flaky-0.5-5",
+      "main_commits": 38,
+      "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+      "p": 0.5,
+      "partner_ok": false,
+      "seconds": 1.2,
+      "seed": 5,
+      "status": "flaky",
+      "tests": null,
+      "variant": "flaky p=0.5",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 0,
+      "blamed": false,
+      "culprit_ok": false,
+      "flaky_tests": null,
+      "label": "flaky-0.5-6",
+      "main_commits": 41,
+      "message": "No failing tests at bad",
+      "p": 0.5,
+      "partner_ok": false,
+      "seconds": 0.2,
+      "seed": 6,
+      "status": "healthy",
+      "tests": null,
+      "variant": "flaky p=0.5",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 3,
+      "blamed": true,
+      "culprit_ok": true,
+      "flaky_tests": [],
+      "label": "clash-flaky-0.3-1",
+      "main_commits": 26,
+      "message": "Main broke at 30963b89. Cause: PR #15 (clashed with #1). Undo PR #26 opened.",
+      "p": 0.3,
+      "partner_ok": true,
+      "seconds": 5.4,
+      "seed": 1,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "variant": "clash+flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "flaky_tests": [],
+      "label": "clash-flaky-0.3-2",
+      "main_commits": 34,
+      "message": "Main broke at d988a1ab. Cause: PR #13 (clashed with #1). Undo PR #34 opened.",
+      "p": 0.3,
+      "partner_ok": true,
+      "seconds": 5.5,
+      "seed": 2,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "variant": "clash+flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "flaky_tests": [],
+      "label": "clash-flaky-0.3-3",
+      "main_commits": 33,
+      "message": "Main broke at 0f66108f. Cause: PR #16 (clashed with #1). Undo PR #33 opened.",
+      "p": 0.3,
+      "partner_ok": true,
+      "seconds": 5.1,
+      "seed": 3,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "variant": "clash+flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "clash-flaky-0.3-4",
+      "main_commits": 31,
+      "message": "Main broke at 99870a88. Cause: PR #16 (clashed with #1). Undo PR #31 opened. Ignored as flaky: tests/test_latency.py::test_latency_budget.",
+      "p": 0.3,
+      "partner_ok": true,
+      "seconds": 6.1,
+      "seed": 4,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "variant": "clash+flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "flaky_tests": [
+        "tests/test_latency.py::test_latency_budget"
+      ],
+      "label": "clash-flaky-0.3-5",
+      "main_commits": 39,
+      "message": "Main broke at c0c0e73c. Cause: PR #22 (clashed with #1). Undo PR #39 opened. Ignored as flaky: tests/test_latency.py::test_latency_budget.",
+      "p": 0.3,
+      "partner_ok": true,
+      "seconds": 5.9,
+      "seed": 5,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "variant": "clash+flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 4,
+      "blamed": true,
+      "culprit_ok": true,
+      "flaky_tests": [],
+      "label": "clash-flaky-0.3-6",
+      "main_commits": 42,
+      "message": "Main broke at fe22a9da. Cause: PR #22 (clashed with #1). Undo PR #42 opened.",
+      "p": 0.3,
+      "partner_ok": true,
+      "seconds": 6.0,
+      "seed": 6,
+      "status": "clash",
+      "tests": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "variant": "clash+flaky p=0.3",
+      "wrong_blame": false
+    },
+    {
+      "bisect_steps": 6,
+      "culprit_ok": true,
+      "label": "long-1",
+      "main_commits": 184,
+      "message": "Main broke at fb398106. Cause: PR #70 (clashed with #1). Undo PR #184 opened.",
+      "partner_ok": true,
+      "seconds": 11.2,
+      "seed": 1,
+      "status": "clash",
+      "undo_opened": true,
+      "variant": "long history clash"
+    },
+    {
+      "bisect_steps": 6,
+      "culprit_ok": true,
+      "label": "long-2",
+      "main_commits": 193,
+      "message": "Main broke at 1b14de31. Cause: PR #117 (clashed with #1). Undo PR #193 opened.",
+      "partner_ok": true,
+      "seconds": 12.4,
+      "seed": 2,
+      "status": "clash",
+      "undo_opened": true,
+      "variant": "long history clash"
+    },
+    {
+      "bisect_steps": 6,
+      "culprit_ok": true,
+      "label": "long-3",
+      "main_commits": 176,
+      "message": "Main broke at 2a5bbbda. Cause: PR #77 (clashed with #1). Undo PR #176 opened.",
+      "partner_ok": true,
+      "seconds": 10.7,
+      "seed": 3,
+      "status": "clash",
+      "undo_opened": true,
+      "variant": "long history clash"
+    },
+    {
+      "culprit_ok": true,
+      "label": "nonmono-1",
+      "main_commits": 29,
+      "message": "Main broke at c83630be. Cause: PR #28 (clashed with #17). Undo PR #29 opened.",
+      "partner_is_first_merge": false,
+      "partner_is_reapply": true,
+      "partner_pr": 17,
+      "partner_reason": null,
+      "seconds": 5.0,
+      "seed": 1,
+      "status": "clash",
+      "trials": [
+        [
+          "bdfb0fc",
+          "pass"
+        ],
+        [
+          "89e65a8",
+          "fail"
+        ],
+        [
+          "17cf74b",
+          "pass"
+        ],
+        [
+          "609ca3a",
+          "fail"
+        ],
+        [
+          "ccf44d0",
+          "pass"
+        ],
+        [
+          "43b72d3",
+          "fail"
+        ],
+        [
+          "47222cd",
+          "fail"
+        ]
+      ],
+      "variant": "non-monotonic clash"
+    },
+    {
+      "culprit_ok": true,
+      "label": "nonmono-2",
+      "main_commits": 26,
+      "message": "Main broke at 192b0706. Cause: PR #25 (clashed with #15). Undo PR #26 opened.",
+      "partner_is_first_merge": false,
+      "partner_is_reapply": true,
+      "partner_pr": 15,
+      "partner_reason": null,
+      "seconds": 4.5,
+      "seed": 2,
+      "status": "clash",
+      "trials": [
+        [
+          "e2fbb2c",
+          "pass"
+        ],
+        [
+          "cf615fe",
+          "fail"
+        ],
+        [
+          "c63ef25",
+          "pass"
+        ],
+        [
+          "d9f32e2",
+          "fail"
+        ],
+        [
+          "8202147",
+          "fail"
+        ],
+        [
+          "19099d7",
+          "pass"
+        ],
+        [
+          "8b87ccd",
+          "pass"
+        ]
+      ],
+      "variant": "non-monotonic clash"
+    },
+    {
+      "culprit_ok": true,
+      "label": "nonmono-3",
+      "main_commits": 29,
+      "message": "Main broke at db4f001e. Cause: PR #28 (clashed with #17). Undo PR #29 opened.",
+      "partner_is_first_merge": false,
+      "partner_is_reapply": true,
+      "partner_pr": 17,
+      "partner_reason": null,
+      "seconds": 5.6,
+      "seed": 3,
+      "status": "clash",
+      "trials": [
+        [
+          "7282572",
+          "pass"
+        ],
+        [
+          "5221cd4",
+          "fail"
+        ],
+        [
+          "00cc9cf",
+          "pass"
+        ],
+        [
+          "5cb2b46",
+          "fail"
+        ],
+        [
+          "2ec0863",
+          "pass"
+        ],
+        [
+          "8ca6dbf",
+          "fail"
+        ],
+        [
+          "579ce82",
+          "fail"
+        ]
+      ],
+      "variant": "non-monotonic clash"
+    },
+    {
+      "bisect_steps": 6,
+      "culprit_ok": true,
+      "label": "defect-1",
+      "main_commits": 96,
+      "message": "Main broke at b4601158. Cause: PR #36. Undo PR #96 opened.",
+      "no_partner": true,
+      "seconds": 7.9,
+      "seed": 1,
+      "status": "culprit",
+      "undo_opened": true,
+      "variant": "ordinary defect, long history"
+    },
+    {
+      "bisect_steps": 5,
+      "culprit_ok": true,
+      "label": "defect-2",
+      "main_commits": 107,
+      "message": "Main broke at 09e08c01. Cause: PR #62. Undo PR #107 opened.",
+      "no_partner": true,
+      "seconds": 7.8,
+      "seed": 2,
+      "status": "culprit",
+      "undo_opened": true,
+      "variant": "ordinary defect, long history"
+    },
+    {
+      "bisect_steps": 5,
+      "culprit_ok": true,
+      "label": "defect-3",
+      "main_commits": 71,
+      "message": "Main broke at a44bb23a. Cause: PR #39. Undo PR #71 opened.",
+      "no_partner": true,
+      "seconds": 8.0,
+      "seed": 3,
+      "status": "culprit",
+      "undo_opened": true,
+      "variant": "ordinary defect, long history"
+    }
+  ],
+  "timestamp": "20261027T014813.106584Z"
+}

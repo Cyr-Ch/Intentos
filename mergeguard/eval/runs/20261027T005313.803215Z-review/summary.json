@@ -1,0 +1,911 @@
+{
+  "kind": "review",
+  "policy": "demo",
+  "results": [
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S1-baseline-1",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235041.999562Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S1-harness-1",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235041.999562Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S1-baseline-1",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S1-baseline-2",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S1-baseline-3",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S1-harness-1",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: 3 recorded test attempts",
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S1-harness-2",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S1-harness-3",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S1",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S2-baseline-1",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S2",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S2-baseline-2",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S2",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S2-baseline-3",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S2",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S2-harness-1",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "account.py changes executable code or has no comment-only proof",
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S2",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S2-harness-2",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: 3 recorded test attempts",
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S2",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S2-harness-3",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S2",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S3-baseline-1",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S3",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S3-baseline-2",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S3",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S3-baseline-3",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S3",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S3-harness-1",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S3",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S3-harness-2",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S3",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S3-harness-3",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S3",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S4-baseline-1",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S4-baseline-2",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S4-baseline-3",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S4-harness-1",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": true,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S4-harness-2",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": true,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S4-harness-3",
+      "main_broken": true,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": true,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S5-baseline-1",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S5-baseline-2",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S5-baseline-3",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S5-harness-1",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S5-harness-2",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S5-harness-3",
+      "main_broken": false,
+      "model": "haiku",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261026T235313.817005Z-live-claude-haiku",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S1-baseline-1",
+      "main_broken": true,
+      "model": "sonnet",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S1",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S1-harness-1",
+      "main_broken": false,
+      "model": "sonnet",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S1",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S2-baseline-1",
+      "main_broken": true,
+      "model": "sonnet",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S2",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S2-harness-1",
+      "main_broken": false,
+      "model": "sonnet",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S2",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S3-baseline-1",
+      "main_broken": true,
+      "model": "sonnet",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S3",
+      "sync_clean": false,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S3-harness-1",
+      "main_broken": false,
+      "model": "sonnet",
+      "no_human_merge": false,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "How-made: agent received a specific sync note"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S3",
+      "sync_clean": true,
+      "tier": 1
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S4-baseline-1",
+      "main_broken": true,
+      "model": "sonnet",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S4-harness-1",
+      "main_broken": true,
+      "model": "sonnet",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "invoices/__init__.py": "new module: nothing existing changed",
+        "invoices/total.py": "new module: nothing existing changed",
+        "tests/test_invoices.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": true,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S4",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "baseline",
+      "label": "S5-baseline-1",
+      "main_broken": false,
+      "model": "sonnet",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    },
+    {
+      "agent": "claude",
+      "arm": "harness",
+      "label": "S5-harness-1",
+      "main_broken": false,
+      "model": "sonnet",
+      "no_human_merge": true,
+      "pr": 2,
+      "proofs": {
+        "account.py": "additive-only: adds definitions or imports, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "recovered": false,
+      "run": "20261027T000011.417858Z-live-claude-sonnet",
+      "scenario": "S5",
+      "sync_clean": true,
+      "tier": 0
+    }
+  ],
+  "timestamp": "20261027T005313.803215Z",
+  "totals": {
+    "approvals_flat": 42,
+    "approvals_routed": 13,
+    "blocked_stale": 13,
+    "no_human_merge": 16,
+    "no_human_merges_that_broke_main": 8,
+    "of_which_recovered": 4,
+    "prs": 42,
+    "tier0": 29,
+    "tier1": 13,
+    "tier2": 0
+  }
+}

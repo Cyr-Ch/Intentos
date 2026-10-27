@@ -1,0 +1,57 @@
+{
+  "a_merge": {
+    "after_seconds": 5.87,
+    "agent_events_before": 7,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 4,
+    "cost_usd": 0.007033330000000001,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 21.45,
+    "timed_out": false,
+    "tokens": {
+      "cached": 140843,
+      "input": 163362,
+      "output": 1966
+    },
+    "tool_calls": 7,
+    "turns": 8
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "`invoice_total(amounts)` is in place and `python -m pytest -q` passes (4 tests, including the 2 existing ones).\n\nChanges:\n- **`invoices/__init__.py`**: new empty file that makes `invoices` a package.\n- **`invoices/total.py`**: `invoice_total` sums `payments.charge.charge(amount)` over the list, so each dollar amount is converted to cents by the existing helper. `invoice_total([5, 10])` returns `1500`.\n- **`tests/test_invoices.py`**: checks the `[5, 10]` \u2192 `1500` case and an empty list \u2192 `0`.\n\nI did not commit anything. The repo's `.mergeguard/policy.yaml` lists `payments/` under `always_two` review. I only imported from `payments/` and did not modify it, so this change should not trigger that rule, but it's worth knowing if you open a PR.",
+  "agent_name": "claude",
+  "arm": "harness",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 2,
+  "commands_without_exit_code": 2,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": {
+    "culprit": "b83c587cb7ec165c3329fc0d8c675a5fc53e4f25",
+    "message": "Main broke at b83c587c. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+    "partner_pr": 1,
+    "status": "clash",
+    "undo_pr": 3
+  },
+  "integrated_clean": false,
+  "label": "S4-harness-8",
+  "main_broken": true,
+  "merge_commit": "b83c587cb7ec165c3329fc0d8c675a5fc53e4f25",
+  "merged_tests": "fail",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": true,
+  "scenario": "S4",
+  "seconds": 36.1,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T014147.904560Z-live-claude-haiku/S4-harness-8"
+}

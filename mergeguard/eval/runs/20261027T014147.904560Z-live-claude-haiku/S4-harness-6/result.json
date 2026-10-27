@@ -1,0 +1,57 @@
+{
+  "a_merge": {
+    "after_seconds": 4.85,
+    "agent_events_before": 7,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 2,
+    "cost_usd": 0.0058394200000000005,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 12.95,
+    "timed_out": false,
+    "tokens": {
+      "cached": 72772,
+      "input": 94448,
+      "output": 1276
+    },
+    "tool_calls": 5,
+    "turns": 6
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "I added `invoice_total(amounts)`, and `python -m pytest -q` passes (3 tests, including the new one).\n\n- **`invoices/__init__.py`**: new empty file that makes `invoices` a package.\n- **`invoices/total.py`**: `invoice_total` sums `charge(amount)` over the list, so `invoice_total([5, 10])` returns `1500`.\n- **`tests/test_invoices.py`**: asserts `invoice_total([5, 10]) == 1500`.\n\nI did not commit anything; the changes are uncommitted on `s4/task-b`.",
+  "agent_name": "claude",
+  "arm": "harness",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 2,
+  "commands_without_exit_code": 2,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": {
+    "culprit": "edbc65c61c23446039fc0a2d759f3ac3c297c1ae",
+    "message": "Main broke at edbc65c6. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+    "partner_pr": 1,
+    "status": "clash",
+    "undo_pr": 3
+  },
+  "integrated_clean": false,
+  "label": "S4-harness-6",
+  "main_broken": true,
+  "merge_commit": "edbc65c61c23446039fc0a2d759f3ac3c297c1ae",
+  "merged_tests": "fail",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": true,
+  "scenario": "S4",
+  "seconds": 24.72,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T014147.904560Z-live-claude-haiku/S4-harness-6"
+}

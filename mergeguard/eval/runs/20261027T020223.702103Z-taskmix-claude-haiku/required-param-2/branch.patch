@@ -1,0 +1,19 @@
+diff --git a/tests/test_users.py b/tests/test_users.py
+index 8295123..3ac63ac 100644
+--- a/tests/test_users.py
++++ b/tests/test_users.py
+@@ -1,4 +1,4 @@
+ from users import get_user
+ 
+ def test_user():
+-    assert get_user(7) == {"id": 7}
++    assert get_user(7, 3) == {"id": 7, "org_id": 3}
+diff --git a/users.py b/users.py
+index 039ac6c..25cd0f8 100644
+--- a/users.py
++++ b/users.py
+@@ -1,2 +1,2 @@
+-def get_user(uid):
+-    return {"id": uid}
++def get_user(uid, org_id):
++    return {"id": uid, "org_id": org_id}

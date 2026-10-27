@@ -1,0 +1,52 @@
+{
+  "a_merge": {
+    "after_seconds": 6.93,
+    "agent_events_before": 8,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 3,
+    "cost_usd": null,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 23.14,
+    "timed_out": false,
+    "tokens": {
+      "cached": 59392,
+      "input": 67288,
+      "output": 438,
+      "reasoning": 0
+    },
+    "tool_calls": 4,
+    "turns": 1
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "Implemented `account_summary(uid)` using `users.get_user`. Added a pytest test confirming `account_summary(7)` returns `\"User 7\"`.\n\nRan `python -m pytest -q`: **3 passed**.",
+  "agent_name": "codex",
+  "arm": "baseline",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 0,
+  "commands_without_exit_code": 0,
+  "false_notes": 0,
+  "final_healthy": false,
+  "final_sync_clean": false,
+  "guardian": null,
+  "integrated_clean": false,
+  "label": "S3-baseline-3",
+  "main_broken": true,
+  "merge_commit": "e178ac386c70a41fe4a99f6a56dedc4942113644",
+  "merged_tests": "error",
+  "model": "gpt-6-astra",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S3",
+  "seconds": 27.83,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012919.337462Z-live-codex-gpt-6-astra/S3-baseline-3"
+}

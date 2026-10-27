@@ -1,0 +1,36 @@
+diff --git a/invoices/__init__.py b/invoices/__init__.py
+new file mode 100644
+index 0000000..c37d8ca
+--- /dev/null
++++ b/invoices/__init__.py
+@@ -0,0 +1 @@
++"""Invoice calculations."""
+diff --git a/invoices/total.py b/invoices/total.py
+new file mode 100644
+index 0000000..9cc6db6
+--- /dev/null
++++ b/invoices/total.py
+@@ -0,0 +1,6 @@
++from payments.charge import charge
++
++
++def invoice_total(amounts):
++    """Return the total in cents, charging each dollar amount separately."""
++    return sum(charge(amount) for amount in amounts)
+diff --git a/tests/test_invoice_total.py b/tests/test_invoice_total.py
+new file mode 100644
+index 0000000..683c266
+--- /dev/null
++++ b/tests/test_invoice_total.py
+@@ -0,0 +1,11 @@
++import pytest
++
++from invoices.total import invoice_total
++
++
++@pytest.mark.parametrize(
++    "amounts, expected",
++    [([5, 10], 1500), ([], 0), ([0.006, 0.006], 2)],
++)
++def test_invoice_total(amounts, expected):
++    assert invoice_total(amounts) == expected

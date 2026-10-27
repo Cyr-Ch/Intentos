@@ -1,0 +1,5 @@
+Added the `invoices` package and `invoice_total(amounts)`, which sums `charge(amount)` for each dollar amount.
+
+Added a pytest test verifying `[5, 10]` returns `1500`.
+
+`python -m pytest -q`: **3 passed**.

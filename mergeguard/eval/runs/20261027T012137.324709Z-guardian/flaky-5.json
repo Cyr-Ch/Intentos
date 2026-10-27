@@ -1,0 +1,24 @@
+{
+  "bisect_steps": 0,
+  "blamed": false,
+  "culprit_ok": false,
+  "expected": "label flaky, blame nobody",
+  "flaky_tests": [
+    "tests/test_latency.py::test_latency_budget"
+  ],
+  "harmless_after": 21,
+  "harmless_before": 18,
+  "label": "flaky-5",
+  "main_commits": 42,
+  "message": "flaky: failures were not consistent at bad and passing at good; no blame or undo issued",
+  "partner_ok": false,
+  "seconds": 0.9,
+  "seed": 5,
+  "status": "flaky",
+  "tests": [
+    "tests/test_latency.py::test_latency_budget"
+  ],
+  "undo_opened": false,
+  "variant": "flaky",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/flaky-5"
+}

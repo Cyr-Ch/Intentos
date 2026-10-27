@@ -39,8 +39,9 @@ export function coordinationStatus(): { ok: boolean; reason: string } {
   if (process.env.INTENTOS_COORDINATION === "0") return { ok: false, reason: "INTENTOS_COORDINATION=0" };
   if (available) return available;
   const python = resolvePython();
-  const res = spawnSync(python, ["-c", "import mergeguard, sys; print(mergeguard.__file__)"], { encoding: "utf8" });
-  available = res.status === 0 ? { ok: true, reason: `mergeguard at ${res.stdout.trim()}` } : { ok: false, reason: `mergeguard is not importable by ${python} (${(res.stderr || "").trim().split("\n").pop() ?? "import failed"}); install it with: ${python} -m pip install -e <path to mergeguard>` };
+  // -I: isolated mode, so a `mergeguard/` directory in the current working directory never shadows the installed package.
+  const res = spawnSync(python, ["-I", "-c", "import mergeguard, sys; print(mergeguard.__file__)"], { encoding: "utf8" });
+  available = res.status === 0 ? { ok: true, reason: `mergeguard at ${res.stdout.trim()}` } : { ok: false, reason: `mergeguard is not importable by ${python} (${(res.stderr || "").trim().split("\n").pop() ?? "import failed"}); run: npm run setup:python (installs mergeguard/ from this repository)` };
   return available;
 }
 
@@ -105,7 +106,7 @@ export interface MergeguardCall {
 
 /** Run `python -m mergeguard <args> --json` in `cwd` with the coordination environment. */
 export function mergeguard(coord: CoordinationEnv, cwd: string, args: string[], opts: { timeoutMs?: number } = {}): MergeguardCall {
-  const argv = [coord.python, "-m", "mergeguard", "--repo", cwd, ...args, "--json"];
+  const argv = [coord.python, "-I", "-m", "mergeguard", "--repo", cwd, ...args, "--json"];
   const env = { ...process.env, ...coord.env };
   delete env.MERGEGUARD_DISABLE;
   const res = spawnSync(argv[0]!, argv.slice(1), { cwd, env, encoding: "utf8", timeout: opts.timeoutMs ?? 600_000, maxBuffer: 64 * 1024 * 1024 });

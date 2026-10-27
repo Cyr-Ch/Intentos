@@ -1,0 +1,13 @@
+{
+  "bisect_steps": 5,
+  "culprit_ok": true,
+  "label": "defect-3",
+  "main_commits": 71,
+  "message": "Main broke at a44bb23a. Cause: PR #39. Undo PR #71 opened.",
+  "no_partner": true,
+  "seconds": 8.0,
+  "seed": 3,
+  "status": "culprit",
+  "undo_opened": true,
+  "variant": "ordinary defect, long history"
+}

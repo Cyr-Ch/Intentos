@@ -1,0 +1,46 @@
+{
+  "arm": "guarded",
+  "branch_after": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "branch_before": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "expected_checks_passed": true,
+  "final_healthy": true,
+  "guardian": null,
+  "hook_ms": 548.18,
+  "hook_output": {},
+  "hook_stderr": "",
+  "main_broken": false,
+  "merge_commit": "e75dae3e3e0f32a49779b969384bb1345688ef15",
+  "merged_tests": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+  },
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S5",
+  "scripted_repair": false,
+  "seconds": 11.55,
+  "tool_sha256": "4c23822cdfbe17a917c561f5497d340b88bf75371096aee675ea054a31401cca",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T000034.552688Z/S5-guarded-2"
+}

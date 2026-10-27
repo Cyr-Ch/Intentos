@@ -1,0 +1,5 @@
+Implemented `account_summary(7)` returning `"User 7"`, reusing `get_user` with its new required organization argument. Added pytest coverage.
+
+Applied upstream file changes directly because Git metadata writes were blocked.
+
+`python -m pytest -q`: **4 passed**.

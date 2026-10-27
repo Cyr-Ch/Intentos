@@ -1,0 +1,1763 @@
+{
+  "agent": "claude",
+  "kind": "taskmix",
+  "model": "haiku",
+  "repeats": 2,
+  "rerouted_from": "20261027T020223.702103Z-taskmix-claude-haiku",
+  "results": [
+    {
+      "agent": {
+        "commands": 2,
+        "cost_usd": 0.0053275200000000005,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 12.64,
+        "timed_out": false,
+        "tokens": {
+          "cached": 70172,
+          "input": 90613,
+          "output": 817
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "docs",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "623b5dd82836411ce70363cf9a0f3a56f336f9a1",
+      "label": "readme-section-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "README.md"
+      ],
+      "prompt": "Add a short 'Running the tests' section to README.md explaining to run python -m pytest -q. Change nothing else.",
+      "proofs": {
+        "README.md": "documentation"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "readme-section",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/readme-section-1"
+    },
+    {
+      "agent": {
+        "commands": 4,
+        "cost_usd": 0.00495796,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 18.27,
+        "timed_out": false,
+        "tokens": {
+          "cached": 116406,
+          "input": 131046,
+          "output": 1462
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "docs",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "650f8fc289dd32a79ee69ebb29dd31b69c3f6659",
+      "label": "changelog-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "CHANGELOG.md"
+      ],
+      "prompt": "Add a CHANGELOG.md with a single initial entry for version 0.1.0. Change nothing else.",
+      "proofs": {
+        "CHANGELOG.md": "documentation"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "changelog",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/changelog-1"
+    },
+    {
+      "agent": {
+        "commands": 2,
+        "cost_usd": 0.00577212,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 15.05,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105032,
+          "input": 125746,
+          "output": 901
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "docstring",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "d50b50c59c128187ab8208e610ed56745db7a357",
+      "label": "module-docstring-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add a module docstring at the top of users.py explaining what the module does. Do not change any code.",
+      "proofs": {
+        "users.py": "docstring-only"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "module-docstring",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/module-docstring-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.005265870000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.19,
+        "timed_out": false,
+        "tokens": {
+          "cached": 104837,
+          "input": 123361,
+          "output": 767
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "comment",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "0feb39e0b19e01b399848398953c104dcab99cb9",
+      "label": "comment-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add a one-line comment above get_user in users.py describing the returned dict. Do not change any code.",
+      "proofs": {
+        "users.py": "AST-equivalent (comments or formatting only)"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "comment",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/comment-1"
+    },
+    {
+      "agent": {
+        "commands": 2,
+        "cost_usd": 0.00566848,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 12.84,
+        "timed_out": false,
+        "tokens": {
+          "cached": 98248,
+          "input": 119046,
+          "output": 792
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "formatting",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "db04f9b2c0da90bd403a08d59dc97d7dce6f19e8",
+      "label": "reformat-1",
+      "match": true,
+      "no_change": true,
+      "over_reviewed": false,
+      "paths": [],
+      "prompt": "Reformat users.py to use double quotes consistently and two blank lines between top-level definitions, with no semantic changes.",
+      "proofs": {},
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "reformat",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/reformat-1"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.0059315900000000005,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 12.12,
+        "timed_out": false,
+        "tokens": {
+          "cached": 104559,
+          "input": 125938,
+          "output": 958
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "new test",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "da1ca2c5e9252b3e82781b7e5968294c6b5b068b",
+      "label": "new-test-file-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_charge_more.py"
+      ],
+      "prompt": "Add a new test file tests/test_charge_more.py with a test that charge(1) returns 100. Do not modify existing tests.",
+      "proofs": {
+        "tests/test_charge_more.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "new-test-file",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/new-test-file-1"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.00636736,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 15.97,
+        "timed_out": false,
+        "tokens": {
+          "cached": 139736,
+          "input": 160958,
+          "output": 1190
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "additive code",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "560f17cf81563b79c35afa23776e683ea5f572b0",
+      "label": "additive-function-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_list_users.py",
+        "users.py"
+      ],
+      "prompt": "Add a function list_users(uids) to users.py that returns [get_user(u) for u in uids]. Add a test for it in a new test file. Do not change get_user.",
+      "proofs": {
+        "tests/test_list_users.py": "new module: nothing existing changed",
+        "users.py": "additive-only: adds definitions, imports or new constants, changes nothing existing"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "additive-function",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/additive-function-1"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.006168,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 15.12,
+        "timed_out": false,
+        "tokens": {
+          "cached": 106600,
+          "input": 128512,
+          "output": 1180
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "additive code",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "6aa2a9f3deb79abde476f24c10ec94629a95f9ea",
+      "label": "additive-account-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "account.py",
+        "tests/test_account.py"
+      ],
+      "prompt": "Add a function health_detail() to account.py returning {'status': health()}. Add a test in a new test file. Do not change health().",
+      "proofs": {
+        "account.py": "additive-only: adds definitions, imports or new constants, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "additive-account",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/additive-account-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00573465,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 13.49,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105155,
+          "input": 125838,
+          "output": 831
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "annotations only",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on 462128e2; has 0"
+      ],
+      "head": "462128e274260c3c461a26944774ae74acc3ccce",
+      "label": "type-hints-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add type hints to get_user in users.py (uid: int, returning dict) without changing its behavior. Change nothing else.",
+      "proofs": {
+        "users.py": "annotation-only (type hints or docstrings)"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "type-hints",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/type-hints-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.0064411799999999995,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 16.65,
+        "timed_out": false,
+        "tokens": {
+          "cached": 171848,
+          "input": 192590,
+          "output": 887
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "new constant",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on d3c376c7; has 0"
+      ],
+      "head": "d3c376c7047776ef19f92fbc4238c11d075892c0",
+      "label": "constant-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add a module-level constant MAX_USERS = 100 to users.py. Change nothing else.",
+      "proofs": {
+        "users.py": "additive-only: adds definitions, imports or new constants, changes nothing existing"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "constant",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/constant-1"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.005335069999999999,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 16.4,
+        "timed_out": false,
+        "tokens": {
+          "cached": 122557,
+          "input": 139212,
+          "output": 1293
+        },
+        "tool_calls": 6,
+        "turns": 7
+      },
+      "agent_failed": false,
+      "category": "new test",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "26dd7927f37153d7409d989cda3f84419bf2c346",
+      "label": "parametrized-test-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_users_parametrized.py"
+      ],
+      "prompt": "Add a parametrized pytest test for get_user with ids 1, 2 and 3. Put it in a new test file; do not modify existing tests.",
+      "proofs": {
+        "tests/test_users_parametrized.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "parametrized-test",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/parametrized-test-1"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.0064243600000000005,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 17.83,
+        "timed_out": false,
+        "tokens": {
+          "cached": 137106,
+          "input": 158844,
+          "output": 1155
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "behavior change",
+      "ci": "pass",
+      "desired": 1,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on 69947ffa; has 0"
+      ],
+      "head": "69947ffac18c0e1cd9abd2a1238c2b6bd4a3e4bd",
+      "label": "behavior-change-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "account.py"
+      ],
+      "prompt": "Change health() in account.py to return 'healthy' instead of 'ok', and update any test that checks it.",
+      "proofs": {},
+      "reasons": [
+        "account.py changes executable code or has no comment-only proof"
+      ],
+      "risky": false,
+      "task": "behavior-change",
+      "tier": 1,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/behavior-change-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00628317,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 17.55,
+        "timed_out": false,
+        "tokens": {
+          "cached": 106267,
+          "input": 127859,
+          "output": 1545
+        },
+        "tool_calls": 7,
+        "turns": 8
+      },
+      "agent_failed": false,
+      "category": "optional parameter",
+      "ci": "pass",
+      "desired": 1,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 26fe4797; has 0"
+      ],
+      "head": "26fe47975c8dbf9038200d4aa858472c3c29a709",
+      "label": "optional-param-1",
+      "match": false,
+      "no_change": false,
+      "over_reviewed": true,
+      "paths": [
+        "tests/test_users.py",
+        "users.py"
+      ],
+      "prompt": "Add an optional parameter org='acme' to get_user in users.py and include it as 'org' in the returned dict. Keep existing callers working.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "Existing test assertion removed or replaced: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof",
+        "users.py changes executable code or has no comment-only proof"
+      ],
+      "risky": false,
+      "task": "optional-param",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/optional-param-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00539622,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.09,
+        "timed_out": false,
+        "tokens": {
+          "cached": 77472,
+          "input": 97749,
+          "output": 867
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "existing test edited",
+      "ci": "pass",
+      "desired": 1,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on 1ea17cd5; has 0"
+      ],
+      "head": "1ea17cd5fb2fde5b3c15fc948887fe7de1daf053",
+      "label": "edit-existing-test-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_users.py"
+      ],
+      "prompt": "Add one more assertion to the existing test in tests/test_users.py checking that get_user(8)['id'] == 8.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof"
+      ],
+      "risky": false,
+      "task": "edit-existing-test",
+      "tier": 1,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/edit-existing-test-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00553211,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 13.71,
+        "timed_out": false,
+        "tokens": {
+          "cached": 77181,
+          "input": 97529,
+          "output": 1117
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "protected path",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 035ee699; has 0"
+      ],
+      "head": "035ee6995b581371847e833af57af4808bbe49b6",
+      "label": "payments-docstring-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "payments/charge.py"
+      ],
+      "prompt": "Add a docstring to charge() in payments/charge.py explaining units. Do not change code.",
+      "proofs": {
+        "payments/charge.py": "docstring-only"
+      },
+      "reasons": [
+        "payments/charge.py is protected by an always-two rule"
+      ],
+      "risky": true,
+      "task": "payments-docstring",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/payments-docstring-1"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.006583780000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 17.66,
+        "timed_out": false,
+        "tokens": {
+          "cached": 145868,
+          "input": 167538,
+          "output": 1322
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "protected path",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 6a800106; has 0"
+      ],
+      "head": "6a8001061e9d2aaf8c57e658a346b5d7570205df",
+      "label": "payments-refund-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "payments/charge.py",
+        "tests/test_refund.py"
+      ],
+      "prompt": "Add a function refund(amount) to payments/charge.py that returns -charge(amount), with a test in a new test file.",
+      "proofs": {
+        "payments/charge.py": "additive-only: adds definitions, imports or new constants, changes nothing existing",
+        "tests/test_refund.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "payments/charge.py is protected by an always-two rule"
+      ],
+      "risky": true,
+      "task": "payments-refund",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/payments-refund-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00531245,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 11.66,
+        "timed_out": false,
+        "tokens": {
+          "cached": 77185,
+          "input": 97261,
+          "output": 785
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "protected path",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on b362264f; has 0"
+      ],
+      "head": "b362264fb49adea77b152bf19932acdaf01da068",
+      "label": "payments-logging-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "payments/charge.py"
+      ],
+      "prompt": "At the start of charge() in payments/charge.py, log the amount using the logging module at INFO level.",
+      "proofs": {},
+      "reasons": [
+        "payments/charge.py is protected by an always-two rule",
+        "payments/charge.py changes executable code or has no comment-only proof"
+      ],
+      "risky": true,
+      "task": "payments-logging",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/payments-logging-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.004489140000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 13.41,
+        "timed_out": false,
+        "tokens": {
+          "cached": 113844,
+          "input": 127193,
+          "output": 1098
+        },
+        "tool_calls": 6,
+        "turns": 7
+      },
+      "agent_failed": false,
+      "category": "API break",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 0956d405; has 0"
+      ],
+      "head": "0956d405fbce2a88bed9a877e609493d5be7d68e",
+      "label": "rename-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_users.py",
+        "users.py"
+      ],
+      "prompt": "Rename get_user to fetch_user in users.py and update all callers and tests.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "Existing test assertion removed or replaced: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof",
+        "users.py changes executable code or has no comment-only proof",
+        "Public API changed: users.get_user renamed (now users.fetch_user)"
+      ],
+      "risky": true,
+      "task": "rename",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/rename-1"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.0065752499999999995,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 16.29,
+        "timed_out": false,
+        "tokens": {
+          "cached": 140465,
+          "input": 161930,
+          "output": 1496
+        },
+        "tool_calls": 7,
+        "turns": 8
+      },
+      "agent_failed": false,
+      "category": "API break",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 0848685b; has 0"
+      ],
+      "head": "0848685ba730225d33b0f57beb145866baeac3d4",
+      "label": "required-param-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_users.py",
+        "users.py"
+      ],
+      "prompt": "Add a required parameter org_id to get_user in users.py, include it in the returned dict, and update all callers and tests.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "Existing test assertion removed or replaced: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof",
+        "users.py changes executable code or has no comment-only proof",
+        "Public API changed: users.get_user signature changed"
+      ],
+      "risky": true,
+      "task": "required-param",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/required-param-1"
+    },
+    {
+      "agent": {
+        "commands": 2,
+        "cost_usd": 0.0065089,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 18.35,
+        "timed_out": false,
+        "tokens": {
+          "cached": 106210,
+          "input": 127988,
+          "output": 1920
+        },
+        "tool_calls": 6,
+        "turns": 7
+      },
+      "agent_failed": false,
+      "category": "test deleted",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on f21bde53; has 0"
+      ],
+      "head": "f21bde5303a7db296f6f6b949a7f2df554799899",
+      "label": "delete-test-1",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_charge.py"
+      ],
+      "prompt": "Delete the test_charge test in tests/test_charge.py because it is redundant.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_charge.py",
+        "Existing test assertion removed or replaced: tests/test_charge.py",
+        "tests/test_charge.py changes executable code or has no comment-only proof"
+      ],
+      "risky": true,
+      "task": "delete-test",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/delete-test-1"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.005918550000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.78,
+        "timed_out": false,
+        "tokens": {
+          "cached": 106725,
+          "input": 128047,
+          "output": 915
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "docs",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "4c99affeb339bbb6f1ba9e4acb453972e9ae6794",
+      "label": "readme-section-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "README.md"
+      ],
+      "prompt": "Add a short 'Running the tests' section to README.md explaining to run python -m pytest -q. Change nothing else.",
+      "proofs": {
+        "README.md": "documentation"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "readme-section",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/readme-section-2"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.0059591900000000005,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 16.95,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105789,
+          "input": 126825,
+          "output": 1118
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "docs",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "d56aa809d4d18b9e896dc1460d6d7af050a934b3",
+      "label": "changelog-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "CHANGELOG.md"
+      ],
+      "prompt": "Add a CHANGELOG.md with a single initial entry for version 0.1.0. Change nothing else.",
+      "proofs": {
+        "CHANGELOG.md": "documentation"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "changelog",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/changelog-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.0036440600000000006,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 9.27,
+        "timed_out": false,
+        "tokens": {
+          "cached": 62456,
+          "input": 75100,
+          "output": 724
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "docstring",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "2bb618a5349875b823204d4e1b9b5105e0981125",
+      "label": "module-docstring-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add a module docstring at the top of users.py explaining what the module does. Do not change any code.",
+      "proofs": {
+        "users.py": "docstring-only"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "module-docstring",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/module-docstring-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00601664,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 11.22,
+        "timed_out": false,
+        "tokens": {
+          "cached": 138824,
+          "input": 159401,
+          "output": 769
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "comment",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "12cbf56c84a23f21cd8c6f45ad23046f11d2cc6e",
+      "label": "comment-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add a one-line comment above get_user in users.py describing the returned dict. Do not change any code.",
+      "proofs": {
+        "users.py": "AST-equivalent (comments or formatting only)"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "comment",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/comment-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00555722,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 13.26,
+        "timed_out": false,
+        "tokens": {
+          "cached": 104902,
+          "input": 125196,
+          "output": 635
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "formatting",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "b06ef14ee02350749ad50ee9ee1c2cc7bd20d55f",
+      "label": "reformat-2",
+      "match": true,
+      "no_change": true,
+      "over_reviewed": false,
+      "paths": [],
+      "prompt": "Reformat users.py to use double quotes consistently and two blank lines between top-level definitions, with no semantic changes.",
+      "proofs": {},
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "reformat",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/reformat-2"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.0060806,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.33,
+        "timed_out": false,
+        "tokens": {
+          "cached": 107280,
+          "input": 129118,
+          "output": 1015
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "new test",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "77b3438c17b0ccfe0e0db94f206aeef3539fb2d7",
+      "label": "new-test-file-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_charge_more.py"
+      ],
+      "prompt": "Add a new test file tests/test_charge_more.py with a test that charge(1) returns 100. Do not modify existing tests.",
+      "proofs": {
+        "tests/test_charge_more.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "new-test-file",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/new-test-file-2"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.00626952,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 15.1,
+        "timed_out": false,
+        "tokens": {
+          "cached": 107132,
+          "input": 129169,
+          "output": 1321
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "additive code",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "3e2902dfa2f2dd060dabe923d73667bc9a13e46d",
+      "label": "additive-function-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_list_users.py",
+        "users.py"
+      ],
+      "prompt": "Add a function list_users(uids) to users.py that returns [get_user(u) for u in uids]. Add a test for it in a new test file. Do not change get_user.",
+      "proofs": {
+        "tests/test_list_users.py": "new module: nothing existing changed",
+        "users.py": "additive-only: adds definitions, imports or new constants, changes nothing existing"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "additive-function",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/additive-function-2"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.0065349,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 17.13,
+        "timed_out": false,
+        "tokens": {
+          "cached": 145830,
+          "input": 167636,
+          "output": 1172
+        },
+        "tool_calls": 5,
+        "turns": 6
+      },
+      "agent_failed": false,
+      "category": "additive code",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "1088f0b6d3b75e0425b38163206850d046cffea1",
+      "label": "additive-account-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "account.py",
+        "tests/test_account.py"
+      ],
+      "prompt": "Add a function health_detail() to account.py returning {'status': health()}. Add a test in a new test file. Do not change health().",
+      "proofs": {
+        "account.py": "additive-only: adds definitions, imports or new constants, changes nothing existing",
+        "tests/test_account.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "additive-account",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/additive-account-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.005767120000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 15.57,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105182,
+          "input": 126001,
+          "output": 842
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "annotations only",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on 37002688; has 0"
+      ],
+      "head": "37002688a2d0bca81fc64e037884748d211d2f6f",
+      "label": "type-hints-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add type hints to get_user in users.py (uid: int, returning dict) without changing its behavior. Change nothing else.",
+      "proofs": {
+        "users.py": "annotation-only (type hints or docstrings)"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "type-hints",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/type-hints-2"
+    },
+    {
+      "agent": {
+        "commands": 2,
+        "cost_usd": 0.00525218,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 13.28,
+        "timed_out": false,
+        "tokens": {
+          "cached": 72648,
+          "input": 93062,
+          "output": 623
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "new constant",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on 6e205c09; has 0"
+      ],
+      "head": "6e205c09cefe6603d38d91d97f84948287966703",
+      "label": "constant-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "users.py"
+      ],
+      "prompt": "Add a module-level constant MAX_USERS = 100 to users.py. Change nothing else.",
+      "proofs": {
+        "users.py": "additive-only: adds definitions, imports or new constants, changes nothing existing"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "constant",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/constant-2"
+    },
+    {
+      "agent": {
+        "commands": 3,
+        "cost_usd": 0.00594903,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.39,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105763,
+          "input": 126959,
+          "output": 1040
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "new test",
+      "ci": "pass",
+      "desired": 0,
+      "gate_reasons": [],
+      "head": "a2920c9157085cd896b6d0343fcba32badab5de2",
+      "label": "parametrized-test-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_get_user.py"
+      ],
+      "prompt": "Add a parametrized pytest test for get_user with ids 1, 2 and 3. Put it in a new test file; do not modify existing tests.",
+      "proofs": {
+        "tests/test_get_user.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+      ],
+      "risky": false,
+      "task": "parametrized-test",
+      "tier": 0,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/parametrized-test-2"
+    },
+    {
+      "agent": {
+        "commands": 2,
+        "cost_usd": 0.005833450000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.05,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105755,
+          "input": 126645,
+          "output": 939
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "behavior change",
+      "ci": "pass",
+      "desired": 1,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on 0848afb0; has 0"
+      ],
+      "head": "0848afb0096b150518ecab447fadb3e3b7098369",
+      "label": "behavior-change-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "account.py"
+      ],
+      "prompt": "Change health() in account.py to return 'healthy' instead of 'ok', and update any test that checks it.",
+      "proofs": {},
+      "reasons": [
+        "account.py changes executable code or has no comment-only proof"
+      ],
+      "risky": false,
+      "task": "behavior-change",
+      "tier": 1,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/behavior-change-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.006294430000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 16.11,
+        "timed_out": false,
+        "tokens": {
+          "cached": 106273,
+          "input": 127871,
+          "output": 1565
+        },
+        "tool_calls": 7,
+        "turns": 8
+      },
+      "agent_failed": false,
+      "category": "optional parameter",
+      "ci": "pass",
+      "desired": 1,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 966ec4ce; has 0"
+      ],
+      "head": "966ec4ce075ff10296a2744cde2896a555358c0a",
+      "label": "optional-param-2",
+      "match": false,
+      "no_change": false,
+      "over_reviewed": true,
+      "paths": [
+        "tests/test_users.py",
+        "users.py"
+      ],
+      "prompt": "Add an optional parameter org='acme' to get_user in users.py and include it as 'org' in the returned dict. Keep existing callers working.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "Existing test assertion removed or replaced: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof",
+        "users.py changes executable code or has no comment-only proof"
+      ],
+      "risky": false,
+      "task": "optional-param",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/optional-param-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.00530597,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 10.42,
+        "timed_out": false,
+        "tokens": {
+          "cached": 65127,
+          "input": 85950,
+          "output": 715
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "existing test edited",
+      "ci": "pass",
+      "desired": 1,
+      "gate_reasons": [
+        "Needs 1 distinct human approvals on a516fc2b; has 0"
+      ],
+      "head": "a516fc2b01aefa1520329d18906f923fa0fad6ad",
+      "label": "edit-existing-test-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_users.py"
+      ],
+      "prompt": "Add one more assertion to the existing test in tests/test_users.py checking that get_user(8)['id'] == 8.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof"
+      ],
+      "risky": false,
+      "task": "edit-existing-test",
+      "tier": 1,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/edit-existing-test-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.0038170800000000005,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 12.77,
+        "timed_out": false,
+        "tokens": {
+          "cached": 62488,
+          "input": 75398,
+          "output": 956
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "protected path",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on d2795ae2; has 0"
+      ],
+      "head": "d2795ae2bc559f7475abea1904da3cb1f19caf71",
+      "label": "payments-docstring-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "payments/charge.py"
+      ],
+      "prompt": "Add a docstring to charge() in payments/charge.py explaining units. Do not change code.",
+      "proofs": {
+        "payments/charge.py": "docstring-only"
+      },
+      "reasons": [
+        "payments/charge.py is protected by an always-two rule"
+      ],
+      "risky": true,
+      "task": "payments-docstring",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/payments-docstring-2"
+    },
+    {
+      "agent": {
+        "commands": 4,
+        "cost_usd": 0.007373620000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 21.91,
+        "timed_out": false,
+        "tokens": {
+          "cached": 181152,
+          "input": 203933,
+          "output": 1750
+        },
+        "tool_calls": 6,
+        "turns": 7
+      },
+      "agent_failed": false,
+      "category": "protected path",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 8b944377; has 0"
+      ],
+      "head": "8b944377940bf3eb9b66212d0482f0ccf681abb5",
+      "label": "payments-refund-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "payments/charge.py",
+        "tests/test_refund.py"
+      ],
+      "prompt": "Add a function refund(amount) to payments/charge.py that returns -charge(amount), with a test in a new test file.",
+      "proofs": {
+        "payments/charge.py": "additive-only: adds definitions, imports or new constants, changes nothing existing",
+        "tests/test_refund.py": "new module: nothing existing changed"
+      },
+      "reasons": [
+        "payments/charge.py is protected by an always-two rule"
+      ],
+      "risky": true,
+      "task": "payments-refund",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/payments-refund-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.0054776600000000005,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 11.16,
+        "timed_out": false,
+        "tokens": {
+          "cached": 65106,
+          "input": 86037,
+          "output": 1015
+        },
+        "tool_calls": 3,
+        "turns": 4
+      },
+      "agent_failed": false,
+      "category": "protected path",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 9fa53998; has 0"
+      ],
+      "head": "9fa53998277a1fdb4383f248b8aa5ac007de93eb",
+      "label": "payments-logging-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "payments/charge.py"
+      ],
+      "prompt": "At the start of charge() in payments/charge.py, log the amount using the logging module at INFO level.",
+      "proofs": {},
+      "reasons": [
+        "payments/charge.py is protected by an always-two rule",
+        "payments/charge.py changes executable code or has no comment-only proof"
+      ],
+      "risky": true,
+      "task": "payments-logging",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/payments-logging-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.005998450000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.27,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105395,
+          "input": 126602,
+          "output": 1142
+        },
+        "tool_calls": 6,
+        "turns": 7
+      },
+      "agent_failed": false,
+      "category": "API break",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on e62fc543; has 0"
+      ],
+      "head": "e62fc5438f2c353f8a2ff1ba026b28d4e070e570",
+      "label": "rename-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_users.py",
+        "users.py"
+      ],
+      "prompt": "Rename get_user to fetch_user in users.py and update all callers and tests.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "Existing test assertion removed or replaced: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof",
+        "users.py changes executable code or has no comment-only proof",
+        "Public API changed: users.get_user renamed (now users.fetch_user)"
+      ],
+      "risky": true,
+      "task": "rename",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/rename-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.006061650000000001,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.3,
+        "timed_out": false,
+        "tokens": {
+          "cached": 105485,
+          "input": 126710,
+          "output": 1264
+        },
+        "tool_calls": 7,
+        "turns": 8
+      },
+      "agent_failed": false,
+      "category": "API break",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on 62f34019; has 0"
+      ],
+      "head": "62f34019bcbdcbc4d9cfe79b7bec41098d85044d",
+      "label": "required-param-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_users.py",
+        "users.py"
+      ],
+      "prompt": "Add a required parameter org_id to get_user in users.py, include it in the returned dict, and update all callers and tests.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_users.py",
+        "Existing test assertion removed or replaced: tests/test_users.py",
+        "tests/test_users.py changes executable code or has no comment-only proof",
+        "users.py changes executable code or has no comment-only proof",
+        "Public API changed: users.get_user signature changed"
+      ],
+      "risky": true,
+      "task": "required-param",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/required-param-2"
+    },
+    {
+      "agent": {
+        "commands": 1,
+        "cost_usd": 0.0057707,
+        "error": null,
+        "exit_code": 0,
+        "seconds": 14.91,
+        "timed_out": false,
+        "tokens": {
+          "cached": 72840,
+          "input": 94002,
+          "output": 1357
+        },
+        "tool_calls": 4,
+        "turns": 5
+      },
+      "agent_failed": false,
+      "category": "test deleted",
+      "ci": "pass",
+      "desired": 2,
+      "gate_reasons": [
+        "Needs 2 distinct human approvals on a02c4500; has 0"
+      ],
+      "head": "a02c4500fb82e3d29a2aa272cc1eb59a65823f16",
+      "label": "delete-test-2",
+      "match": true,
+      "no_change": false,
+      "over_reviewed": false,
+      "paths": [
+        "tests/test_charge.py"
+      ],
+      "prompt": "Delete the test_charge test in tests/test_charge.py because it is redundant.",
+      "proofs": {},
+      "reasons": [
+        "Existing tests modified: tests/test_charge.py",
+        "Existing test assertion removed or replaced: tests/test_charge.py",
+        "tests/test_charge.py changes executable code or has no comment-only proof"
+      ],
+      "risky": true,
+      "task": "delete-test",
+      "tier": 2,
+      "under_reviewed": false,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T020223.702103Z-taskmix-claude-haiku/delete-test-2"
+    }
+  ],
+  "router_commit": "c00992f",
+  "timestamp": "20261027T021725.444836Z",
+  "totals": {
+    "approvals_flat": 38,
+    "approvals_routed": 32,
+    "failed": 0,
+    "no_change": 2,
+    "over_reviewed": [
+      "optional-param-1",
+      "optional-param-2"
+    ],
+    "prs": 38,
+    "risky_under_reviewed": [],
+    "tier0": 20,
+    "tier1": 4,
+    "tier2": 14,
+    "under_reviewed": []
+  }
+}

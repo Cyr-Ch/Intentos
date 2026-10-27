@@ -1,0 +1,51 @@
+{
+  "a_merge": {
+    "after_seconds": 6.01,
+    "agent_events_before": 7,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 3,
+    "cost_usd": 0.006220680000000001,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 15.48,
+    "timed_out": false,
+    "tokens": {
+      "cached": 106368,
+      "input": 128320,
+      "output": 1266
+    },
+    "tool_calls": 5,
+    "turns": 6
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "I added `account_summary(uid)` to `account.py`, and it returns `\"User 7\"` for `account_summary(7)`. `python -m pytest -q` passes: 3 tests, including the new one.\n\nThe function calls the existing `get_user(uid)` from `users.py` and formats its `id` as `User <id>`. The new test is in `tests/test_account.py`.\n\nI didn't commit anything. The working tree has the changes to `account.py` and the new test file.",
+  "agent_name": "claude",
+  "arm": "baseline",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 0,
+  "commands_without_exit_code": 0,
+  "false_notes": 0,
+  "final_healthy": false,
+  "final_sync_clean": false,
+  "guardian": null,
+  "integrated_clean": false,
+  "label": "S2-baseline-1",
+  "main_broken": true,
+  "merge_commit": "b938a468f8a5ff00093764832ae7642c1e22520d",
+  "merged_tests": "fail",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S2",
+  "seconds": 20.97,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T014147.904560Z-live-claude-haiku/S2-baseline-1"
+}

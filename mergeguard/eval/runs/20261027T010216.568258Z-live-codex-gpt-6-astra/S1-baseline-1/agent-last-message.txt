@@ -1,0 +1,3 @@
+Implemented `account_summary(uid)` in `account.py`, reusing `users.get_user`. `account_summary(7)` returns `"User 7"`.
+
+Added `tests/test_account.py`. Ran `python -m pytest -q`: **3 passed**.

@@ -1,0 +1,39 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.08877940000000001,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 12.11,
+    "timed_out": false,
+    "tokens": {
+      "cached": 70446,
+      "input": 89805,
+      "output": 418
+    },
+    "tool_calls": 3,
+    "turns": 4
+  },
+  "agent_failed": false,
+  "category": "annotations only",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [
+    "Needs 1 distinct human approvals on 8f6ea653; has 0"
+  ],
+  "label": "type-hints-1",
+  "match": false,
+  "over_reviewed": true,
+  "paths": [
+    "users.py"
+  ],
+  "prompt": "Add type hints to get_user in users.py (uid: int, returning dict) without changing its behavior. Change nothing else.",
+  "proofs": {},
+  "reasons": [
+    "users.py changes executable code or has no comment-only proof"
+  ],
+  "risky": false,
+  "task": "type-hints",
+  "tier": 1,
+  "under_reviewed": false
+}

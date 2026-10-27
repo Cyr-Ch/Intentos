@@ -1,0 +1,5 @@
+Implemented `account_summary(7)` → `"User 7"` using `accounts.users.get_user`, and added `tests/test_account.py`.
+
+`python -m pytest -q`: **3 passed**.
+
+Git metadata writes were blocked, so I applied the upstream module move directly to the working files.

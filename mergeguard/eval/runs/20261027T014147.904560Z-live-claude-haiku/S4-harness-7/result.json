@@ -1,0 +1,57 @@
+{
+  "a_merge": {
+    "after_seconds": 5.93,
+    "agent_events_before": 7,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 3,
+    "cost_usd": 0.00635674,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 18.08,
+    "timed_out": false,
+    "tokens": {
+      "cached": 106044,
+      "input": 127964,
+      "output": 1548
+    },
+    "tool_calls": 6,
+    "turns": 7
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "I added `invoice_total(amounts)` in a new `invoices` package. `invoice_total([5, 10])` returns 1500, and `python -m pytest -q` passes (4 tests, including the two I added).\n\n- **`invoices/__init__.py`**: empty, which makes `invoices` a package.\n- **`invoices/total.py`**: sums `charge(amount)` over the amounts, so each dollar value goes through `payments.charge.charge` and comes back in cents. I left `payments/` untouched.\n- **`tests/test_invoices.py`**: covers the `[5, 10]` \u2192 1500 case and an empty list \u2192 0.\n\nNothing is committed. `payments/` is in the `always_two` list in `.mergeguard/policy.yaml`, but this change only imports from it, so I didn't edit it.",
+  "agent_name": "claude",
+  "arm": "harness",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 3,
+  "commands_without_exit_code": 3,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": {
+    "culprit": "31e437d5b1e5823a39dad36b1c32484ba8023dad",
+    "message": "Main broke at 31e437d5. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+    "partner_pr": 1,
+    "status": "clash",
+    "undo_pr": 3
+  },
+  "integrated_clean": false,
+  "label": "S4-harness-7",
+  "main_broken": true,
+  "merge_commit": "31e437d5b1e5823a39dad36b1c32484ba8023dad",
+  "merged_tests": "fail",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": true,
+  "scenario": "S4",
+  "seconds": 32.16,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T014147.904560Z-live-claude-haiku/S4-harness-7"
+}

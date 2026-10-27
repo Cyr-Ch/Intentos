@@ -1,0 +1,133 @@
+{
+  "kind": "scale",
+  "seeds": 3,
+  "sizes": [
+    {
+      "blind_spot_caught": 0,
+      "blind_spot_trials": 36,
+      "check_ms_mean": 388.5,
+      "check_ms_p95": 531.2,
+      "clean_trials": 54,
+      "explicit_positives": 54,
+      "false_negatives": 0,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "functions_per_module": 8,
+      "hook_ms_cached_mean": 377.3,
+      "hook_ms_with_fetch": 475.9,
+      "misclassified": [],
+      "modules": 10,
+      "precision": 1.0,
+      "python_files": 11,
+      "recall": 1.0,
+      "recall_by_change": {
+        "add_required_param": {
+          "recall": "9/9"
+        },
+        "move": {
+          "recall": "9/9"
+        },
+        "remove": {
+          "recall": "9/9"
+        },
+        "remove_param": {
+          "recall": "9/9"
+        },
+        "rename": {
+          "recall": "9/9"
+        },
+        "reorder_params": {
+          "recall": "9/9"
+        }
+      },
+      "symbols": 80,
+      "trials": 144,
+      "true_positives": 54
+    },
+    {
+      "blind_spot_caught": 0,
+      "blind_spot_trials": 36,
+      "check_ms_mean": 1417.8,
+      "check_ms_p95": 2286.6,
+      "clean_trials": 54,
+      "explicit_positives": 54,
+      "false_negatives": 0,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "functions_per_module": 8,
+      "hook_ms_cached_mean": 985.4,
+      "hook_ms_with_fetch": 1025.6,
+      "misclassified": [],
+      "modules": 50,
+      "precision": 1.0,
+      "python_files": 51,
+      "recall": 1.0,
+      "recall_by_change": {
+        "add_required_param": {
+          "recall": "9/9"
+        },
+        "move": {
+          "recall": "9/9"
+        },
+        "remove": {
+          "recall": "9/9"
+        },
+        "remove_param": {
+          "recall": "9/9"
+        },
+        "rename": {
+          "recall": "9/9"
+        },
+        "reorder_params": {
+          "recall": "9/9"
+        }
+      },
+      "symbols": 400,
+      "trials": 144,
+      "true_positives": 54
+    },
+    {
+      "blind_spot_caught": 0,
+      "blind_spot_trials": 36,
+      "check_ms_mean": 3654.1,
+      "check_ms_p95": 3846.2,
+      "clean_trials": 54,
+      "explicit_positives": 54,
+      "false_negatives": 0,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "functions_per_module": 8,
+      "hook_ms_cached_mean": 3529.1,
+      "hook_ms_with_fetch": 3450.3,
+      "misclassified": [],
+      "modules": 200,
+      "precision": 1.0,
+      "python_files": 201,
+      "recall": 1.0,
+      "recall_by_change": {
+        "add_required_param": {
+          "recall": "9/9"
+        },
+        "move": {
+          "recall": "9/9"
+        },
+        "remove": {
+          "recall": "9/9"
+        },
+        "remove_param": {
+          "recall": "9/9"
+        },
+        "rename": {
+          "recall": "9/9"
+        },
+        "reorder_params": {
+          "recall": "9/9"
+        }
+      },
+      "symbols": 1600,
+      "trials": 144,
+      "true_positives": 54
+    }
+  ],
+  "timestamp": "20261027T033852.191075Z"
+}

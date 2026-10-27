@@ -1,0 +1,8 @@
+diff --git a/account.py b/account.py
+index 7dd5116..0880523 100644
+--- a/account.py
++++ b/account.py
+@@ -1,2 +1,2 @@
+ def health():
+-    return "ok"
++    return "healthy"

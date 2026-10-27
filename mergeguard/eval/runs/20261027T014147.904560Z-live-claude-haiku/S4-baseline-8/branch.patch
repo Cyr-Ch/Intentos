@@ -1,0 +1,30 @@
+diff --git a/invoices/__init__.py b/invoices/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/invoices/total.py b/invoices/total.py
+new file mode 100644
+index 0000000..97ff08f
+--- /dev/null
++++ b/invoices/total.py
+@@ -0,0 +1,6 @@
++from payments.charge import charge
++
++
++def invoice_total(amounts):
++    """Return the invoice total in cents; amounts are dollars."""
++    return sum(charge(amount) for amount in amounts)
+diff --git a/tests/test_invoices.py b/tests/test_invoices.py
+new file mode 100644
+index 0000000..5b7d5d8
+--- /dev/null
++++ b/tests/test_invoices.py
+@@ -0,0 +1,9 @@
++from invoices.total import invoice_total
++
++
++def test_invoice_total():
++    assert invoice_total([5, 10]) == 1500
++
++
++def test_invoice_total_empty():
++    assert invoice_total([]) == 0

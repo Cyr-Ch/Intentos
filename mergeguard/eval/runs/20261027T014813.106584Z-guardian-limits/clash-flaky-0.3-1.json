@@ -1,0 +1,19 @@
+{
+  "bisect_steps": 3,
+  "blamed": true,
+  "culprit_ok": true,
+  "flaky_tests": [],
+  "label": "clash-flaky-0.3-1",
+  "main_commits": 26,
+  "message": "Main broke at 30963b89. Cause: PR #15 (clashed with #1). Undo PR #26 opened.",
+  "p": 0.3,
+  "partner_ok": true,
+  "seconds": 5.4,
+  "seed": 1,
+  "status": "clash",
+  "tests": [
+    "tests/test_invoice.py::test_invoice_total"
+  ],
+  "variant": "clash+flaky p=0.3",
+  "wrong_blame": false
+}

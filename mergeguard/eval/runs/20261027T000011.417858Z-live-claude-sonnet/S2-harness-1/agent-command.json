@@ -1,0 +1,17 @@
+[
+  "claude",
+  "-p",
+  "Add an account summary that shows the user's id. Implement account_summary(uid) in account.py, reusing the existing user lookup in users.py, so that account_summary(7) returns \"User 7\". Add a pytest test for it under tests/. Run python -m pytest -q before finishing.",
+  "--model",
+  "sonnet",
+  "--allowedTools",
+  "Bash,Read,Edit,Write,MultiEdit,Glob,Grep",
+  "--permission-mode",
+  "acceptEdits",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--max-turns",
+  "60",
+  "--no-session-persistence"
+]

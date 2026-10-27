@@ -1,0 +1,45 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.005998450000000001,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 14.27,
+    "timed_out": false,
+    "tokens": {
+      "cached": 105395,
+      "input": 126602,
+      "output": 1142
+    },
+    "tool_calls": 6,
+    "turns": 7
+  },
+  "agent_failed": false,
+  "category": "API break",
+  "ci": "pass",
+  "desired": 2,
+  "gate_reasons": [
+    "Needs 2 distinct human approvals on e62fc543; has 0"
+  ],
+  "label": "rename-2",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [
+    "tests/test_users.py",
+    "users.py"
+  ],
+  "prompt": "Rename get_user to fetch_user in users.py and update all callers and tests.",
+  "proofs": {},
+  "reasons": [
+    "Existing tests modified: tests/test_users.py",
+    "Existing test assertion removed or replaced: tests/test_users.py",
+    "tests/test_users.py changes executable code or has no comment-only proof",
+    "users.py changes executable code or has no comment-only proof",
+    "Public API changed: users.get_user renamed (now users.fetch_user)",
+    "How-made: existing tests were modified"
+  ],
+  "risky": true,
+  "task": "rename",
+  "tier": 2,
+  "under_reviewed": false
+}

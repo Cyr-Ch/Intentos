@@ -1,0 +1,28 @@
+[
+  {
+    "session_id": "redacted-probe-id",
+    "turn_id": "redacted-probe-id",
+    "transcript_path": null,
+    "cwd": "/demo/engineer_b",
+    "hook_event_name": "PostToolUse",
+    "model": "gpt-6-astra",
+    "permission_mode": "bypassPermissions",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "printf mergeguard-probe"
+    },
+    "tool_response": "mergeguard-probe",
+    "tool_use_id": "redacted-probe-id"
+  },
+  {
+    "session_id": "redacted-probe-id",
+    "turn_id": "redacted-probe-id",
+    "transcript_path": null,
+    "cwd": "/demo/engineer_b",
+    "hook_event_name": "Stop",
+    "model": "gpt-6-astra",
+    "permission_mode": "bypassPermissions",
+    "stop_hook_active": false,
+    "last_assistant_message": "mergeguard-probe"
+  }
+]

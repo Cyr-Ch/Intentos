@@ -1,0 +1,17 @@
+[
+  "claude",
+  "-p",
+  "Add one more assertion to the existing test in tests/test_users.py checking that get_user(8)['id'] == 8. Run python -m pytest -q before finishing.",
+  "--model",
+  "haiku",
+  "--allowedTools",
+  "Bash,Read,Edit,Write,MultiEdit,Glob,Grep",
+  "--permission-mode",
+  "acceptEdits",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--max-turns",
+  "60",
+  "--no-session-persistence"
+]

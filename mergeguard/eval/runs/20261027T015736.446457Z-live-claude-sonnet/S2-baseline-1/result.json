@@ -1,0 +1,51 @@
+{
+  "a_merge": {
+    "after_seconds": 4.39,
+    "agent_events_before": 5,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.07073460000000001,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 17.06,
+    "timed_out": false,
+    "tokens": {
+      "cached": 110462,
+      "input": 122858,
+      "output": 999
+    },
+    "tool_calls": 7,
+    "turns": 8
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "I added `account_summary(uid)` to `account.py`. It calls `get_user` from `users.py` and returns `\"User {id}\"`, so `account_summary(7)` returns `\"User 7\"`.\n\nThe new test is in `tests/test_account.py`. `python -m pytest -q` passes with 3 tests. I haven't committed anything.",
+  "agent_name": "claude",
+  "arm": "baseline",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 0,
+  "commands_without_exit_code": 0,
+  "false_notes": 0,
+  "final_healthy": false,
+  "final_sync_clean": false,
+  "guardian": null,
+  "integrated_clean": false,
+  "label": "S2-baseline-1",
+  "main_broken": true,
+  "merge_commit": "bbe59860affefac388af03aba83a0410290d7205",
+  "merged_tests": "fail",
+  "model": "sonnet",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S2",
+  "seconds": 22.33,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T015736.446457Z-live-claude-sonnet/S2-baseline-1"
+}

@@ -1,0 +1,14 @@
+diff --git a/tests/test_users_parametrized.py b/tests/test_users_parametrized.py
+new file mode 100644
+index 0000000..74318bc
+--- /dev/null
++++ b/tests/test_users_parametrized.py
+@@ -0,0 +1,8 @@
++import pytest
++
++from users import get_user
++
++
++@pytest.mark.parametrize("uid", [1, 2, 3])
++def test_get_user_returns_id(uid):
++    assert get_user(uid) == {"id": uid}

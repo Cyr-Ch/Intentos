@@ -1,0 +1,51 @@
+{
+  "a_merge": {
+    "after_seconds": 6.09,
+    "agent_events_before": 8,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 8,
+    "cost_usd": 0.01017562,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 33.7,
+    "timed_out": false,
+    "tokens": {
+      "cached": 322252,
+      "input": 347213,
+      "output": 3657
+    },
+    "tool_calls": 11,
+    "turns": 13
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "`account.py` now imports `get_user` from `accounts.users`, and `python -m pytest -q` passes (3 tests).\n\nThe move had not reached my branch. `s3/task-b` and local `main` were still at `387f535`, and `origin/main` is at `dc3cfb7`, which contains the `accounts/` move. I fast-forwarded `s3/task-b` to `origin/main` so `accounts.users` exists, and left local `main` alone. My uncommitted changes to `account.py` and the new `tests/test_account.py` carried over.\n\n`account_summary` has one call to `get_user`, and it now uses the new import. The test only calls `account_summary`, so it needed no change. Nothing is committed.",
+  "agent_name": "claude",
+  "arm": "stop-only",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 7,
+  "commands_without_exit_code": 7,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": null,
+  "integrated_clean": true,
+  "label": "S3-stop-only-1",
+  "main_broken": false,
+  "merge_commit": "c07931cc52eaf022b3ecebaec9b556614a90d7cf",
+  "merged_tests": "pass",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S3",
+  "seconds": 40.41,
+  "stop_blocks": 1,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012148.132778Z-live-claude-haiku/S3-stop-only-1"
+}

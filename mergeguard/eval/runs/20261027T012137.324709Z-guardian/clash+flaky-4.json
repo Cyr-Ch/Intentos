@@ -1,0 +1,24 @@
+{
+  "bisect_steps": 4,
+  "blamed": true,
+  "culprit_ok": true,
+  "expected": "blame clash PR, name partner, open undo",
+  "flaky_tests": [
+    "tests/test_latency.py::test_latency_budget"
+  ],
+  "harmless_after": 19,
+  "harmless_before": 17,
+  "label": "clash+flaky-4",
+  "main_commits": 40,
+  "message": "Main broke at 09ed367f. Cause: PR #20 (clashed with #1). Undo PR #40 opened. Ignored as flaky: tests/test_latency.py::test_latency_budget.",
+  "partner_ok": true,
+  "seconds": 7.7,
+  "seed": 4,
+  "status": "clash",
+  "tests": [
+    "tests/test_invoice.py::test_invoice_total"
+  ],
+  "undo_opened": true,
+  "variant": "clash+flaky",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/clash+flaky-4"
+}

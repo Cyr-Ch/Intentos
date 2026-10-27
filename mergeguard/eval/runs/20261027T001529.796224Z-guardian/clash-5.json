@@ -1,0 +1,22 @@
+{
+  "bisect_steps": 4,
+  "blamed": true,
+  "culprit_ok": true,
+  "expected": "blame clash PR, name partner, open undo",
+  "flaky_tests": [],
+  "harmless_after": 21,
+  "harmless_before": 18,
+  "label": "clash-5",
+  "main_commits": 42,
+  "message": "Main broke at d6761e00. Cause: PR #20 (clashed with #1). Undo PR #42 opened.",
+  "partner_ok": true,
+  "seconds": 10.3,
+  "seed": 5,
+  "status": "clash",
+  "tests": [
+    "tests/test_invoice.py::test_invoice_total"
+  ],
+  "undo_opened": true,
+  "variant": "clash",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T001529.796224Z-guardian/clash-5"
+}

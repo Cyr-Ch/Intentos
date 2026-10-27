@@ -1,0 +1,1787 @@
+{
+  "results": [
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 71.36,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "0a45e06bd1b30497df662ca85fb4c874914cadeb",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^\nE   AttributeError: module 'users' has no attribute 'get_user'. Did you mean: 'fetch_user'?\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - AttributeError: module 'users' h...\n1 failed, 2 passed in 0.04s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S1",
+      "scripted_repair": false,
+      "seconds": 7.6,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S1-baseline-1"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 464.74,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` was renamed to `users.fetch_user` in commit c756b2d2. Your code uses it at account.py:7. Update the import and calls to use `users.fetch_user`, re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "2c93827497dbde49fb7593f4b2ac8e66742e94ef",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S1",
+      "scripted_repair": true,
+      "seconds": 8.87,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S1-guarded-1"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 59.44,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "2cb120dfa8a0f903b211c34d8eb15b5c5c897202",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^^^^^^\nE   TypeError: get_user() missing 1 required positional argument: 'org_id'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - TypeError: get_user() missing 1 ...\n1 failed, 2 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S2",
+      "scripted_repair": false,
+      "seconds": 6.84,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S2-baseline-1"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 474.67,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` changed signature: missing required argument: org_id in commit c13872a5. Your code uses it at account.py:7. Update the call to match the new signature (required: uid, org_id), re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "f99b428ee8635f298424790eefa3c9ddab7332c5",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S2",
+      "scripted_repair": true,
+      "seconds": 8.69,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S2-guarded-1"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 61.95,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "69879e6ce10e2751fda00e466f2c6ead62dfc776",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:6: in account_summary\n    import users\nE   ModuleNotFoundError: No module named 'users'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - ModuleNotFoundError: No module n...\n1 failed, 2 passed in 0.04s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S3",
+      "scripted_repair": false,
+      "seconds": 7.64,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S3-baseline-1"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 517.2,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` was moved to `accounts.users.get_user` in commit 7500d97f. Your code uses it at account.py:7. Update the import and calls to use `accounts.users.get_user`, re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "ddd0ab282c5651d0ee22c7333a0d39206030532f",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S3",
+      "scripted_repair": true,
+      "seconds": 9.45,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S3-guarded-1"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 65.93,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "a58e76a250a65ba4a007f6d37f3ae8932029826a",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S4",
+      "scripted_repair": false,
+      "seconds": 6.87,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-baseline-1"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": {
+        "alone": {
+          "collected": 1,
+          "collection_errors": [],
+          "exit_code": 0,
+          "failed": [],
+          "missing": [],
+          "outcome": "pass",
+          "output": ".                                                                        [100%]\n1 passed in 0.02s\n"
+        },
+        "bad": "bef04fff816547667387ff6544f55e391d1982d0",
+        "bisect_log": "running '/Users/QTG2659/codex-project/mergeguard/.venv/bin/python' '/var/folders/t2/0p47jmmj1cn7wlym_wk3bf6c0000gr/T/mergeguard-bisect-xvkwr890/check.py'\nbef04fff816547667387ff6544f55e391d1982d0 is the first bad commit\ncommit bef04fff816547667387ff6544f55e391d1982d0\nMerge: 4ce8b42 c901e6e\nAuthor: mergeguard <mergeguard@localhost>\nDate:   Tue Oct 27 00:06:40 2026 +0100\n\n    Merge PR #2: S4 task B (guarded)\n\n invoices/__init__.py  | 0\n invoices/total.py     | 4 ++++\n tests/test_invoice.py | 4 ++++\n 3 files changed, 8 insertions(+)\n create mode 100644 invoices/__init__.py\n create mode 100644 invoices/total.py\n create mode 100644 tests/test_invoice.py\nbisect found first bad commit\n",
+        "culprit": "bef04fff816547667387ff6544f55e391d1982d0",
+        "discovery": {
+          "collected": 3,
+          "collection_errors": [],
+          "exit_code": 1,
+          "failed": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "missing": [],
+          "outcome": "fail",
+          "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.03s\n"
+        },
+        "good": "4ce8b4284e3403484cff1ce894e49fb45529da62",
+        "message": "Main broke at bef04fff. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+        "partner": {
+          "assumption": "failure is monotonic across the candidate interval",
+          "commit": "4ce8b4284e3403484cff1ce894e49fb45529da62",
+          "trials": [
+            {
+              "commit": "33a1c56fe76c4c99275ff9fb3920437152964c3c",
+              "outcome": "pass"
+            },
+            {
+              "commit": "4ce8b4284e3403484cff1ce894e49fb45529da62",
+              "outcome": "fail"
+            }
+          ]
+        },
+        "partner_pr": 1,
+        "pr": 2,
+        "repetitions": {
+          "bad": [
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+            },
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+            },
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.03s\n"
+            }
+          ],
+          "good": [
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            },
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            },
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            }
+          ]
+        },
+        "status": "clash",
+        "tests": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "undo_pr": 3,
+        "undo_validation": {
+          "collected": 2,
+          "collection_errors": [],
+          "exit_code": 0,
+          "failed": [],
+          "missing": [],
+          "outcome": "pass",
+          "output": "..                                                                       [100%]\n2 passed in 0.01s\n"
+        }
+      },
+      "hook_ms": 429.73,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "bef04fff816547667387ff6544f55e391d1982d0",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.06s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": true,
+      "scenario": "S4",
+      "scripted_repair": false,
+      "seconds": 16.8,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-guarded-1"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 63.19,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "6614ad871f6d357e1ec992d6f7c37f24bcd03d19",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S5",
+      "scripted_repair": false,
+      "seconds": 5.9,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S5-baseline-1"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 417.05,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "fd01983e3612c27cf9f6241225187214c9356074",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S5",
+      "scripted_repair": false,
+      "seconds": 7.75,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S5-guarded-1"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 67.34,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "f57987a24ee8e140307bf30d7743e0df66b4b96d",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^\nE   AttributeError: module 'users' has no attribute 'get_user'. Did you mean: 'fetch_user'?\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - AttributeError: module 'users' h...\n1 failed, 2 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S1",
+      "scripted_repair": false,
+      "seconds": 7.0,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S1-baseline-2"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 459.37,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` was renamed to `users.fetch_user` in commit f59f594a. Your code uses it at account.py:7. Update the import and calls to use `users.fetch_user`, re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "ade62cdcbff8fa81a5c2f035a7f375a9b59cb154",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S1",
+      "scripted_repair": true,
+      "seconds": 8.78,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S1-guarded-2"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 66.15,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "d72ce7fe633495dc17a10040d79d0ce0f0b52394",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^^^^^^\nE   TypeError: get_user() missing 1 required positional argument: 'org_id'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - TypeError: get_user() missing 1 ...\n1 failed, 2 passed in 0.05s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S2",
+      "scripted_repair": false,
+      "seconds": 6.72,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S2-baseline-2"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.04s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 452.5,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` changed signature: missing required argument: org_id in commit 6b099c10. Your code uses it at account.py:7. Update the call to match the new signature (required: uid, org_id), re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "1ec61ce0a0f6bbb307d7e2c060b325d0c4b21530",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S2",
+      "scripted_repair": true,
+      "seconds": 8.88,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S2-guarded-2"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 60.53,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "e1801824ef6f1f0dc345fdb7db5bea3fba48fea0",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:6: in account_summary\n    import users\nE   ModuleNotFoundError: No module named 'users'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - ModuleNotFoundError: No module n...\n1 failed, 2 passed in 0.04s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S3",
+      "scripted_repair": false,
+      "seconds": 6.27,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S3-baseline-2"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 485.92,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` was moved to `accounts.users.get_user` in commit 21c429a7. Your code uses it at account.py:7. Update the import and calls to use `accounts.users.get_user`, re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "10c748a38df77fc2f9132be0f021eb1bcf60da24",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S3",
+      "scripted_repair": true,
+      "seconds": 9.07,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S3-guarded-2"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 61.25,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "59f381a08394ae1ee46303a91a6bdb31f3c6f328",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S4",
+      "scripted_repair": false,
+      "seconds": 7.38,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-baseline-2"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": {
+        "alone": {
+          "collected": 1,
+          "collection_errors": [],
+          "exit_code": 0,
+          "failed": [],
+          "missing": [],
+          "outcome": "pass",
+          "output": ".                                                                        [100%]\n1 passed in 0.02s\n"
+        },
+        "bad": "75997054abe2dd5070867906d27c01ae4a0a788d",
+        "bisect_log": "running '/Users/QTG2659/codex-project/mergeguard/.venv/bin/python' '/var/folders/t2/0p47jmmj1cn7wlym_wk3bf6c0000gr/T/mergeguard-bisect-2ekkyzox/check.py'\n75997054abe2dd5070867906d27c01ae4a0a788d is the first bad commit\ncommit 75997054abe2dd5070867906d27c01ae4a0a788d\nMerge: 1976012 e15b2f4\nAuthor: mergeguard <mergeguard@localhost>\nDate:   Tue Oct 27 00:08:06 2026 +0100\n\n    Merge PR #2: S4 task B (guarded)\n\n invoices/__init__.py  | 0\n invoices/total.py     | 4 ++++\n tests/test_invoice.py | 4 ++++\n 3 files changed, 8 insertions(+)\n create mode 100644 invoices/__init__.py\n create mode 100644 invoices/total.py\n create mode 100644 tests/test_invoice.py\nbisect found first bad commit\n",
+        "culprit": "75997054abe2dd5070867906d27c01ae4a0a788d",
+        "discovery": {
+          "collected": 3,
+          "collection_errors": [],
+          "exit_code": 1,
+          "failed": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "missing": [],
+          "outcome": "fail",
+          "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.04s\n"
+        },
+        "good": "19760125158b13d14405de0361a4ccad7f1e9db4",
+        "message": "Main broke at 75997054. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+        "partner": {
+          "assumption": "failure is monotonic across the candidate interval",
+          "commit": "19760125158b13d14405de0361a4ccad7f1e9db4",
+          "trials": [
+            {
+              "commit": "d2246f037a4bec1587d7780f251bdc18bb4769a2",
+              "outcome": "pass"
+            },
+            {
+              "commit": "19760125158b13d14405de0361a4ccad7f1e9db4",
+              "outcome": "fail"
+            }
+          ]
+        },
+        "partner_pr": 1,
+        "pr": 2,
+        "repetitions": {
+          "bad": [
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+            },
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.03s\n"
+            },
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+            }
+          ],
+          "good": [
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            },
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            },
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            }
+          ]
+        },
+        "status": "clash",
+        "tests": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "undo_pr": 3,
+        "undo_validation": {
+          "collected": 2,
+          "collection_errors": [],
+          "exit_code": 0,
+          "failed": [],
+          "missing": [],
+          "outcome": "pass",
+          "output": "..                                                                       [100%]\n2 passed in 0.02s\n"
+        }
+      },
+      "hook_ms": 427.47,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "75997054abe2dd5070867906d27c01ae4a0a788d",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.04s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": true,
+      "scenario": "S4",
+      "scripted_repair": false,
+      "seconds": 18.22,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-guarded-2"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 68.61,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "babea2d5739ec8832f0dbd5a9aaf33a2df544c75",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S5",
+      "scripted_repair": false,
+      "seconds": 5.88,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S5-baseline-2"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 579.2,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "4646bdc53894591c8284c5a31fc75c00e692a3cd",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S5",
+      "scripted_repair": false,
+      "seconds": 8.14,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S5-guarded-2"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 62.84,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "542399f75d584e4c4e4dd2a7a5a138d062b46d17",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^\nE   AttributeError: module 'users' has no attribute 'get_user'. Did you mean: 'fetch_user'?\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - AttributeError: module 'users' h...\n1 failed, 2 passed in 0.04s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S1",
+      "scripted_repair": false,
+      "seconds": 6.98,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S1-baseline-3"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 563.98,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` was renamed to `users.fetch_user` in commit 6171513c. Your code uses it at account.py:7. Update the import and calls to use `users.fetch_user`, re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "3c3765e29374cb02426e48445cb52a7d76f9afd9",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S1",
+      "scripted_repair": true,
+      "seconds": 8.96,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S1-guarded-3"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 63.34,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "d7cd7bcf3074503cf01a831466dcb34fccd941e3",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:7: in account_summary\n    user = users.get_user(uid)\n           ^^^^^^^^^^^^^^^^^^^\nE   TypeError: get_user() missing 1 required positional argument: 'org_id'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - TypeError: get_user() missing 1 ...\n1 failed, 2 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S2",
+      "scripted_repair": false,
+      "seconds": 6.98,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S2-baseline-3"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 466.72,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` changed signature: missing required argument: org_id in commit b19b4eb4. Your code uses it at account.py:7. Update the call to match the new signature (required: uid, org_id), re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "cf7c911e731650e2a4e4acb19f8ebd8cadaafbb2",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S2",
+      "scripted_repair": true,
+      "seconds": 8.28,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S2-guarded-3"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 62.33,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "b748877536a6659c64ba5fab4c2e8ce439c62697",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_account.py::test_summary"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:6: in account_summary\n    import users\nE   ModuleNotFoundError: No module named 'users'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - ModuleNotFoundError: No module n...\n1 failed, 2 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S3",
+      "scripted_repair": false,
+      "seconds": 6.59,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S3-baseline-3"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 528.16,
+      "hook_output": {
+        "hookSpecificOutput": {
+          "additionalContext": "While you were working, main changed: `users.get_user` was moved to `accounts.users.get_user` in commit 080750e5. Your code uses it at account.py:7. Update the import and calls to use `accounts.users.get_user`, re-run the tests, then finish.",
+          "hookEventName": "PostToolUse"
+        }
+      },
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "eaff6ceb11c7b561f26a612642edb66ae6f0fb6f",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "notes": 1,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S3",
+      "scripted_repair": true,
+      "seconds": 9.32,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S3-guarded-3"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": false,
+      "guardian": null,
+      "hook_ms": 75.96,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "633f3230263d215c500c935bd936127d8c353711",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.03s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S4",
+      "scripted_repair": false,
+      "seconds": 7.11,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-baseline-3"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": {
+        "alone": {
+          "collected": 1,
+          "collection_errors": [],
+          "exit_code": 0,
+          "failed": [],
+          "missing": [],
+          "outcome": "pass",
+          "output": ".                                                                        [100%]\n1 passed in 0.02s\n"
+        },
+        "bad": "0a3e92da516ec369eb56d13316e2c394b1d24bcd",
+        "bisect_log": "running '/Users/QTG2659/codex-project/mergeguard/.venv/bin/python' '/var/folders/t2/0p47jmmj1cn7wlym_wk3bf6c0000gr/T/mergeguard-bisect-45whmf_z/check.py'\n0a3e92da516ec369eb56d13316e2c394b1d24bcd is the first bad commit\ncommit 0a3e92da516ec369eb56d13316e2c394b1d24bcd\nMerge: 2a292f3 3b659f0\nAuthor: mergeguard <mergeguard@localhost>\nDate:   Tue Oct 27 00:09:32 2026 +0100\n\n    Merge PR #2: S4 task B (guarded)\n\n invoices/__init__.py  | 0\n invoices/total.py     | 4 ++++\n tests/test_invoice.py | 4 ++++\n 3 files changed, 8 insertions(+)\n create mode 100644 invoices/__init__.py\n create mode 100644 invoices/total.py\n create mode 100644 tests/test_invoice.py\nbisect found first bad commit\n",
+        "culprit": "0a3e92da516ec369eb56d13316e2c394b1d24bcd",
+        "discovery": {
+          "collected": 3,
+          "collection_errors": [],
+          "exit_code": 1,
+          "failed": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "missing": [],
+          "outcome": "fail",
+          "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.03s\n"
+        },
+        "good": "2a292f393609eaa96c0e67a0f1ce48f9b213e4a2",
+        "message": "Main broke at 0a3e92da. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+        "partner": {
+          "assumption": "failure is monotonic across the candidate interval",
+          "commit": "2a292f393609eaa96c0e67a0f1ce48f9b213e4a2",
+          "trials": [
+            {
+              "commit": "6f6875f496932a3500a5a372043949612ade9805",
+              "outcome": "pass"
+            },
+            {
+              "commit": "2a292f393609eaa96c0e67a0f1ce48f9b213e4a2",
+              "outcome": "fail"
+            }
+          ]
+        },
+        "partner_pr": 1,
+        "pr": 2,
+        "repetitions": {
+          "bad": [
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+            },
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+            },
+            {
+              "collected": 1,
+              "collection_errors": [],
+              "exit_code": 1,
+              "failed": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "missing": [],
+              "outcome": "fail",
+              "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.03s\n"
+            }
+          ],
+          "good": [
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            },
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            },
+            {
+              "failed": [],
+              "missing": [
+                "tests/test_invoice.py::test_invoice_total"
+              ],
+              "outcome": "pass",
+              "output": "Test files absent at this commit (pass by bisect convention)"
+            }
+          ]
+        },
+        "status": "clash",
+        "tests": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "undo_pr": 3,
+        "undo_validation": {
+          "collected": 2,
+          "collection_errors": [],
+          "exit_code": 0,
+          "failed": [],
+          "missing": [],
+          "outcome": "pass",
+          "output": "..                                                                       [100%]\n2 passed in 0.01s\n"
+        }
+      },
+      "hook_ms": 399.81,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": true,
+      "merge_commit": "0a3e92da516ec369eb56d13316e2c394b1d24bcd",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 1,
+        "failed": [
+          "tests/test_invoice.py::test_invoice_total"
+        ],
+        "missing": [],
+        "outcome": "fail",
+        "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.05s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": true,
+      "scenario": "S4",
+      "scripted_repair": false,
+      "seconds": 17.27,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-guarded-3"
+    },
+    {
+      "arm": "baseline",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 60.48,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "e9c6e877918ed5a46683609fef4ae02615c1e8e3",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.04s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S5",
+      "scripted_repair": false,
+      "seconds": 7.79,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S5-baseline-3"
+    },
+    {
+      "arm": "guarded",
+      "branch_after": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+      },
+      "branch_before": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.03s\n"
+      },
+      "expected_checks_passed": true,
+      "final_healthy": true,
+      "guardian": null,
+      "hook_ms": 425.05,
+      "hook_output": {},
+      "hook_stderr": "",
+      "main_broken": false,
+      "merge_commit": "17c75db89289994996b7f4951b76cea9d696e0d5",
+      "merged_tests": {
+        "collected": 3,
+        "collection_errors": [],
+        "exit_code": 0,
+        "failed": [],
+        "missing": [],
+        "outcome": "pass",
+        "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+      },
+      "notes": 0,
+      "pr": 2,
+      "recovered": false,
+      "scenario": "S5",
+      "scripted_repair": false,
+      "seconds": 7.62,
+      "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S5-guarded-3"
+    }
+  ],
+  "timestamp": "20261026T230536.764001Z"
+}

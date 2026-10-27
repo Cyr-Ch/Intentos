@@ -1,0 +1,2 @@
+{"ts": "2026-10-27T01:54:03.805679Z", "event": "command", "branch": "s4/task-b", "cmd": "cat .mergeguard/policy.yaml; echo ---; head -40 README.md; echo ---; python -m pytest -q 2>&1 | tail -3", "exit_code": null}
+{"ts": "2026-10-27T01:54:08.313038Z", "event": "command", "branch": "s4/task-b", "cmd": "python -m pytest -q", "exit_code": null}

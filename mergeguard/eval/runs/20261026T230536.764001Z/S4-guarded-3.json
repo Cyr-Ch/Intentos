@@ -1,0 +1,166 @@
+{
+  "arm": "guarded",
+  "branch_after": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+  },
+  "branch_before": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.02s\n"
+  },
+  "expected_checks_passed": true,
+  "final_healthy": true,
+  "guardian": {
+    "alone": {
+      "collected": 1,
+      "collection_errors": [],
+      "exit_code": 0,
+      "failed": [],
+      "missing": [],
+      "outcome": "pass",
+      "output": ".                                                                        [100%]\n1 passed in 0.02s\n"
+    },
+    "bad": "0a3e92da516ec369eb56d13316e2c394b1d24bcd",
+    "bisect_log": "running '/Users/QTG2659/codex-project/mergeguard/.venv/bin/python' '/var/folders/t2/0p47jmmj1cn7wlym_wk3bf6c0000gr/T/mergeguard-bisect-45whmf_z/check.py'\n0a3e92da516ec369eb56d13316e2c394b1d24bcd is the first bad commit\ncommit 0a3e92da516ec369eb56d13316e2c394b1d24bcd\nMerge: 2a292f3 3b659f0\nAuthor: mergeguard <mergeguard@localhost>\nDate:   Tue Oct 27 00:09:32 2026 +0100\n\n    Merge PR #2: S4 task B (guarded)\n\n invoices/__init__.py  | 0\n invoices/total.py     | 4 ++++\n tests/test_invoice.py | 4 ++++\n 3 files changed, 8 insertions(+)\n create mode 100644 invoices/__init__.py\n create mode 100644 invoices/total.py\n create mode 100644 tests/test_invoice.py\nbisect found first bad commit\n",
+    "culprit": "0a3e92da516ec369eb56d13316e2c394b1d24bcd",
+    "discovery": {
+      "collected": 3,
+      "collection_errors": [],
+      "exit_code": 1,
+      "failed": [
+        "tests/test_invoice.py::test_invoice_total"
+      ],
+      "missing": [],
+      "outcome": "fail",
+      "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.03s\n"
+    },
+    "good": "2a292f393609eaa96c0e67a0f1ce48f9b213e4a2",
+    "message": "Main broke at 0a3e92da. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+    "partner": {
+      "assumption": "failure is monotonic across the candidate interval",
+      "commit": "2a292f393609eaa96c0e67a0f1ce48f9b213e4a2",
+      "trials": [
+        {
+          "commit": "6f6875f496932a3500a5a372043949612ade9805",
+          "outcome": "pass"
+        },
+        {
+          "commit": "2a292f393609eaa96c0e67a0f1ce48f9b213e4a2",
+          "outcome": "fail"
+        }
+      ]
+    },
+    "partner_pr": 1,
+    "pr": 2,
+    "repetitions": {
+      "bad": [
+        {
+          "collected": 1,
+          "collection_errors": [],
+          "exit_code": 1,
+          "failed": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "missing": [],
+          "outcome": "fail",
+          "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+        },
+        {
+          "collected": 1,
+          "collection_errors": [],
+          "exit_code": 1,
+          "failed": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "missing": [],
+          "outcome": "fail",
+          "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.02s\n"
+        },
+        {
+          "collected": 1,
+          "collection_errors": [],
+          "exit_code": 1,
+          "failed": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "missing": [],
+          "outcome": "fail",
+          "output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed in 0.03s\n"
+        }
+      ],
+      "good": [
+        {
+          "failed": [],
+          "missing": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "outcome": "pass",
+          "output": "Test files absent at this commit (pass by bisect convention)"
+        },
+        {
+          "failed": [],
+          "missing": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "outcome": "pass",
+          "output": "Test files absent at this commit (pass by bisect convention)"
+        },
+        {
+          "failed": [],
+          "missing": [
+            "tests/test_invoice.py::test_invoice_total"
+          ],
+          "outcome": "pass",
+          "output": "Test files absent at this commit (pass by bisect convention)"
+        }
+      ]
+    },
+    "status": "clash",
+    "tests": [
+      "tests/test_invoice.py::test_invoice_total"
+    ],
+    "undo_pr": 3,
+    "undo_validation": {
+      "collected": 2,
+      "collection_errors": [],
+      "exit_code": 0,
+      "failed": [],
+      "missing": [],
+      "outcome": "pass",
+      "output": "..                                                                       [100%]\n2 passed in 0.01s\n"
+    }
+  },
+  "hook_ms": 399.81,
+  "hook_output": {},
+  "hook_stderr": "",
+  "main_broken": true,
+  "merge_commit": "0a3e92da516ec369eb56d13316e2c394b1d24bcd",
+  "merged_tests": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 1,
+    "failed": [
+      "tests/test_invoice.py::test_invoice_total"
+    ],
+    "missing": [],
+    "outcome": "fail",
+    "output": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n______________________________ test_invoice_total ______________________________\ntests/test_invoice.py:4: in test_invoice_total\n    assert invoice_total([5, 10]) == 1500\nE   assert 15 == 1500\nE    +  where 15 = invoice_total([5, 10])\n=========================== short test summary info ============================\nFAILED tests/test_invoice.py::test_invoice_total - assert 15 == 1500\n1 failed, 2 passed in 0.05s\n"
+  },
+  "notes": 0,
+  "pr": 2,
+  "recovered": true,
+  "scenario": "S4",
+  "scripted_repair": false,
+  "seconds": 17.27,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261026T230536.764001Z/S4-guarded-3"
+}

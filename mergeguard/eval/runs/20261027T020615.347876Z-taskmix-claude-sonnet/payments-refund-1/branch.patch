@@ -1,0 +1,29 @@
+diff --git a/payments/charge.py b/payments/charge.py
+index 21737ae..d09222d 100644
+--- a/payments/charge.py
++++ b/payments/charge.py
+@@ -1,3 +1,8 @@
+ def charge(amount):
+     """Return the captured amount in cents; input is dollars."""
+     return round(amount * 100)
++
++
++def refund(amount):
++    """Return the refunded amount in cents (negative); input is dollars."""
++    return -charge(amount)
+diff --git a/tests/test_refund.py b/tests/test_refund.py
+new file mode 100644
+index 0000000..66f17d3
+--- /dev/null
++++ b/tests/test_refund.py
+@@ -0,0 +1,10 @@
++from payments.charge import charge, refund
++
++
++def test_refund_is_negative_charge():
++    assert refund(10) == -1000
++    assert refund(1.25) == -charge(1.25)
++
++
++def test_refund_zero():
++    assert refund(0) == 0

@@ -1,0 +1,24 @@
+{
+  "bisect_steps": 4,
+  "blamed": false,
+  "culprit_ok": true,
+  "expected": "blame clash PR, name partner, open undo",
+  "flaky_tests": [
+    "tests/test_latency.py::test_latency_budget"
+  ],
+  "harmless_after": 14,
+  "harmless_before": 17,
+  "label": "clash+flaky-3",
+  "main_commits": 35,
+  "message": "Undo does not restore a passing suite; no PR opened",
+  "partner_ok": false,
+  "seconds": 5.6,
+  "seed": 3,
+  "status": "undo_failed",
+  "tests": [
+    "tests/test_invoice.py::test_invoice_total"
+  ],
+  "undo_opened": false,
+  "variant": "clash+flaky",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T001529.796224Z-guardian/clash+flaky-3"
+}

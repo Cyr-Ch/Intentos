@@ -1,0 +1,48 @@
+{
+  "arm": "baseline",
+  "branch_after": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "branch_before": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 0,
+    "failed": [],
+    "missing": [],
+    "outcome": "pass",
+    "output": "...                                                                      [100%]\n3 passed in 0.01s\n"
+  },
+  "expected_checks_passed": true,
+  "final_healthy": false,
+  "guardian": null,
+  "hook_ms": 69.85,
+  "hook_output": {},
+  "hook_stderr": "",
+  "main_broken": true,
+  "merge_commit": "e585c829c5762df1d74972f34da777de48f1a048",
+  "merged_tests": {
+    "collected": 3,
+    "collection_errors": [],
+    "exit_code": 1,
+    "failed": [
+      "tests/test_account.py::test_summary"
+    ],
+    "missing": [],
+    "outcome": "fail",
+    "output": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n_________________________________ test_summary _________________________________\ntests/test_account.py:4: in test_summary\n    assert account_summary(7) == \"User 7\"\n           ^^^^^^^^^^^^^^^^^^\naccount.py:6: in account_summary\n    import users\nE   ModuleNotFoundError: No module named 'users'\n=========================== short test summary info ============================\nFAILED tests/test_account.py::test_summary - ModuleNotFoundError: No module n...\n1 failed, 2 passed in 0.03s\n"
+  },
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S3",
+  "scripted_repair": false,
+  "seconds": 10.44,
+  "tool_sha256": "4c23822cdfbe17a917c561f5497d340b88bf75371096aee675ea054a31401cca",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T000034.552688Z/S3-baseline-3"
+}

@@ -2,9 +2,10 @@
 
 IntentOS verifies one run against one base revision: does this change belong, and does it hold the approved
 invariants? It has no answer to the second question a team of parallel agents raises: is this change still safe to
-merge now that other runs have landed on main since it started? That is what [mergeguard](https://github.com/Cyr-Ch/mergeguard)
-does, a deterministic coordination harness (no model anywhere in it) for coding agents that share a repository. This
-document describes how the two are combined.
+merge now that other runs have landed on main since it started? That is what mergeguard does, the deterministic
+coordination harness (no model anywhere in it) for coding agents that share a repository, which lives in
+[`mergeguard/`](../mergeguard/) with its own README, design notes, demo and evaluation results. This document describes
+how the two are combined.
 
 ## What each side contributes
 
@@ -21,8 +22,8 @@ track, and mergeguard's gate calls back into IntentOS for the merged-result veri
 
 ## How it runs
 
-mergeguard is a Python package installed into the IntentOS venv (`.intentos/venv/bin/python -m pip install -e <path to
-mergeguard>`). IntentOS drives it in **local mode**: the indexed repository is origin, its checked-out branch is main,
+mergeguard is a Python package in `mergeguard/`, installed into the IntentOS venv by `npm run setup:python`. IntentOS
+drives it in **local mode**: the indexed repository is origin, its checked-out branch is main,
 every run's worktree is a branch in waiting, and all mergeguard state lives under `INTENTOS_HOME/coordination/<repo>/`:
 the PR registry, the incident ledger and the trusted policy, never inside the repository the agents edit. The trusted
 policy is rendered from the IntentOS policy: the same protected paths need two humans at the merge, `intentos` is the

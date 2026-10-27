@@ -1,0 +1,39 @@
+{
+  "agent": {
+    "commands": 2,
+    "cost_usd": 0.005833450000000001,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 14.05,
+    "timed_out": false,
+    "tokens": {
+      "cached": 105755,
+      "input": 126645,
+      "output": 939
+    },
+    "tool_calls": 4,
+    "turns": 5
+  },
+  "agent_failed": false,
+  "category": "behavior change",
+  "ci": "pass",
+  "desired": 1,
+  "gate_reasons": [
+    "Needs 1 distinct human approvals on 0848afb0; has 0"
+  ],
+  "label": "behavior-change-2",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [
+    "account.py"
+  ],
+  "prompt": "Change health() in account.py to return 'healthy' instead of 'ok', and update any test that checks it.",
+  "proofs": {},
+  "reasons": [
+    "account.py changes executable code or has no comment-only proof"
+  ],
+  "risky": false,
+  "task": "behavior-change",
+  "tier": 1,
+  "under_reviewed": false
+}

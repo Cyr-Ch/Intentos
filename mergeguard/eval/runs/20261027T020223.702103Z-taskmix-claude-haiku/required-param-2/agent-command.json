@@ -1,0 +1,17 @@
+[
+  "claude",
+  "-p",
+  "Add a required parameter org_id to get_user in users.py, include it in the returned dict, and update all callers and tests. Run python -m pytest -q before finishing.",
+  "--model",
+  "haiku",
+  "--allowedTools",
+  "Bash,Read,Edit,Write,MultiEdit,Glob,Grep",
+  "--permission-mode",
+  "acceptEdits",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--max-turns",
+  "60",
+  "--no-session-persistence"
+]

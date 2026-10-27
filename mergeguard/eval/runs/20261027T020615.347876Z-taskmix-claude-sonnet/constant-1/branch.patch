@@ -1,0 +1,10 @@
+diff --git a/users.py b/users.py
+index 039ac6c..03d461d 100644
+--- a/users.py
++++ b/users.py
+@@ -1,2 +1,5 @@
++MAX_USERS = 100
++
++
+ def get_user(uid):
+     return {"id": uid}

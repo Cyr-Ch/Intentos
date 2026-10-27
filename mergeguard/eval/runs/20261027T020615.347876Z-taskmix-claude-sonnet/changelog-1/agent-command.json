@@ -1,0 +1,17 @@
+[
+  "claude",
+  "-p",
+  "Add a CHANGELOG.md with a single initial entry for version 0.1.0. Change nothing else. Run python -m pytest -q before finishing.",
+  "--model",
+  "sonnet",
+  "--allowedTools",
+  "Bash,Read,Edit,Write,MultiEdit,Glob,Grep",
+  "--permission-mode",
+  "acceptEdits",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--max-turns",
+  "60",
+  "--no-session-persistence"
+]

@@ -1,0 +1,13 @@
+diff --git a/users.py b/users.py
+index 039ac6c..71aed84 100644
+--- a/users.py
++++ b/users.py
+@@ -1,2 +1,8 @@
++"""User lookup helpers.
++
++Provides get_user(), which builds a minimal user record for a given user ID.
++Currently the record contains only the ID; no data store is consulted.
++"""
++
+ def get_user(uid):
+     return {"id": uid}

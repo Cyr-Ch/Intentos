@@ -1,0 +1,44 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.00628317,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 17.55,
+    "timed_out": false,
+    "tokens": {
+      "cached": 106267,
+      "input": 127859,
+      "output": 1545
+    },
+    "tool_calls": 7,
+    "turns": 8
+  },
+  "agent_failed": false,
+  "category": "optional parameter",
+  "ci": "pass",
+  "desired": 1,
+  "gate_reasons": [
+    "Needs 2 distinct human approvals on 26fe4797; has 0"
+  ],
+  "label": "optional-param-1",
+  "match": false,
+  "over_reviewed": true,
+  "paths": [
+    "tests/test_users.py",
+    "users.py"
+  ],
+  "prompt": "Add an optional parameter org='acme' to get_user in users.py and include it as 'org' in the returned dict. Keep existing callers working.",
+  "proofs": {},
+  "reasons": [
+    "Existing tests modified: tests/test_users.py",
+    "Existing test assertion removed or replaced: tests/test_users.py",
+    "tests/test_users.py changes executable code or has no comment-only proof",
+    "users.py changes executable code or has no comment-only proof",
+    "How-made: existing tests were modified"
+  ],
+  "risky": false,
+  "task": "optional-param",
+  "tier": 2,
+  "under_reviewed": false
+}

@@ -1,0 +1,51 @@
+{
+  "a_merge": {
+    "after_seconds": 2.81,
+    "agent_events_before": 5,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 3,
+    "cost_usd": 0.0942108,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 11.79,
+    "timed_out": false,
+    "tokens": {
+      "cached": 100584,
+      "input": 120065,
+      "output": 611
+    },
+    "tool_calls": 3,
+    "turns": 4
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "I added `account_summary(uid)` to `account.py`. It calls `get_user` from `users.py`, so `account_summary(7)` returns `\"User 7\"`. I also added `tests/test_account.py` with a test for that case, and `python -m pytest -q` passes (3 tests).\n\nMy first write replaced the whole file and dropped the existing `health()` function. I put `health()` back, and the diff now shows only additions.",
+  "agent_name": "claude",
+  "arm": "baseline",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 0,
+  "commands_without_exit_code": 0,
+  "false_notes": 0,
+  "final_healthy": false,
+  "final_sync_clean": false,
+  "guardian": null,
+  "integrated_clean": false,
+  "label": "S1-baseline-2",
+  "main_broken": true,
+  "merge_commit": "3bdf81c184dc04fea9b971c14c79bb7f0a1d5d42",
+  "merged_tests": "error",
+  "model": "sonnet",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": false,
+  "scenario": "S1",
+  "seconds": 16.69,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T015736.446457Z-live-claude-sonnet/S1-baseline-2"
+}

@@ -1,0 +1,39 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.0064411799999999995,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 16.65,
+    "timed_out": false,
+    "tokens": {
+      "cached": 171848,
+      "input": 192590,
+      "output": 887
+    },
+    "tool_calls": 5,
+    "turns": 6
+  },
+  "agent_failed": false,
+  "category": "new constant",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [
+    "Needs 1 distinct human approvals on d3c376c7; has 0"
+  ],
+  "label": "constant-1",
+  "match": false,
+  "over_reviewed": true,
+  "paths": [
+    "users.py"
+  ],
+  "prompt": "Add a module-level constant MAX_USERS = 100 to users.py. Change nothing else.",
+  "proofs": {},
+  "reasons": [
+    "users.py changes executable code or has no comment-only proof"
+  ],
+  "risky": false,
+  "task": "constant",
+  "tier": 1,
+  "under_reviewed": false
+}

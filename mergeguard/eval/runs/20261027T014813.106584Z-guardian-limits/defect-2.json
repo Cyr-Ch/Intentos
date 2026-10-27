@@ -1,0 +1,13 @@
+{
+  "bisect_steps": 5,
+  "culprit_ok": true,
+  "label": "defect-2",
+  "main_commits": 107,
+  "message": "Main broke at 09e08c01. Cause: PR #62. Undo PR #107 opened.",
+  "no_partner": true,
+  "seconds": 7.8,
+  "seed": 2,
+  "status": "culprit",
+  "undo_opened": true,
+  "variant": "ordinary defect, long history"
+}

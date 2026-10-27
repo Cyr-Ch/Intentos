@@ -1,0 +1,39 @@
+{
+  "agent": {
+    "commands": 1,
+    "cost_usd": 0.0856113,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 21.53,
+    "timed_out": false,
+    "tokens": {
+      "cached": 68476,
+      "input": 87420,
+      "output": 287
+    },
+    "tool_calls": 2,
+    "turns": 3
+  },
+  "agent_failed": false,
+  "category": "docs",
+  "ci": "pass",
+  "desired": 0,
+  "gate_reasons": [],
+  "label": "readme-section-1",
+  "match": true,
+  "over_reviewed": false,
+  "paths": [
+    "README.md"
+  ],
+  "prompt": "Add a short 'Running the tests' section to README.md explaining to run python -m pytest -q. Change nothing else.",
+  "proofs": {
+    "README.md": "documentation"
+  },
+  "reasons": [
+    "Trusted author; every changed file is documentation, AST-equivalent, docstring-only, or additive-only"
+  ],
+  "risky": false,
+  "task": "readme-section",
+  "tier": 0,
+  "under_reviewed": false
+}

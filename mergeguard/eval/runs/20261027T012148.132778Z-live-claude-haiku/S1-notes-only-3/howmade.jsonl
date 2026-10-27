@@ -1,0 +1,2 @@
+{"ts": "2026-10-27T01:33:08.208047Z", "event": "command", "branch": "s1/task-b", "cmd": "cat tests/test_users.py tests/test_charge.py && cat pyproject.toml README.md .mergeguard/policy.yaml && cat payments/charge.py | head -30 && git log --oneline | head", "exit_code": null}
+{"ts": "2026-10-27T01:33:12.709202Z", "event": "command", "branch": "s1/task-b", "cmd": "python -m pytest -q; echo \"exit=$?\"", "exit_code": null}

@@ -1,0 +1,21 @@
+diff --git a/account.py b/account.py
+index 7dd5116..55654c3 100644
+--- a/account.py
++++ b/account.py
+@@ -1,2 +1,6 @@
+ def health():
+     return "ok"
++
++
++def health_detail():
++    return {'status': health()}
+diff --git a/tests/test_account.py b/tests/test_account.py
+new file mode 100644
+index 0000000..e7cc362
+--- /dev/null
++++ b/tests/test_account.py
+@@ -0,0 +1,4 @@
++from account import health, health_detail
++
++def test_health_detail():
++    assert health_detail() == {'status': health()}

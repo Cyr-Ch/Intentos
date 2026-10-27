@@ -1,0 +1,20 @@
+{
+  "bisect_steps": 0,
+  "blamed": false,
+  "culprit_ok": false,
+  "expected": "label flaky, blame nobody",
+  "flaky_tests": null,
+  "harmless_after": 14,
+  "harmless_before": 17,
+  "label": "flaky-3",
+  "main_commits": 34,
+  "message": "No failing tests at bad",
+  "partner_ok": false,
+  "seconds": 0.3,
+  "seed": 3,
+  "status": "healthy",
+  "tests": [],
+  "undo_opened": false,
+  "variant": "flaky",
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012137.324709Z-guardian/flaky-3"
+}

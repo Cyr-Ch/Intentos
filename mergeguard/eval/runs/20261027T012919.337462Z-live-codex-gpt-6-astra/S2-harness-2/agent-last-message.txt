@@ -1,0 +1,5 @@
+Implemented `account_summary(7)` → `"User 7"`, reusing `get_user` with its new `org_id` argument. Added pytest coverage.
+
+`python -m pytest -q`: **4 passed**.
+
+Git metadata was read-only, so I applied the upstream signature changes directly to the working files.

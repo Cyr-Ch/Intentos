@@ -1,0 +1,3 @@
+Added the `invoices` package and `invoice_total(amounts)`, using `payments.charge.charge` for each amount. Added a test confirming `[5, 10]` returns `1500`.
+
+`python -m pytest -q`: **3 passed**.

@@ -1,0 +1,61 @@
+# Stretch item 1: the PR check is the backstop for the laptop hooks. It runs the same sync check and router
+# on GitHub and fails the check when a branch still uses a symbol that main changed.
+# Not yet exercised against a hosted repository: the offline world is the demo's source of truth.
+name: mergeguard-pr
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  sync-and-route:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e .
+      - name: Fetch the base branch
+        run: git fetch --no-tags origin "+refs/heads/${{ github.event.pull_request.base.ref }}:refs/remotes/origin/main"
+      - name: Sync check (same logic as the laptop hook)
+        id: sync
+        run: |
+          set +e
+          python -m mergeguard sync-check --head HEAD --main origin/main --json > sync.json
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat sync.json
+      - name: Route the review tier (policy is read from main, never from the PR)
+        run: |
+          base=$(git merge-base HEAD origin/main)
+          python -m mergeguard route --base "$base" --head HEAD --author "${{ github.event.pull_request.user.login }}" --policy-ref origin/main --json > route.json
+          cat route.json
+      - name: Summarize and comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' > comment.md
+          import json
+          sync, route = json.load(open("sync.json")), json.load(open("route.json"))
+          print(f"## mergeguard: tier {route['tier']} ({route['required_approvals']} human approval(s) required)")
+          for reason in route["reasons"]:
+              print(f"- {reason}")
+          print()
+          print("### Sync check: " + ("clean" if sync["clean"] else f"{len(sync['issues'])} issue(s) against main"))
+          for issue in sync["issues"]:
+              print(f"- {issue['message']}")
+          PY
+          cat comment.md >> "$GITHUB_STEP_SUMMARY"
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file comment.md --repo "${{ github.repository }}" || true
+      - name: Fail when the branch is stale against main
+        if: steps.sync.outputs.code != '0'
+        run: |
+          echo "The branch uses symbols that main changed; see the comment above." >&2
+          exit 1

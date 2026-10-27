@@ -1,0 +1,475 @@
+{
+  "breaker": {
+    "automatic_loosening": false,
+    "day18_cooldown_complete": true,
+    "day18_floor_still_set": 2,
+    "day1_after_one_incident": null,
+    "day4_after_two_incidents": 2,
+    "day60_floor_still_set": 2,
+    "floor_after_human_reset_day20": null,
+    "suggestions_day22": [
+      "./: 21 clean merges and zero strikes in 30 days; consider a human-reviewed lower floor.",
+      "payments/: cooldown complete; a human may approve a breaker.resets policy timestamp on main."
+    ]
+  },
+  "breaker_tests": {
+    "exit_code": 0,
+    "seconds": 0.4,
+    "summary_line": "5 passed in 0.18s",
+    "targets": [
+      "tests/test_ledger_breaker.py"
+    ]
+  },
+  "guardian_tests": {
+    "exit_code": 0,
+    "seconds": 38.2,
+    "summary_line": "4 passed in 38.01s",
+    "targets": [
+      "tests/test_guardian.py"
+    ]
+  },
+  "kind": "policy",
+  "router": {
+    "by_tier": {
+      "0": 5,
+      "1": 10,
+      "2": 13
+    },
+    "exact": 28,
+    "risky_too_low": [],
+    "risky_total": 11,
+    "rows": [
+      {
+        "actual": 0,
+        "author": "engineer_a",
+        "expected": 0,
+        "name": "readme edit",
+        "ok": true,
+        "paths": [
+          "README.md"
+        ],
+        "reasons": [
+          "Trusted author; every changed file is documentation, AST-equivalent, or docstring-only"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 0,
+        "author": "engineer_a",
+        "expected": 0,
+        "name": "new docs page",
+        "ok": true,
+        "paths": [
+          "docs/guide.md"
+        ],
+        "reasons": [
+          "Trusted author; every changed file is documentation, AST-equivalent, or docstring-only"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 0,
+        "author": "engineer_a",
+        "expected": 0,
+        "name": "comment added",
+        "ok": true,
+        "paths": [
+          "users.py"
+        ],
+        "reasons": [
+          "Trusted author; every changed file is documentation, AST-equivalent, or docstring-only"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 0,
+        "author": "engineer_a",
+        "expected": 0,
+        "name": "docstring only",
+        "ok": true,
+        "paths": [
+          "users.py"
+        ],
+        "reasons": [
+          "Trusted author; every changed file is documentation, AST-equivalent, or docstring-only"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 0,
+        "author": "engineer_b",
+        "expected": 0,
+        "name": "blank-line formatting",
+        "ok": true,
+        "paths": [
+          "account.py"
+        ],
+        "reasons": [
+          "Trusted author; every changed file is documentation, AST-equivalent, or docstring-only"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "contractor",
+        "expected": 1,
+        "name": "comment by untrusted author",
+        "ok": true,
+        "paths": [
+          "users.py"
+        ],
+        "reasons": [
+          "Author contractor is not in the trusted-author list on main"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "engineer_b",
+        "expected": 1,
+        "name": "new helper function",
+        "ok": true,
+        "paths": [
+          "account.py"
+        ],
+        "reasons": [
+          "account.py changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "engineer_b",
+        "expected": 1,
+        "name": "behavior change in health()",
+        "ok": true,
+        "paths": [
+          "account.py"
+        ],
+        "reasons": [
+          "account.py changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "engineer_a",
+        "expected": 1,
+        "name": "new module",
+        "ok": true,
+        "paths": [
+          "catalog.py"
+        ],
+        "reasons": [
+          "catalog.py changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "engineer_a",
+        "expected": 1,
+        "name": "new test file only",
+        "ok": true,
+        "paths": [
+          "tests/test_catalog.py"
+        ],
+        "reasons": [
+          "tests/test_catalog.py changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "engineer_a",
+        "expected": 1,
+        "name": "existing test gains an assertion",
+        "ok": true,
+        "paths": [
+          "tests/test_users.py"
+        ],
+        "reasons": [
+          "Existing tests modified: tests/test_users.py",
+          "tests/test_users.py changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "S1 rename get_user -> fetch_user",
+        "ok": true,
+        "paths": [
+          "tests/test_users.py",
+          "users.py"
+        ],
+        "reasons": [
+          "Existing tests modified: tests/test_users.py",
+          "Existing test assertion removed or replaced: tests/test_users.py",
+          "tests/test_users.py changes executable code or has no comment-only proof",
+          "users.py changes executable code or has no comment-only proof",
+          "Public API changed: users.get_user renamed (now users.fetch_user)"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "S2 required parameter added",
+        "ok": true,
+        "paths": [
+          "tests/test_users.py",
+          "users.py"
+        ],
+        "reasons": [
+          "Existing tests modified: tests/test_users.py",
+          "Existing test assertion removed or replaced: tests/test_users.py",
+          "tests/test_users.py changes executable code or has no comment-only proof",
+          "users.py changes executable code or has no comment-only proof",
+          "Public API changed: users.get_user signature changed"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 1,
+        "author": "engineer_a",
+        "expected": 1,
+        "name": "docs plus code",
+        "ok": true,
+        "paths": [
+          "README.md",
+          "account.py"
+        ],
+        "reasons": [
+          "account.py changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "engineer_a",
+        "expected": 1,
+        "name": ".gitignore edit",
+        "ok": true,
+        "paths": [
+          ".gitignore"
+        ],
+        "reasons": [
+          ".gitignore changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 1,
+        "author": "engineer_a",
+        "expected": 1,
+        "name": "pyproject edit",
+        "ok": true,
+        "paths": [
+          "pyproject.toml"
+        ],
+        "reasons": [
+          "pyproject.toml changes executable code or has no comment-only proof"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "S4 payments units change",
+        "ok": true,
+        "paths": [
+          "payments/charge.py",
+          "tests/test_charge.py"
+        ],
+        "reasons": [
+          "payments/charge.py is protected by an always-two rule",
+          "payments/charge.py changes executable code or has no comment-only proof",
+          "Existing tests modified: tests/test_charge.py",
+          "Existing test assertion removed or replaced: tests/test_charge.py",
+          "tests/test_charge.py changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "payments comment only",
+        "ok": true,
+        "paths": [
+          "payments/charge.py"
+        ],
+        "reasons": [
+          "payments/charge.py is protected by an always-two rule"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 2,
+        "author": "engineer_b",
+        "expected": 2,
+        "name": "policy adds a trusted author",
+        "ok": true,
+        "paths": [
+          ".mergeguard/policy.yaml"
+        ],
+        "reasons": [
+          ".mergeguard/policy.yaml is protected by an always-two rule",
+          ".mergeguard/policy.yaml changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "new workflow",
+        "ok": true,
+        "paths": [
+          ".github/workflows/deploy.yml"
+        ],
+        "reasons": [
+          ".github/workflows/deploy.yml is protected by an always-two rule",
+          ".github/workflows/deploy.yml changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "codex hooks edit",
+        "ok": true,
+        "paths": [
+          ".codex/hooks.json"
+        ],
+        "reasons": [
+          ".codex/hooks.json is protected by an always-two rule",
+          ".codex/hooks.json changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "claude settings edit",
+        "ok": true,
+        "paths": [
+          ".claude/settings.json"
+        ],
+        "reasons": [
+          ".claude/settings.json is protected by an always-two rule",
+          ".claude/settings.json changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "test file deleted",
+        "ok": true,
+        "paths": [
+          "tests/test_charge.py"
+        ],
+        "reasons": [
+          "Existing tests modified: tests/test_charge.py",
+          "Existing test file deleted: tests/test_charge.py",
+          "tests/test_charge.py changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "test assertion removed",
+        "ok": true,
+        "paths": [
+          "tests/test_charge.py"
+        ],
+        "reasons": [
+          "Existing tests modified: tests/test_charge.py",
+          "Existing test assertion removed or replaced: tests/test_charge.py",
+          "tests/test_charge.py changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 1,
+        "author": "engineer_a",
+        "expected": 1,
+        "name": "docs-only but a sync note was received",
+        "ok": true,
+        "paths": [
+          "README.md"
+        ],
+        "reasons": [
+          "How-made: agent received a specific sync note"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "payments change with a clean how-made claim",
+        "ok": true,
+        "paths": [
+          "payments/charge.py"
+        ],
+        "reasons": [
+          "payments/charge.py is protected by an always-two rule",
+          "payments/charge.py changes executable code or has no comment-only proof"
+        ],
+        "risky": true
+      },
+      {
+        "actual": 2,
+        "author": "contractor",
+        "expected": 2,
+        "name": "payments comment by untrusted author",
+        "ok": true,
+        "paths": [
+          "payments/charge.py"
+        ],
+        "reasons": [
+          "Author contractor is not in the trusted-author list on main",
+          "payments/charge.py is protected by an always-two rule"
+        ],
+        "risky": false
+      },
+      {
+        "actual": 2,
+        "author": "engineer_a",
+        "expected": 2,
+        "name": "S3 move users.py into a package",
+        "ok": true,
+        "paths": [
+          "accounts/__init__.py",
+          "accounts/users.py",
+          "tests/test_users.py",
+          "users.py"
+        ],
+        "reasons": [
+          "accounts/__init__.py changes executable code or has no comment-only proof",
+          "accounts/users.py changes executable code or has no comment-only proof",
+          "Existing tests modified: tests/test_users.py",
+          "tests/test_users.py changes executable code or has no comment-only proof",
+          "users.py changes executable code or has no comment-only proof",
+          "Public API changed: users.get_user moved (now accounts.users.get_user)"
+        ],
+        "risky": true
+      }
+    ],
+    "too_high": [],
+    "too_low": [],
+    "total": 28
+  },
+  "timestamp": "20261026T235804.421330Z"
+}

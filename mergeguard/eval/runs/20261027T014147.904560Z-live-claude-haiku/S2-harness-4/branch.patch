@@ -1,0 +1,25 @@
+diff --git a/account.py b/account.py
+index 7dd5116..607979a 100644
+--- a/account.py
++++ b/account.py
+@@ -1,2 +1,10 @@
++from users import get_user
++
++
+ def health():
+     return "ok"
++
++
++def account_summary(uid, org_id=None):
++    user = get_user(uid, org_id)
++    return f"User {user['id']}"
+diff --git a/tests/test_account.py b/tests/test_account.py
+new file mode 100644
+index 0000000..eb8fa3b
+--- /dev/null
++++ b/tests/test_account.py
+@@ -0,0 +1,4 @@
++from account import account_summary
++
++def test_account_summary():
++    assert account_summary(7) == "User 7"

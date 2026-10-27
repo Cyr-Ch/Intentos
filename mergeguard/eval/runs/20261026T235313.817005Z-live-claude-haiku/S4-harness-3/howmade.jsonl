@@ -1,0 +1,2 @@
+{"ts": "2026-10-26T23:57:58.149004Z", "event": "command", "branch": "s4/task-b", "cmd": "cat tests/test_charge.py && echo --- && cat pyproject.toml && echo --- && cat .mergeguard/policy.yaml && echo --- && cat README.md | head -40 && echo --- && python -m pytest -q 2>&1 | tail -5", "exit_code": null}
+{"ts": "2026-10-26T23:58:02.380504Z", "event": "command", "branch": "s4/task-b", "cmd": "python -m pytest -q", "exit_code": null}

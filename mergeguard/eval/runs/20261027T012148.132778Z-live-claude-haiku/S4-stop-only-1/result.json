@@ -1,0 +1,57 @@
+{
+  "a_merge": {
+    "after_seconds": 5.12,
+    "agent_events_before": 6,
+    "triggered_by_agent_action": true
+  },
+  "a_pr": 1,
+  "agent": {
+    "commands": 2,
+    "cost_usd": 0.005880410000000001,
+    "error": null,
+    "exit_code": 0,
+    "seconds": 14.9,
+    "timed_out": false,
+    "tokens": {
+      "cached": 73061,
+      "input": 94660,
+      "output": 1383
+    },
+    "tool_calls": 5,
+    "turns": 6
+  },
+  "agent_committed": false,
+  "agent_failed": false,
+  "agent_final_text": "`invoice_total(amounts)` is in place and returns cents: `invoice_total([5, 10])` gives 1500. `python -m pytest -q` passes (3 tests, including the new one).\n\nChanges:\n- **`invoices/__init__.py`**: new empty file that makes `invoices` a package.\n- **`invoices/total.py`**: `invoice_total` sums `charge(amount)` over the list. `charge` already converts dollars to cents, so the function does no conversion of its own.\n- **`tests/test_invoices.py`**: asserts `invoice_total([5, 10]) == 1500`.\n\nI did not commit anything. The working tree has the three new files, and I left the commit and branch decisions to you.",
+  "agent_name": "claude",
+  "arm": "stop-only",
+  "blocked_by_pr_check": null,
+  "branch_tests": "pass",
+  "command_events": 2,
+  "commands_without_exit_code": 2,
+  "false_notes": 0,
+  "final_healthy": true,
+  "final_sync_clean": true,
+  "guardian": {
+    "culprit": "6c26c7075056782272b1077eac1e7d3ba6a4e735",
+    "message": "Main broke at 6c26c707. Cause: PR #2 (clashed with #1). Undo PR #3 opened.",
+    "partner_pr": 1,
+    "status": "clash",
+    "undo_pr": 3
+  },
+  "integrated_clean": false,
+  "label": "S4-stop-only-1",
+  "main_broken": true,
+  "merge_commit": "6c26c7075056782272b1077eac1e7d3ba6a4e735",
+  "merged_tests": "fail",
+  "model": "haiku",
+  "note_messages": [],
+  "notes": 0,
+  "pr": 2,
+  "recovered": true,
+  "scenario": "S4",
+  "seconds": 31.48,
+  "stop_blocks": 0,
+  "tier": 0,
+  "world": "/Users/QTG2659/codex-project/mergeguard-eval-worlds/20261027T012148.132778Z-live-claude-haiku/S4-stop-only-1"
+}

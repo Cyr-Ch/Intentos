@@ -1,0 +1,6 @@
+{
+  "id": "S4",
+  "name": "dollars \u2192 cents (semantic blind spot)",
+  "prompt": "Add an invoice total for a list of dollar amounts, returning cents.",
+  "expected_notes": 0
+}

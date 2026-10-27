@@ -1,0 +1,19 @@
+diff --git a/tests/test_users.py b/tests/test_users.py
+index 8295123..56b254c 100644
+--- a/tests/test_users.py
++++ b/tests/test_users.py
+@@ -1,4 +1,4 @@
+-from users import get_user
++from users import fetch_user
+ 
+ def test_user():
+-    assert get_user(7) == {"id": 7}
++    assert fetch_user(7) == {"id": 7}
+diff --git a/users.py b/users.py
+index 039ac6c..413c1fa 100644
+--- a/users.py
++++ b/users.py
+@@ -1,2 +1,2 @@
+-def get_user(uid):
++def fetch_user(uid):
+     return {"id": uid}
