@@ -21,7 +21,8 @@
 
     Could `simple_profile` take an optional break window (start and end time, like `am`/`pm`) during which the
     "night" factors apply on workdays? Nothing should change when no break is given, and the result should still
-    integrate to the `annual_demand` I pass in, as it does today.
+    integrate to the `annual_demand` I pass in, as it does today. Call the window `break_start` and `break_end`
+    (`datetime.time`, inclusive at both ends like `am` and `pm`).
   acceptance: |
     - Without a break the profile is identical to today's (regression against the current output for a fixed index).
     - With a break 12:00–13:00 on a workday, every step inside the window carries the night factor and steps at
@@ -40,7 +41,8 @@
     and it is easy to get the factor wrong for non-quarter-hourly indexes.
 
     Please add a way to get a 2025 profile scaled so that it integrates to an annual energy I specify (in kWh),
-    for any constant-step index the class already accepts. The unscaled behaviour must stay exactly as it is.
+    for any constant-step index the class already accepts, as an `annual_energy` keyword argument (kWh) on the
+    profile classes (`G25(index, annual_energy=...)` and the others). The unscaled behaviour must stay exactly as it is.
   acceptance: |
     - Scaled profile for a full year integrates to the requested energy within 0.1% at 15 min, 1 h and 1 min steps.
     - The unscaled profile is unchanged (regression on a fixed index) and still integrates to about 1 GWh.
@@ -142,7 +144,7 @@
     myself, and colleagues keep doing it differently (sum vs mean).
 
     Please add a daily accessor on `HeatBuilding` that returns one value per calendar day, in the same unit as the
-    hourly profile, so the daily values add up to the annual heat demand.
+    hourly profile, so the daily values add up to the annual heat demand. Call it `get_daily_profile()`.
   acceptance: |
     - Daily values sum to annual_heat_demand within 1e-6 relative.
     - Index is one entry per calendar day of the input index; length matches the number of days.

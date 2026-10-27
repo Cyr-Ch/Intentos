@@ -2,6 +2,7 @@
 
 Base revision 6757f4f659, 2026-10-27T11:38:05.639Z. At that revision: test_add_houses_rejects_a_name_repeated_in_one_call failed, test_add_houses_rejects_a_name_already_in_the_region failed.
 Expectation: the requested behaviour does not exist yet; at least one test fails now and all pass once implemented.
+Reviewer edit (2026-10-27): the generated houses lacked the required demand keys; they are complete now so that only the name is at fault.
 Hidden from the implementer. Assert behaviour through public entry points so that any compliant implementation passes.
 
 Covers:
@@ -24,7 +25,8 @@ from oemof.demand.vdi.regions import Region
 
 
 def _house(name):
-    return {"name": name, "house_type": "EFH"}
+    # A complete house, so the only thing wrong with the input is the repeated name.
+    return {"name": name, "house_type": "EFH", "N_Pers": 3, "N_WE": 1, "Q_Heiz_a": 6000, "Q_TWW_a": 1500, "W_a": 3000}
 
 
 def _region():

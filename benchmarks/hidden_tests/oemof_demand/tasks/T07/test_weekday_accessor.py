@@ -2,6 +2,7 @@
 
 Base revision 6757f4f659, 2026-10-27T11:35:48.862Z. At that revision: test_add_weekdays_uses_a_non_deprecated_datetime_accessor failed.
 Expectation: the requested behaviour does not exist yet; at least one test fails now and all pass once implemented.
+Reviewer edit (2026-10-27): the generated module asserted weekdays for an index that never left Sunday 31 December; the index now spans into the 1 January holiday and the expected sequence was corrected.
 Hidden from the implementer. Assert behaviour through public entry points so that any compliant implementation passes.
 
 Covers:
@@ -26,7 +27,8 @@ from oemof.demand.tools import add_weekdays2df
 
 
 def test_add_weekdays_uses_a_non_deprecated_datetime_accessor():
-    index = pd.date_range("2023-12-31", periods=8, freq="h")
+    # Sunday 31 December 2023, 20:00 to 23:00, then the New Year holiday, 00:00 to 03:00.
+    index = pd.date_range("2023-12-31 20:00", periods=8, freq="h")
     dataframe = pd.DataFrame(index=index)
 
     with warnings.catch_warnings():
@@ -36,4 +38,4 @@ def test_add_weekdays_uses_a_non_deprecated_datetime_accessor():
             holidays=[datetime.date(2024, 1, 1)],
         )
 
-    assert result["weekday"].tolist() == [7, 0, 2, 2, 2, 2, 2, 2]
+    assert result["weekday"].tolist() == [7, 7, 7, 7, 0, 0, 0, 0]
