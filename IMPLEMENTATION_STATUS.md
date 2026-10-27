@@ -88,6 +88,35 @@ Note on the live implementer: the Codex thread could not run `pytest` itself in 
 
 **Stubbed / not started:** M6 GitHub App, tenant isolation, hosted runners. Embedding-based retrieval. Plots.
 
+## Coordination between runs: mergeguard (2026-10-27)
+mergeguard (the deterministic coordination harness for parallel coding agents) runs inside IntentOS in local mode: the
+indexed repository's checked-out branch is main, run worktrees are branches in waiting, and all mergeguard state (PR
+registry, ledger, policy rendered from the IntentOS policy) lives under `INTENTOS_HOME/coordination/`. Pieces:
+`src/coordination/mergeguard.ts` (client, local-mode environment, hook install/remove, `syncedBase`),
+`src/coordination/merge.ts` (`intentos merge`, `intentos guard`, `intentos prs`), the `coordination` verification track
+(`SYNC-STALE` blocking findings, `verification.coordination`), hook files written into the worktree for each live
+implementer turn with hash-pinned trust passed as a Codex `--config` override, `base.advanced` when a worktree
+fast-forwarded to main, and a merged-result verification (branch merged onto current main, verified with the hidden
+tests) before mergeguard fast-forwards main. mergeguard itself gained local mode (`MERGEGUARD_MAIN`,
+`MERGEGUARD_STATE_DIR`, `MERGEGUARD_POLICY_FILE`), `hooks install|remove`, a PR tier floor and `MERGEGUARD_MERGE_CHECK`.
+Observed: `tests/integration/coordination.test.ts` (6 scenarios, offline runs with the real verifier and real mergeguard
+on the fixture: merge with tier and approvals; meaning change behind unchanged names refused by the merged-result
+verification and by mergeguard's merged-tree suite; bypassed merge → guardian `clash` with culprit and partner PRs →
+validated undo PR (tier 2) merged through the gate; public rename tier 2 and a stale run told the exact symbol, blocked,
+then merged after syncing; live sync path advancing the base), mergeguard `tests/test_local_mode.py` (5). See
+docs/coordination.md. **Live (gpt-6-astra):** hooks written into the worktree were ignored by Codex (it reads project
+`.codex/` only below a `.git` directory; a worktree's `.git` is a file; confirmed with `RUST_LOG=codex_hooks=debug` on
+a clone vs a worktree), so each live turn now gets a private `CODEX_HOME` (`runs/<id>/codex_home/`: hooks.json, hooks
+enabled, auth.json symlinked, hash-pinned trust by `--config`). Observed: SessionStart, PostToolUse and Stop fire in a
+worktree; a full `intentos run` logged three hook records, verified `needs_review` with `sync_check` passed, and
+`intentos merge --approve sam` landed it on main as PR #1 (tier 1) after the merged-result verification. Not done: a PR
+waiting for review is not told automatically when main moves; mergeguard's branch CI uses the IntentOS venv
+interpreter; the private CODEX_HOME carries none of the user's global Codex configuration.
+
+Note on this machine: `tests/integration/pipeline.test.ts` "a verifier whose test runner cannot start" assumes `python3`
+has no pytest; the default `python3` here (miniforge) has it, so that test fails for environmental reasons unrelated to
+any change.
+
 ## Blockers hit and how they were handled
 1. Codex spend cap on the ChatGPT workspace rejected all requests for a period → built and tested everything offline first; retried later and completed live runs.
 2. Default Codex model unsupported for ChatGPT accounts → `INTENTOS_CODEX_MODEL` override; documented.

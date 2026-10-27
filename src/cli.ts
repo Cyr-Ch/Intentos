@@ -9,6 +9,7 @@ import { loadIndexedRepo } from "./knowledge/repo.ts";
 import { buildEvidencePack } from "./knowledge/retrieval.ts";
 import { renderEvidencePack } from "./reports/explain.ts";
 import { registerRunCommands } from "./cli_run.ts";
+import { registerMergeCommands } from "./cli_merge.ts";
 import { onboardRepository } from "./onboard.ts";
 import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./suggest.ts";
 import { defaultReviewer, loadReviewState, startReviewServer } from "./review.ts";
@@ -444,6 +445,7 @@ setup
   });
 
 registerRunCommands(program, { openStore, fail });
+registerMergeCommands(program, { openStore, fail });
 
 program.parseAsync(process.argv).catch((err) => {
   console.error(`error: ${(err as Error).message}`);

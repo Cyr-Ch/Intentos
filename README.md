@@ -214,11 +214,34 @@ review-only `PRECEDENT-FOLLOWED` (info) or `PRECEDENT-DIVERGENCE` (review) signa
 lands where the similar ticket was solved. None of this blocks a run or changes policy; an invariant or rule
 always wins. From an MCP host the same happens through the `precedents` tool followed by `explain`.
 
+## Coordination between runs: mergeguard
+
+Several runs share one repository, and main moves under them. [mergeguard](https://github.com/Cyr-Ch/mergeguard) (a
+deterministic coordination harness, no model in it) is built in: install it into the IntentOS venv
+(`.intentos/venv/bin/python -m pip install -e <path to mergeguard>`; `intentos coordination` confirms) and every run gets
+
+- **hooks in its worktree** (live Codex): after each command the agent is told which symbol it uses that main just
+  renamed, moved, removed or re-signed, with the commit, the file and line and the first step; it cannot finish stale.
+  Codex trusts the hooks by hash through a config override scoped to the process; `~/.codex` is never touched.
+- **a `coordination` verification track**: a stale tree is a blocking `SYNC-STALE` finding the repair loop fixes.
+- **`intentos merge <run-id> [--approve <name>…]`**: branch, PR with a review tier (0, 1 or 2 humans; at least 1 when
+  IntentOS asked for a human), head-bound approvals, the branch merged onto the main of right now verified with the
+  hidden tests, mergeguard's own merged-tree test run, fast-forward of main, ledger, re-index.
+- **`intentos guard <repo>`**: when main is red anyway, culprit merge and partner by first-parent bisect, a validated
+  undo PR (`intentos merge <n> --repo <repo>`), and review floors per folder that rise after repeated incidents.
+
+mergeguard runs in local mode: the repository's checked-out branch is main, worktrees are branches in waiting, and all
+its state (PR registry, ledger, trusted policy rendered from the IntentOS policy) lives under
+`INTENTOS_HOME/coordination/`. See [docs/coordination.md](docs/coordination.md).
+
 ## Environment variables
 
 | Variable | Purpose |
 |---|---|
 | `INTENTOS_HOME` | runtime data dir (default `.intentos/`) |
+| `INTENTOS_COORDINATION` | `0` turns mergeguard coordination off (default: on when mergeguard imports in the verifier interpreter) |
+| `INTENTOS_COORDINATION_FETCH_INTERVAL` | seconds between the hook's checks of main after commands (default 15; the Stop hook always checks) |
+| `INTENTOS_COORDINATION_MERGE_CHECK` | `0` skips mergeguard's merged-tree run of the project suite (evaluation only) |
 | `INTENTOS_PYTHON` | interpreter for indexer/verifier (default: `.intentos/venv/bin/python`, else `python3`) |
 | `INTENTOS_CODEX_MODEL` | Codex model (default: the CLI's configured default; may be unsupported for ChatGPT accounts) |
 | `INTENTOS_CODEX_REASONING` | reasoning effort passed to Codex |

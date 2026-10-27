@@ -400,6 +400,265 @@ invariants:
     verified_by:
       - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_022_bdew_2025_excerpts_retain_calendar_based_values.py
     enforcement: blocking
+  - id: INV-023
+    statement: Load-profile calendar assignment must emit a UserWarning when holidays are omitted, suppress the missing-holidays warning for an explicit empty list, and retain ordinary weekday classifications in both cases.
+    scope:
+      - demand
+      - tools
+    applies_to_paths:
+      - src/oemof/demand/tools.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Distinguish omitted holidays from an explicitly empty calendar
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_023_distinguish_omitted_holidays_from_an_explicitly_em.py
+    enforcement: blocking
+  - id: INV-024
+    statement: Static BDEW electricity profiles must sum to each sector's requested annual energy, and their default quarter-hourly power profiles must integrate to that same energy.
+    scope:
+      - bdew
+      - elec_slp
+    applies_to_paths:
+      - src/oemof/demand/bdew/elec_slp.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Static electricity profiles conserve requested annual energy
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_024_static_electricity_profiles_conserve_requested_ann.py
+    enforcement: blocking
+  - id: INV-025
+    statement: Leap-year BDEW electricity profiles must contain 35,136 quarter-hourly intervals.
+    scope:
+      - bdew
+      - elec_slp
+    applies_to_paths:
+      - src/oemof/demand/bdew/elec_slp.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Electricity profiles include the leap-year intervals
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_025_electricity_profiles_include_the_leap_year_interva.py
+    enforcement: blocking
+  - id: INV-026
+    statement: BDEW 2025 electricity profiles must represent power on a nominal 1 GWh annual scale and preserve integrated energy when resampled between one-minute, quarter-hourly, and hourly intervals.
+    scope:
+      - bdew
+      - _profiles25
+      - "*25.csv"
+    applies_to_paths:
+      - src/oemof/demand/bdew/_profiles25.py
+      - src/oemof/demand/bdew/bdew_data/*25.csv
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: BDEW 2025 profiles preserve their power and energy interpretation
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_026_bdew_2025_profiles_preserve_their_power_and_energy.py
+    enforcement: blocking
+  - id: INV-027
+    statement: Industrial power profiles must integrate to the supplied total demand over the supplied time period, including at quarter-hourly resolution.
+    scope:
+      - demand
+      - particular_profiles
+    applies_to_paths:
+      - src/oemof/demand/particular_profiles.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Industrial power integrates to demand over the supplied period
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_027_industrial_power_integrates_to_demand_over_the_sup.py
+    enforcement: blocking
+  - id: INV-028
+    statement: Industrial load-profile generation must raise ValueError when supplied scaling factors omit a weekday, weekend, or holiday category or its day or night factor.
+    scope:
+      - demand
+      - particular_profiles
+    applies_to_paths:
+      - src/oemof/demand/particular_profiles.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Industrial scaling factors must be complete
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_028_industrial_scaling_factors_must_be_complete.py
+    enforcement: blocking
+  - id: INV-029
+    statement: Industrial profiles configured to treat holidays as Sundays must apply the factors assigned to Sunday on those holiday dates.
+    scope:
+      - demand
+      - particular_profiles
+      - tools
+    applies_to_paths:
+      - src/oemof/demand/particular_profiles.py
+      - src/oemof/demand/tools.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Industrial holidays can use Sunday factors
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_029_industrial_holidays_can_use_sunday_factors.py
+    enforcement: blocking
+  - id: INV-030
+    statement: BDEW warm-water-only heat profiles must suppress the space-heating sigmoid contribution while retaining the hot-water contribution.
+    scope:
+      - bdew
+      - heat_building
+    applies_to_paths:
+      - src/oemof/demand/bdew/heat_building.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Warm-water-only profiles exclude the space-heating contribution
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_030_warm_water_only_profiles_exclude_the_space_heating.py
+    enforcement: blocking
+  - id: INV-031
+    statement: Non-residential BDEW heat profiles must reject building classes other than zero with ValueError.
+    scope:
+      - bdew
+      - heat_building
+    applies_to_paths:
+      - src/oemof/demand/bdew/heat_building.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Non-residential heat profiles require building class zero
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_031_non_residential_heat_profiles_require_building_cla.py
+    enforcement: blocking
+  - id: INV-032
+    statement: VDI 4655 load curves must sum separately to each house's specified annual heating, hot-water, and electricity demand at hourly and quarter-hourly resolutions.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: VDI profiles conserve every house's annual energy demands
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_032_vdi_profiles_conserve_every_house_s_annual_energy_.py
+    enforcement: blocking
+  - id: INV-033
+    statement: A VDI 4655 house with zero annual heating demand must receive zero heating demand at every timestep.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Zero annual heating demand produces an entirely zero curve
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_033_zero_annual_heating_demand_produces_an_entirely_ze.py
+    enforcement: blocking
+  - id: INV-034
+    statement: Hourly VDI 4655 profiles for a leap year must contain 8,784 intervals when supplied with 366 days of climate data.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: VDI leap-year profiles include all 366 days
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_034_vdi_leap_year_profiles_include_all_366_days.py
+    enforcement: blocking
+  - id: INV-035
+    statement: VDI 4655 generation must warn when a computed typical-day electricity or hot-water demand becomes negative and still produce a load curve.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Negative typical-day demand warns without aborting generation
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_035_negative_typical_day_demand_warns_without_aborting.py
+    enforcement: blocking
+  - id: INV-036
+    statement: VDI climate loading must reject DWD TRY region numbers outside 1–15 with ValueError.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Reject invalid DWD test-reference-year region numbers
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_036_reject_invalid_dwd_test_reference_year_region_numb.py
+    enforcement: blocking
+  - id: INV-037
+    statement: VDI 4655 profiles must assign zero space-heating demand to summer days when summer heating suppression is enabled.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Summer heating suppression removes summer space-heating demand
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_037_summer_heating_suppression_removes_summer_space_he.py
+    enforcement: blocking
+  - id: INV-038
+    statement: VDI 4655 houses with omitted seasonal temperature limits must produce the same load curves as otherwise identical houses explicitly using a 15°C summer threshold and a 5°C winter threshold.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: Omitted VDI temperature limits use the documented defaults
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_038_omitted_vdi_temperature_limits_use_the_documented_.py
+    enforcement: blocking
+  - id: INV-039
+    statement: VDI 4655 regions must reject house types other than single-family EFH or multi-family MFH with ValueError.
+    scope:
+      - vdi
+      - regions
+    applies_to_paths:
+      - src/oemof/demand/vdi/regions.py
+    authority: approved_policy
+    approved_by: QTG2659
+    sources:
+      - path: docs/intentos-policy.md
+        heading: VDI regions accept only supported residential house types
+    verified_by:
+      - benchmarks/hidden_tests/oemof_demand/invariants/test_inv_039_vdi_regions_accept_only_supported_residential_hous.py
+    enforcement: blocking
 
 # Deterministic architecture rules: forbidden_import | forbidden_call | frozen_paths | required_import | forbidden_names.
 # Example:

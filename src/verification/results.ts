@@ -1,5 +1,21 @@
 export type FindingSeverity = "blocking" | "review" | "info";
-export type FindingCategory = "functional" | "business_invariant" | "architecture" | "scope" | "counterexample" | "process";
+export type FindingCategory = "functional" | "business_invariant" | "architecture" | "scope" | "counterexample" | "process" | "coordination";
+
+/** What mergeguard said about this tree against the repository's main (present when coordination is on). */
+export interface CoordinationSummary {
+  main_branch: string;
+  /** main's revision the check ran against. */
+  main: string;
+  /** Merge base of the run's base revision and main; equals `main` when the tree is up to date. */
+  base: string;
+  stale: boolean;
+  issues: Array<{ id: string; symbol: string; change: string; new: string | null; commit: string; used_in: string[]; message: string }>;
+  /** Review tier mergeguard's router assigns to the diff (0 none, 1 one human, 2 two), with its reasons and proofs. */
+  tier: number | null;
+  reasons: string[];
+  proofs: Record<string, string>;
+  error: string | null;
+}
 
 export interface Finding {
   id: string;
@@ -51,6 +67,7 @@ export interface VerificationResult {
   simulated: boolean;
   /** Where executing commands ran: on the host, or in the isolated container (image + digest recorded). */
   verifier: { mode: "host" | "docker"; image: string | null; image_digest: string | null };
+  coordination?: CoordinationSummary | null;
 }
 
 export function summarizeStatus(findings: Finding[]): VerificationResult["status"] {

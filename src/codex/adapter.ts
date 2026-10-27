@@ -55,6 +55,10 @@ export interface ImplementRequest {
    * so an interrupted turn can be re-entered later.
    */
   onThreadStarted?: (threadId: string) => void;
+  /** Raw `--config` overrides for this thread's Codex process (e.g. hash-pinned hook trust for the worktree). */
+  configOverrides?: string[];
+  /** Environment variables visible to the Codex process and its hooks for the duration of the turn. */
+  env?: Record<string, string>;
 }
 export interface ImplementResult {
   finalResponse: string;
@@ -113,11 +117,12 @@ export class LiveCodexEngine implements CodingEngine {
     this.settings = { ...codexSettings(), ...(overrides.model !== undefined ? { model: overrides.model } : {}), ...(overrides.reasoningEffort !== undefined ? { reasoningEffort: overrides.reasoningEffort } : {}) };
   }
 
-  private async codex() {
+  private async codex(configOverrides: string[] = []) {
     if (!this.sdk) this.sdk = await import("@openai/codex-sdk");
     const { Codex } = this.sdk;
     const opts: ConstructorParameters<typeof Codex>[0] = {};
     if (this.settings.codexPathOverride) opts.codexPathOverride = this.settings.codexPathOverride;
+    if (configOverrides.length) opts.configOverrides = configOverrides;
     // Let the agent run the project's test runner: expose the verifier's interpreter directory on PATH
     // (the SDK inherits process.env). Verification itself never depends on what the agent ran.
     const pyDir = path.dirname(resolvePython());
@@ -179,10 +184,22 @@ export class LiveCodexEngine implements CodingEngine {
   }
 
   async implement(req: ImplementRequest): Promise<ImplementResult> {
-    const codex = await this.codex();
+    const codex = await this.codex(req.configOverrides ?? []);
     const options = this.threadOptions(req.cwd, "workspace-write");
     const thread = req.threadId ? codex.resumeThread(req.threadId, options) : codex.startThread(options);
     const { signal, clear } = this.withTimeout(req.signal);
+    // The SDK inherits process.env; scope the turn's extra variables (hook configuration) to this call.
+    const previous = new Map<string, string | undefined>();
+    for (const [k, v] of Object.entries(req.env ?? {})) {
+      previous.set(k, process.env[k]);
+      process.env[k] = v;
+    }
+    const restoreEnv = () => {
+      for (const [k, v] of previous) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    };
     try {
       const streamed = await thread.runStreamed(req.prompt, { signal });
       let finalResponse = "";
@@ -207,6 +224,7 @@ export class LiveCodexEngine implements CodingEngine {
       if (!completed) throw new Error(`Codex implementer stream ended without turn.completed${lastError ? `: ${lastError}` : ""}`);
       return { finalResponse, usage, threadId: thread.id, simulated: false, engine: this.name, model: this.settings.model, items, reportedChanges: [...reportedChanges] };
     } finally {
+      restoreEnv();
       clear();
     }
   }

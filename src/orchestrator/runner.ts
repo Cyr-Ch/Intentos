@@ -22,6 +22,7 @@ import { newRunId, nowIso } from "../util/ids.ts";
 import { addWorktree, headSha, isDirty, diffAgainstBase, changedFiles } from "../util/git.ts";
 import { generateReport } from "../reports/generate.ts";
 import { redact } from "../util/redact.ts";
+import { coordinationEnabled, coordinationEnv, coordinationStatus, prepareCodexHome, syncedBase, type CoordinationEnv } from "../coordination/mergeguard.ts";
 
 export interface RunOptions {
   mode: "live" | "offline";
@@ -165,6 +166,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       return finish(store, rs, reason);
     }
     const engine = opts.engine ?? makeEngine(opts, pack, task);
+    const coord = coordinationFor(rs, indexed);
 
     // ---- planning + compilation
     let compiled: CompiledContract | null = null;
@@ -248,16 +250,16 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
         rs.update({ worktree_path: worktree });
       }
       rs.transition("IMPLEMENTING", { worktree, engine: engine.name, simulated: engine.simulated });
-      const prompt = buildImplementationPrompt(contract, pack, task.task);
+      const prompt = buildImplementationPrompt(contract, pack, task.task, { coordination: coord ? { mainBranch: coord.mainBranch } : null });
       rs.writeText("implementationPrompt", prompt);
       log(`implementing in ${worktree} with ${engine.name}…`);
-      const result = await engine.implement({ cwd: worktree, prompt, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: "implement", ...e }) });
+      const result = await coordinatedTurn(rs, coord, engine, worktree, indexed.repoPath, (extra) => engine.implement({ cwd: worktree, prompt, ...extra, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: "implement", ...e }) }));
       recordImplementation(rs, result, "implement", 0);
       rs.transition("VERIFYING", { attempt: 1, reported_changes: result.reportedChanges.length });
     } else if (rs.state === "IMPLEMENTING" || rs.state === "REPAIRING") {
       // Resumed mid-turn: re-enter the recorded Codex thread when that is safe, otherwise let verification
       // judge the partial work. Either way nothing in the worktree is trusted without verification.
-      await reenterIfPossible(store, rs, engine, contract, rs.state === "IMPLEMENTING" ? "implement" : "repair", budget, log);
+      await reenterIfPossible(store, rs, engine, contract, rs.state === "IMPLEMENTING" ? "implement" : "repair", budget, log, coord, indexed.repoPath);
     }
 
     // ---- verification + bounded repair
@@ -286,6 +288,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
         eventsFile: rs.path("codexEvents"),
         repoPath: indexed.repoPath,
         simulated: engine.simulated,
+        coordination: coord,
       });
       rs.writeJson("verification", verification);
       rs.writeJson(`verification/attempt-${attempt}/verification.json`, verification);
@@ -309,10 +312,11 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       }
       budget.check("repair");
       rs.transition("REPAIRING", { repair_attempt: repairsDone + 1, blocking: verification.findings.filter((f) => f.severity === "blocking").map((f) => f.id) });
-      const prompt = buildRepairPrompt(contract, verification.findings, repairsDone + 1);
+      const prompt = buildRepairPrompt(contract, verification.findings, repairsDone + 1, { coordination: coord ? { mainBranch: coord.mainBranch } : null });
       rs.writeText(`repair_prompt.attempt-${repairsDone + 1}.txt`, prompt);
       log(`repair attempt ${repairsDone + 1} with ${engine.name}…`);
-      const result = await engine.implement({ cwd: worktree, prompt, threadId: rs.row.codex_thread_id, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: `repair-${repairsDone + 1}`, ...e }) });
+      const phase = `repair-${repairsDone + 1}`;
+      const result = await coordinatedTurn(rs, coord, engine, worktree, indexed.repoPath, (extra) => engine.implement({ cwd: worktree, prompt, threadId: rs.row.codex_thread_id, ...extra, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase, ...e }) }));
       recordImplementation(rs, result, "repair", repairsDone + 1);
       rs.transition("VERIFYING", { attempt: attempt + 1 });
     }
@@ -348,7 +352,63 @@ function threadStarted(rs: RunStore): (threadId: string) => void {
  * (`MAX_RESUME_REENTRIES`, counted from `resume.reentered` events) is not exhausted. Otherwise verify as is.
  * Both branches end in VERIFYING; verification alone decides what the partial work is worth.
  */
-async function reenterIfPossible(store: KnowledgeStore, rs: RunStore, engine: CodingEngine, contract: ChangeContract, phase: "implement" | "repair", budget: RunBudget, log: (line: string) => void): Promise<void> {
+/**
+ * mergeguard coordination for this run, or null when it is off or unavailable (recorded once as a run event).
+ * The environment points mergeguard at the indexed repository's checked-out branch as main and keeps all its state
+ * under INTENTOS_HOME.
+ */
+function coordinationFor(rs: RunStore, indexed: IndexedRepo): CoordinationEnv | null {
+  if (!coordinationEnabled()) {
+    rs.event("coordination.off", { reason: coordinationStatus().reason });
+    return null;
+  }
+  try {
+    const coord = coordinationEnv(indexed.repoPath, indexed.policy);
+    rs.event("coordination.on", { main_branch: coord.mainBranch, state_dir: coord.stateDir, policy_file: coord.policyFile });
+    return coord;
+  } catch (err) {
+    rs.event("coordination.off", { reason: (err as Error).message });
+    return null;
+  }
+}
+
+/**
+ * One implementer turn under coordination. The Codex process gets a private CODEX_HOME under the run directory that
+ * holds the mergeguard hooks (trusted by hash through a config override scoped to this process) and a link to the
+ * user's auth; project `.codex/` files are not used because Codex never reads them below a worktree's `.git` file.
+ * A HEAD that moved only by fast-forwarding to main (the sync the hook asked for) advances the run's base afterwards.
+ */
+async function coordinatedTurn(rs: RunStore, coord: CoordinationEnv | null, engine: CodingEngine, worktree: string, repoPath: string, turn: (extra: { configOverrides?: string[]; env?: Record<string, string> }) => Promise<ImplementResult>): Promise<ImplementResult> {
+  if (!coord) return turn({});
+  let home: ReturnType<typeof prepareCodexHome> | null = null;
+  if (!engine.simulated) {
+    home = prepareCodexHome(coord, path.join(rs.runDir, "codex_home"));
+    rs.event("coordination.hooks_installed", { codex_home: home.home, files: home.files.map((f) => path.basename(f)) });
+  }
+  try {
+    return await turn(home ? { configOverrides: [home.trustOverride, "features.hooks=true"], env: { ...coord.env, CODEX_HOME: home.home } } : { env: coord.env });
+  } finally {
+    advanceBase(rs, coord, worktree, repoPath);
+  }
+}
+
+/** A worktree fast-forwarded to main is not an integrity failure: the run's base moves with it. */
+export function advanceBase(rs: RunStore, coord: CoordinationEnv, worktree: string, repoPath: string): string | null {
+  const from = rs.row.base_sha;
+  let synced: string | null = null;
+  try {
+    synced = syncedBase(repoPath, worktree, from, coord.mainBranch);
+  } catch {
+    return null;
+  }
+  if (!synced) return null;
+  rs.update({ base_sha: synced });
+  rs.writeText("baseCommit", `${synced}\n`);
+  rs.event("base.advanced", { from, to: synced, reason: `worktree fast-forwarded to ${coord.mainBranch} as the coordination hook asked` });
+  return synced;
+}
+
+async function reenterIfPossible(store: KnowledgeStore, rs: RunStore, engine: CodingEngine, contract: ChangeContract, phase: "implement" | "repair", budget: RunBudget, log: (line: string) => void, coord: CoordinationEnv | null = null, repoPath: string | null = null): Promise<void> {
   const reentries = store.events(rs.runId).filter((e) => e.event_type === "resume.reentered").length;
   const worktree = rs.row.worktree_path;
   const threadId = rs.row.codex_thread_id;
@@ -380,7 +440,7 @@ async function reenterIfPossible(store: KnowledgeStore, rs: RunStore, engine: Co
   // Recorded before the turn starts so a second interruption still counts against the budget.
   rs.event("resume.reentered", { phase, thread_id: threadId, attempt });
   log(`resume: re-entering Codex thread ${threadId} to continue the interrupted ${phase} (re-entry ${attempt} of ${MAX_RESUME_REENTRIES})…`);
-  const result = await engine.implement({ cwd: worktree, prompt, threadId, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: `resume-${phase}-${attempt}`, ...e }) });
+  const result = await coordinatedTurn(rs, coord, engine, worktree, repoPath ?? worktree, (extra) => engine.implement({ cwd: worktree, prompt, threadId, ...extra, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: `resume-${phase}-${attempt}`, ...e }) }));
   recordImplementation(rs, result, phase, previousAttempts(rs));
   rs.transition("VERIFYING", { attempt: previousAttempts(rs) + 1, resumed: true, reentered: attempt });
 }

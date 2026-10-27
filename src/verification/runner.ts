@@ -13,8 +13,9 @@ import { runArchitecturalSurprise } from "./surprise.ts";
 import { precedentFindings } from "./precedents.ts";
 import { repoInterpreter } from "../knowledge/venv.ts";
 import { generateCounterexamples } from "./counterexamples.ts";
-import { summarizeStatus, type CommandRecord, type Finding, type VerificationResult } from "./results.ts";
+import { summarizeStatus, type CommandRecord, type CoordinationSummary, type Finding, type VerificationResult } from "./results.ts";
 import { nowIso } from "../util/ids.ts";
+import { syncCheck, type CoordinationEnv } from "../coordination/mergeguard.ts";
 import { containerName, dockerClientEnv, dockerPreflight, dockerSettings, killContainer, planCommand, verifierMode, type DockerSettings, type VerifierMode } from "./sandbox.ts";
 
 export interface VerifyInput {
@@ -36,6 +37,34 @@ export interface VerifyInput {
   /** Repository used to read base-revision sources (defaults to the worktree, which shares the object store). */
   repoPath?: string;
   simulated: boolean;
+  /** mergeguard coordination environment; when set, a tree stale against main is a blocking finding. */
+  coordination?: CoordinationEnv | null;
+  /** HEAD the worktree is expected at when it is not the base (a merged-result candidate on top of main). */
+  expectedHead?: string;
+}
+
+/**
+ * mergeguard's sync check as a verification track: the working tree's uses of symbols that main renamed, moved,
+ * removed or re-signed since the run's base are blocking findings carrying the note the agent would have received.
+ * The review tier of the diff is recorded separately by `intentos merge`, where head and base are commits.
+ */
+export function coordinationTrack(coord: CoordinationEnv, worktree: string): { summary: CoordinationSummary; findings: Finding[]; record: CommandRecord } {
+  const t0 = Date.now();
+  const findings: Finding[] = [];
+  let summary: CoordinationSummary;
+  try {
+    const sync = syncCheck(coord, worktree);
+    summary = { main_branch: coord.mainBranch, main: sync.main, base: sync.base, stale: !sync.clean, issues: sync.issues, tier: null, reasons: [], proofs: {}, error: null };
+    sync.issues.forEach((issue, i) => {
+      findings.push({ id: `F-SYNC-${String(i + 1).padStart(3, "0")}`, category: "coordination", severity: "blocking", rule_id: "SYNC-STALE", source_evidence_ids: [], test: null, expected: `code on ${coord.mainBranch} (${sync.main.slice(0, 10)}): ${issue.symbol} ${issue.change.replace("_", " ")}${issue.new ? ` to ${issue.new}` : ""}`, observed: `used at ${issue.used_in.join(", ")}`, message: issue.message, location: issue.used_in[0] ?? null, log_path: null, authority: "deterministic" });
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    summary = { main_branch: coord.mainBranch, main: "", base: "", stale: false, issues: [], tier: null, reasons: [], proofs: {}, error: message };
+    findings.push({ id: "F-SYNC-ERROR", category: "coordination", severity: "review", rule_id: "SYNC-CHECK-ERROR", source_evidence_ids: [], test: null, expected: "mergeguard sync check ran", observed: message.slice(0, 300), message: `coordination check could not run: ${message.slice(0, 200)}`, location: null, log_path: null, authority: "deterministic" });
+  }
+  const record: CommandRecord = { command_id: "sync_check", track: "coordination", enforcement: "blocking", argv: null, builtin: "sync_check", exit_code: null, duration_ms: Date.now() - t0, status: summary.error ? "error" : summary.stale ? "failed" : "passed", stdout_path: null, stderr_path: null, summary: summary.error ? summary.error.slice(0, 160) : summary.stale ? `${summary.issues.length} symbol(s) this tree uses changed on ${coord.mainBranch} since the run's base` : `up to date with ${coord.mainBranch} ${summary.main.slice(0, 10)}`, tests_passed: null, tests_failed: null };
+  return { summary, findings, record };
 }
 
 /** Test function names discovered statically in a directory of pytest files (trusted hidden tests). */
@@ -118,8 +147,8 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
 
   // Integrity: the worktree must still be at the base revision (implementer must not commit).
   const wtHead = headSha(input.worktree);
-  if (wtHead !== input.baseSha) {
-    findings.push({ id: "F-INTEGRITY-001", category: "process", severity: "blocking", rule_id: "WORKTREE-HEAD", source_evidence_ids: [], test: null, expected: input.baseSha, observed: wtHead, message: "worktree HEAD moved from the base revision (implementer committed or rebased)", location: null, log_path: null, authority: "deterministic" });
+  if (wtHead !== (input.expectedHead ?? input.baseSha)) {
+    findings.push({ id: "F-INTEGRITY-001", category: "process", severity: "blocking", rule_id: "WORKTREE-HEAD", source_evidence_ids: [], test: null, expected: input.expectedHead ?? input.baseSha, observed: wtHead, message: "worktree HEAD moved from the base revision (implementer committed or rebased)", location: null, log_path: null, authority: "deterministic" });
   }
 
   // Changes & scope
@@ -133,6 +162,13 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
     commands.push({ command_id: "scope_check", track: "scope", enforcement: "blocking", argv: null, builtin: "scope_check", exit_code: null, duration_ms: 0, status: scope.findings.some((f) => f.severity === "blocking") ? "failed" : "passed", stdout_path: null, stderr_path: null, summary: `${changed.length} changed file(s); ${scope.findings.length} finding(s)`, tests_passed: null, tests_failed: null });
   }
   findings.push(...scanProtectedAccess(input.eventsFile));
+  let coordination: CoordinationSummary | null = null;
+  if (input.coordination) {
+    const track = coordinationTrack(input.coordination, input.worktree);
+    coordination = track.summary;
+    findings.push(...track.findings);
+    commands.push(track.record);
+  }
   if (!input.hiddenTaskTestsDir) {
     findings.push({ id: "F-ACCEPT-NONE", category: "process", severity: "review", rule_id: "NO-ACCEPTANCE-TESTS", source_evidence_ids: [], test: null, expected: "an independent task acceptance test outside the implementer's writable area", observed: "none bound to this task", message: "no independent task acceptance tests are bound (use --task <benchmark id> or add hidden tests); functional correctness rests on the project suite, which the implementer may edit", location: null, log_path: null, authority: "deterministic" });
   }
@@ -292,7 +328,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
 
   // Tracks summary
   const tracks: VerificationResult["tracks"] = {};
-  for (const track of ["functional", "architecture", "business_invariant", "scope"]) {
+  for (const track of ["functional", "architecture", "business_invariant", "scope", ...(input.coordination ? ["coordination"] : [])]) {
     const recs = commands.filter((c) => c.track === track);
     const fs_ = findings.filter((f) => (track === "business_invariant" ? f.category === "business_invariant" || f.category === "counterexample" : f.category === track || (track === "functional" && f.category === "process" && f.rule_id?.startsWith("TESTS")))); // eslint-disable-line
     const blocking = fs_.filter((f) => f.severity === "blocking").length;
@@ -333,6 +369,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
     limitations,
     simulated: input.simulated,
     verifier: { mode, image: docker?.settings.image ?? null, image_digest: docker?.preflight.imageDigest ?? null },
+    coordination,
   };
 }
 

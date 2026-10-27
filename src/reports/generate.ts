@@ -32,6 +32,7 @@ export interface ReportJson {
     tracks: VerificationResult["tracks"] | null;
     unverified_areas: string[];
     limitations: string[];
+    coordination?: VerificationResult["coordination"];
   } | null;
   changed_files: VerificationResult["changed_files"];
   /** Review-only architectural-surprise signals (rule ids SURPRISE-*): risk triage, never blocking. */
@@ -104,7 +105,7 @@ export function generateReport(store: KnowledgeStore, runId: string): { json: Re
     decisions: (pack?.decisions ?? []).map((d) => ({ id: d.id, status: d.decision_status, statement: d.statement, sources: d.sources.map((s) => s.path) })),
     impacted_modules: contract?.affected_modules ?? [],
     verification: verification
-      ? { status: verification.status, attempt: verification.attempt, commands: verification.commands, findings: verification.findings, tracks: verification.tracks, unverified_areas: verification.unverified_areas, limitations: verification.limitations }
+      ? { status: verification.status, attempt: verification.attempt, commands: verification.commands, findings: verification.findings, tracks: verification.tracks, unverified_areas: verification.unverified_areas, limitations: verification.limitations, coordination: verification.coordination ?? null }
       : null,
     changed_files: verification?.changed_files ?? [],
     architectural_surprise: (verification?.findings ?? []).filter((f) => f.rule_id?.startsWith("SURPRISE-")).map((f) => ({ id: f.id, rule_id: f.rule_id!, location: f.location, message: f.message })),
@@ -207,6 +208,12 @@ function renderMarkdown(r: ReportJson, contract: ChangeContract | null, pack: Ev
     }
     L.push("- Scope:");
     for (const c of byTrack("scope")) L.push(`  - ${fmt(c)}`);
+    if (v.coordination) {
+      L.push("- Coordination (mergeguard):");
+      for (const c of byTrack("coordination")) L.push(`  - ${fmt(c)}`);
+      if (v.coordination.stale) for (const i of v.coordination.issues) L.push(`  - stale: ${i.message}`);
+      if (v.coordination.tier !== null) L.push(`  - review tier ${v.coordination.tier}: ${v.coordination.reasons.join("; ")}`);
+    }
     const cx = v.findings.filter((f) => f.category === "counterexample");
     const cxCmd = v.commands.find((c) => c.command_id === "counterexamples");
     L.push(`- Counterexamples: ${cxCmd ? `${cxCmd.status} — ${cxCmd.summary}` : "not configured"}${cx.length ? `; ${cx.length} exploratory failure(s) listed below` : ""}`);
