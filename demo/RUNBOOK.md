@@ -59,7 +59,7 @@ the merged-result verification refuses it before main moves; here both checks we
 
 ## Rehearsing
 
-- `demo/reset.sh` restores everything, including the two prepared runs and the red clone. Restart Codex after it.
+- Stop the dashboard with Ctrl-C before `demo/reset.sh`; it restores everything, including the prepared runs and the red clone. Restart the dashboard and Codex after it.
 - Moment A spends one live run per rehearsal (T12). Moments B and C spend nothing.
 - For a timed command-line rehearsal, use `demo/rehearse-moment-a.sh --model gpt-6-luna --delay 35` after reset. The 35-second merge reached the hook during the live run; stage timing can vary, so merge as soon as status says "implementing".
 - To rebuild from scratch (new prepared runs): `demo/reset.sh --destroy`, then `demo/prepare.ts` again.
