@@ -23,6 +23,7 @@ import { addWorktree, headSha, isDirty, diffAgainstBase, changedFiles, git } fro
 import { generateReport } from "../reports/generate.ts";
 import { redact } from "../util/redact.ts";
 import { coordinationEnabled, coordinationEnv, coordinationStatus, prepareCodexHome, syncedBase, syncCheck, type CoordinationEnv } from "../coordination/mergeguard.ts";
+import { appendRoleSkills, captureAgentSnapshot, type AgentSnapshot, type EffectiveRole } from "../agent-skills.ts";
 
 export interface RunOptions {
   mode: "live" | "offline";
@@ -60,6 +61,7 @@ export function createRun(store: KnowledgeStore, indexed: IndexedRepo, task: str
     benchmark_task_id: hidden.benchmarkTask?.id ?? null,
     engine_options: opts.offline ? { ...opts.offline } : null,
   };
+  const agentConfig = captureAgentSnapshot();
   const now = nowIso();
   store.insertRun({
     id: runId,
@@ -80,13 +82,14 @@ export function createRun(store: KnowledgeStore, indexed: IndexedRepo, task: str
   const rs = new RunStore(store, runId, runDir);
   rs.writeJson("task", taskRecord);
   rs.writeText("baseCommit", `${indexed.revision}\n`);
-  rs.writeJson("environment", environmentInfo(opts, indexed.repoPath));
+  rs.writeJson("agent_config.json", agentConfig);
+  rs.writeJson("environment", environmentInfo(opts, indexed.repoPath, agentConfig));
   rs.event("run.created", { task: taskRecord, options: { mode: opts.mode, requireApproval: !!opts.requireApproval, offline: opts.offline ?? null } });
   rs.update({});
   return rs;
 }
 
-function environmentInfo(opts: RunOptions, repoPath?: string) {
+function environmentInfo(opts: RunOptions, repoPath?: string, agentConfig?: AgentSnapshot) {
   const python = repoInterpreter(repoPath);
   let pythonVersion = "unknown";
   try {
@@ -110,7 +113,8 @@ function environmentInfo(opts: RunOptions, repoPath?: string) {
     python_path: python,
     codex_sdk: sdkVersion,
     codex_auth: { available: auth.available, mode: auth.mode },
-    codex_model: settings.model ?? "codex-default",
+    codex_model: agentConfig?.roles.implementer.model ?? settings.model ?? "codex-default",
+    planner_model: agentConfig?.roles.planner.model ?? settings.model ?? "codex-default",
     mode: opts.mode,
     verifier,
     isolation: verifier.mode === "docker" ? "git worktree + Codex sandbox + container-isolated verifier (docker: read-only snapshot, no network, resource limits; host kernel shared)" : "git worktree + Codex sandbox (no container); prototype is not production-safe for untrusted repositories",
@@ -165,7 +169,9 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       fail("evidence pack missing from run directory");
       return finish(store, rs, reason);
     }
-    const engine = opts.engine ?? makeEngine(opts, pack, task);
+    const agentConfig = rs.readJson<AgentSnapshot>("agent_config.json") ?? captureAgentSnapshot();
+    const engine = opts.engine ?? makeEngine(opts, pack, task, agentConfig.roles.implementer);
+    const plannerEngine = opts.engine ?? (opts.mode === "offline" ? engine : makeEngine(opts, pack, task, agentConfig.roles.planner));
     const coord = coordinationFor(rs, indexed);
 
     // ---- planning + compilation
@@ -177,10 +183,10 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       let feedback: string | null = null;
       while (true) {
         attempt++;
-        const prompt = buildPlanningPrompt(task.task, pack, { hasTaskTests }) + (feedback ? `\n\n## Previous attempt was rejected by the contract compiler\n${feedback}\nFix every issue and return the corrected contract JSON.` : "");
+        const prompt = appendRoleSkills(buildPlanningPrompt(task.task, pack, { hasTaskTests }) + (feedback ? `\n\n## Previous attempt was rejected by the contract compiler\n${feedback}\nFix every issue and return the corrected contract JSON.` : ""), agentConfig.roles.planner);
         rs.writeText(attempt === 1 ? "plannerPrompt" : `planner_prompt.attempt-${attempt}.txt`, prompt);
-        log(`planning with ${engine.name}${attempt > 1 ? ` (retry ${attempt - 1})` : ""}…`);
-        const planned = await engine.plan({ cwd: indexed.repoPath, prompt, outputSchema: changeContractJsonSchema(), onEvent: (e) => rs.appendEventLine({ phase: "plan", ...e }) });
+        log(`planning with ${plannerEngine.name}${attempt > 1 ? ` (retry ${attempt - 1})` : ""}…`);
+        const planned = await plannerEngine.plan({ cwd: indexed.repoPath, prompt, outputSchema: changeContractJsonSchema(), onEvent: (e) => rs.appendEventLine({ phase: "plan", ...e }) });
         rs.writeJson(attempt === 1 ? "plannerOutput" : `planner_output.attempt-${attempt}.json`, { text: planned.text, usage: planned.usage, thread_id: planned.threadId, simulated: planned.simulated, engine: planned.engine, model: planned.model });
         let raw: unknown;
         try {
@@ -196,7 +202,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
         if (compiled.route !== "reject") break;
         const errors = compiled.issues.filter((i) => i.severity === "error");
         log(`contract rejected: ${errors.map((e) => e.message).join("; ")}`);
-        if (engine.simulated || attempt > limits.maxPlannerRetries) {
+        if (plannerEngine.simulated || attempt > limits.maxPlannerRetries) {
           fail(`contract rejected by compiler after ${attempt} attempt(s): ${errors.map((e) => `${e.code}: ${e.message}`).join("; ")}`, { issues: compiled.issues });
           return finish(store, rs, reason);
         }
@@ -250,7 +256,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
         rs.update({ worktree_path: worktree });
       }
       rs.transition("IMPLEMENTING", { worktree, engine: engine.name, simulated: engine.simulated });
-      const prompt = buildImplementationPrompt(contract, pack, task.task, { coordination: coord ? { mainBranch: coord.mainBranch } : null });
+      const prompt = appendRoleSkills(buildImplementationPrompt(contract, pack, task.task, { coordination: coord ? { mainBranch: coord.mainBranch } : null }), agentConfig.roles.implementer);
       rs.writeText("implementationPrompt", prompt);
       log(`implementing in ${worktree} with ${engine.name}…`);
       const result = await coordinatedTurn(rs, coord, engine, worktree, indexed.repoPath, (extra) => engine.implement({ cwd: worktree, prompt, ...extra, onThreadStarted: threadStarted(rs), onEvent: (e) => rs.appendEventLine({ phase: "implement", ...e }) }));
@@ -259,7 +265,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
     } else if (rs.state === "IMPLEMENTING" || rs.state === "REPAIRING") {
       // Resumed mid-turn: re-enter the recorded Codex thread when that is safe, otherwise let verification
       // judge the partial work. Either way nothing in the worktree is trusted without verification.
-      await reenterIfPossible(store, rs, engine, contract, rs.state === "IMPLEMENTING" ? "implement" : "repair", budget, log, coord, indexed.repoPath);
+      await reenterIfPossible(store, rs, engine, contract, rs.state === "IMPLEMENTING" ? "implement" : "repair", budget, log, coord, indexed.repoPath, agentConfig.roles.implementer);
     }
 
     // ---- verification + bounded repair
@@ -312,7 +318,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       }
       budget.check("repair");
       rs.transition("REPAIRING", { repair_attempt: repairsDone + 1, blocking: verification.findings.filter((f) => f.severity === "blocking").map((f) => f.id) });
-      const prompt = buildRepairPrompt(contract, verification.findings, repairsDone + 1, { coordination: coord ? { mainBranch: coord.mainBranch } : null });
+      const prompt = appendRoleSkills(buildRepairPrompt(contract, verification.findings, repairsDone + 1, { coordination: coord ? { mainBranch: coord.mainBranch } : null }), agentConfig.roles.implementer);
       rs.writeText(`repair_prompt.attempt-${repairsDone + 1}.txt`, prompt);
       log(`repair attempt ${repairsDone + 1} with ${engine.name}…`);
       const phase = `repair-${repairsDone + 1}`;
@@ -436,7 +442,7 @@ export function advanceBase(rs: RunStore, coord: CoordinationEnv, worktree: stri
   return synced;
 }
 
-async function reenterIfPossible(store: KnowledgeStore, rs: RunStore, engine: CodingEngine, contract: ChangeContract, phase: "implement" | "repair", budget: RunBudget, log: (line: string) => void, coord: CoordinationEnv | null = null, repoPath: string | null = null): Promise<void> {
+async function reenterIfPossible(store: KnowledgeStore, rs: RunStore, engine: CodingEngine, contract: ChangeContract, phase: "implement" | "repair", budget: RunBudget, log: (line: string) => void, coord: CoordinationEnv | null = null, repoPath: string | null = null, role: EffectiveRole | null = null): Promise<void> {
   const reentries = store.events(rs.runId).filter((e) => e.event_type === "resume.reentered").length;
   const worktree = rs.row.worktree_path;
   const threadId = rs.row.codex_thread_id;
@@ -463,7 +469,7 @@ async function reenterIfPossible(store: KnowledgeStore, rs: RunStore, engine: Co
   budget.check("resume re-entry");
   const attempt = reentries + 1;
   const lastFindings = rs.readJson<VerificationResult>("verification")?.findings ?? [];
-  const prompt = buildContinuePrompt(contract, phase, lastFindings);
+  const prompt = role ? appendRoleSkills(buildContinuePrompt(contract, phase, lastFindings), role) : buildContinuePrompt(contract, phase, lastFindings);
   rs.writeText(`continue_prompt.${attempt}.txt`, prompt);
   // Recorded before the turn starts so a second interruption still counts against the budget.
   rs.event("resume.reentered", { phase, thread_id: threadId, attempt });
@@ -480,14 +486,14 @@ function recordImplementation(rs: RunStore, result: ImplementResult, phase: "imp
   if (result.threadId) rs.update({ codex_thread_id: result.threadId });
 }
 
-function makeEngine(opts: RunOptions, pack: EvidencePack, task: TaskRecord): CodingEngine {
+function makeEngine(opts: RunOptions, pack: EvidencePack, task: TaskRecord, role: EffectiveRole): CodingEngine {
   if (opts.mode === "offline") {
     const o: OfflineOptions = { route: "implement", patchFile: null, claimSuccess: false, fabricateEvidence: false, repairPatchFile: null, taskId: task.task_id, ...((task.engine_options as Partial<OfflineOptions> | null) ?? {}), ...(opts.offline ?? {}) };
     return new OfflineEngine(o, pack);
   }
   const auth = codexAuthStatus();
   if (!auth.available) throw new Error(`Codex credentials not found (${auth.detail}). Set CODEX_API_KEY, run \`codex login\`, or use --offline.`);
-  return new LiveCodexEngine();
+  return new LiveCodexEngine({ model: role.model, reasoningEffort: role.reasoning });
 }
 
 function finish(store: KnowledgeStore, rs: RunStore, reason: string | null, verification: VerificationResult | null = null): RunOutcome {

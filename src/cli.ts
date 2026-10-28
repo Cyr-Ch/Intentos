@@ -317,10 +317,10 @@ program
 program
   .command("dashboard")
   .description("Open a local live view of runs, policy rules, repository evidence and ticket precedents")
-  .argument("<repo>", "path to the indexed repository root")
+  .argument("[repo]", "initial repository (defaults to the most recently indexed)")
   .option("--port <n>", "local port (default: 8787)")
   .option("--no-open", "print the URL without opening a browser")
-  .action(async (repo: string, opts: { port?: string; open: boolean }) => {
+  .action(async (repo: string | undefined, opts: { port?: string; open: boolean }) => {
     try {
       const dashboard = await startDashboard(repo, { port: opts.port ? Number(opts.port) : undefined, open: opts.open });
       console.log(`IntentOS dashboard: ${dashboard.url}`);

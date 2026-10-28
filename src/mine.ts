@@ -8,6 +8,7 @@ import { EVIDENCE_TYPES, ingestProposals, loadMined, minedRows, SKILL_NAME, skil
 import type { Candidate, MinerOutput } from "./suggest.ts";
 import { isGitRepo } from "./util/git.ts";
 import { redact } from "./util/redact.ts";
+import { appendRoleSkills, captureAgentSnapshot } from "./agent-skills.ts";
 
 /**
  * The independent miner. The same `intentos-policy-mining` skill the host agent follows, run by IntentOS in a separate
@@ -203,9 +204,14 @@ export async function mineWithModel(repoInput: string, opts: MineOptions = {}, l
   const outDir = path.resolve(opts.outDir ?? path.join(paths.home, "onboard", repoIdFor(repoPath)));
   const dir = path.join(outDir, "mine");
   fs.mkdirSync(dir, { recursive: true });
-  const model = resolveMiningModel(opts.model);
+  const agentConfig = captureAgentSnapshot();
+  const role = agentConfig.roles.miner;
+  const model = resolveMiningModel(opts.model ?? role.model);
+  const reasoning = opts.reasoningEffort ?? role.reasoning;
+  fs.writeFileSync(path.join(dir, "agent_config.json"), JSON.stringify({ role: { ...role, model, reasoning }, captured_at: agentConfig.captured_at }, null, 2) + "\n");
   if (!opts.engine && !model) throw new Error("no model named for the independent miner: pass --model <slug> (one the Codex account can run, other than the model that drives the session) or set INTENTOS_MINING_MODEL");
-  const engine = opts.engine ?? new LiveCodexEngine({ model, reasoningEffort: opts.reasoningEffort });
+  if (!opts.engine && model && agentConfig.roles.implementer.model === model) throw new Error("miner model must differ from the implementer model");
+  const engine = opts.engine ?? new LiveCodexEngine({ model, reasoningEffort: reasoning });
   const maxRounds = Math.max(1, Math.min(opts.rounds ?? 2, 5));
   const mined = loadMined(repoPath, { policyId, outDir });
   log(`raw list: ${mined.candidates.length} entries at ${mined.head.slice(0, 7)}; asking ${model ?? engine.name} to mine the rules (round 1 of at most ${maxRounds})…`);
@@ -213,7 +219,7 @@ export async function mineWithModel(repoInput: string, opts: MineOptions = {}, l
   let threadId: string | null = null;
   let resolvedModel: string | null = model;
   let engineName = engine.name;
-  let prompt = buildMiningPrompt({ repoPath, policyId, mined, skill: skillText() });
+  let prompt = appendRoleSkills(buildMiningPrompt({ repoPath, policyId, mined, skill: skillText() }), role);
   const rounds: MineRound[] = [];
   const accepted: ProposeResult["accepted"] = [];
   const rejectedAll: ProposeResult["rejected"] = [];
@@ -249,7 +255,7 @@ export async function mineWithModel(repoInput: string, opts: MineOptions = {}, l
     rejectedAll.push(...last.rejected);
     log(`round ${round}: ${last.accepted.length} accepted, ${last.rejected.length} rejected; the review list has ${last.candidates.length} candidate(s)`);
     if (!last.rejected.length || round === maxRounds) break;
-    prompt = buildFixPrompt(last);
+    prompt = appendRoleSkills(buildFixPrompt(last), role);
   }
   if (!last) throw new Error(`${resolvedModel ?? engineName} returned no candidates; nothing to review`);
   const acceptedTitles = new Set(accepted.map((a) => a.title));

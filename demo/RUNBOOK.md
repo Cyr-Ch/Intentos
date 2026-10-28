@@ -11,10 +11,10 @@ rehearse. The exact run ids for the sentences below are in `~/intentos-demo/stat
 2. Laptop on power, `caffeinate -i` in a spare terminal, Codex credits checked, network checked.
 3. Start the local dashboard in a second terminal:
    `INTENTOS_HOME=~/intentos-demo/home node --disable-warning=ExperimentalWarning bin/intentos.js dashboard ~/intentos-demo/demandlib`
-   (run from the IntentOS checkout). It uses port 8787 and a persistent local token, so the URL stays the same after
-   resets. Put its Live runs view beside the Codex chat. The Policy tab shows the
+   (run from the IntentOS checkout). Open `http://127.0.0.1:8787/`; no token is needed. Keep the dashboard running
+   across resets. It opens on the main `demandlib` repository. Use **Reset local demo** to restore the prepared snapshot. Put its Live runs view beside the Codex chat. The Policy tab shows the
    automatically created rules and lets the user edit their statement or enforcement; the Knowledge base tab shows
-   indexed evidence and linked ticket history.
+   indexed evidence and linked ticket history. The Skills tab shows the planner, implementer, miner, and acceptance-test author with their model settings and assigned local instructions.
 4. Fallback open in a browser tab: the rehearsal's `report.md`, `merge.json` and the guardian output from the last
    successful run-through (copy them out of `~/intentos-demo/home/runs/` after rehearsing).
 
@@ -60,7 +60,7 @@ the merged-result verification refuses it before main moves; here both checks we
 
 ## Rehearsing
 
-- Stop the dashboard with Ctrl-C before `demo/reset.sh`; it restores everything, including the prepared runs and the red clone. Restart the dashboard and Codex after it.
+- Use **Reset local demo** in the dashboard. It restores the local snapshot, including the prepared runs and red clone, while the localhost page remains open. Recent runs starts empty; new runs appear as they begin. Skills and agent settings stay in place. Restart Codex after the reset so its MCP server reopens the restored store. The published GitHub fork is unaffected.
 - Moment A spends one live run per rehearsal (T12). Moments B and C spend nothing.
 - For a timed command-line rehearsal, use `demo/rehearse-moment-a.sh --model gpt-6-luna --delay 35` after reset. The 35-second merge reached the hook during the live run; stage timing can vary, so merge as soon as status says "implementing".
 - To rebuild from scratch (new prepared runs): `demo/reset.sh --destroy`, then `demo/prepare.ts` again.

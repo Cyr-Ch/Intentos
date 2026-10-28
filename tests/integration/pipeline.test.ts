@@ -14,6 +14,7 @@ import { applyReverification } from "../../src/orchestrator/runner.ts";
 import { verifyWorktree, scanProtectedAccess, discoverTestNames } from "../../src/verification/runner.ts";
 import type { ChangeContract } from "../../src/contracts/schemas.ts";
 import { spawnSync } from "node:child_process";
+import { saveCustomSkill, updateRoleSettings } from "../../src/agent-skills.ts";
 
 let env: TestEnv;
 let baseHead: string;
@@ -298,5 +299,32 @@ describe("architectural-surprise review signals (spec §7.5)", () => {
     const md = fs.readFileSync(path.join(rs.runDir, "report.md"), "utf8");
     expect(md).toContain("## Architectural surprise (review signals)");
     expect(md).toContain("SURPRISE-DUPLICATE-HELPER");
+  });
+});
+
+describe("run role configuration", () => {
+  it("freezes assigned skill text before execution and includes it only in the assigned role prompt", async () => {
+    const skill = { id: "read-callers", title: "Read callers", description: "Inspect callers before changing an API.", instructions: "Inspect all public callers before changing an API or its tests." };
+    const implementerSkill = { id: "small-diff", title: "Keep diffs small", description: "Prefer small scoped code changes.", instructions: "Keep the implementation diff focused on the ticket's allowed paths." };
+    saveCustomSkill(skill);
+    saveCustomSkill(implementerSkill);
+    updateRoleSettings("planner", { model: null, reasoning: null, skills: [skill.id] });
+    updateRoleSettings("implementer", { model: null, reasoning: null, skills: [implementerSkill.id] });
+    const opts = offline({ patchFile: PATCHES.good });
+    const rs = createRun(env.store, env.indexed, TASK_A, opts);
+    saveCustomSkill({ ...skill, instructions: "This later edit must not affect the existing run." });
+    try {
+      const outcome = await executeRun(env.store, rs, opts);
+      expect(outcome.state).toBe("REVIEW_READY");
+      expect(rs.readJson<{ roles: { planner: { skills: Array<{ instructions: string }> } } }>("agent_config.json")?.roles.planner.skills[0]?.instructions).toBe(skill.instructions);
+      expect(fs.readFileSync(rs.path("plannerPrompt"), "utf8")).toContain(skill.instructions);
+      expect(fs.readFileSync(rs.path("plannerPrompt"), "utf8")).not.toContain("This later edit");
+      expect(fs.readFileSync(rs.path("plannerPrompt"), "utf8")).not.toContain(implementerSkill.instructions);
+      expect(fs.readFileSync(rs.path("implementationPrompt"), "utf8")).toContain(implementerSkill.instructions);
+      expect(fs.readFileSync(rs.path("implementationPrompt"), "utf8")).not.toContain(skill.instructions);
+    } finally {
+      fs.rmSync(path.join(env.home, "agent-config.json"), { force: true });
+      fs.rmSync(path.join(env.home, "agent-skills"), { recursive: true, force: true });
+    }
   });
 });

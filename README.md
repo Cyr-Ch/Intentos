@@ -277,6 +277,12 @@ mergeguard runs in local mode: the repository's checked-out branch is main, work
 its state (PR registry, ledger, trusted policy rendered from the IntentOS policy) lives under
 `INTENTOS_HOME/coordination/`. See [docs/coordination.md](docs/coordination.md).
 
+## Local dashboard and agent skills
+
+Run `intentos dashboard <repo>` to open the localhost dashboard. Its **Skills** page configures the Codex SDK threads IntentOS starts: planner, implementer, independent policy miner and acceptance-test author. The page lets you create local text skills, assign them to roles, and choose each role's model and reasoning effort. The two shipped host Codex skills are listed separately; they are not automatically loaded by the implementer.
+
+Configuration lives under `INTENTOS_HOME/agent-config.json` and `INTENTOS_HOME/agent-skills/`. Edits affect new jobs. Each run saves an `agent_config.json` snapshot, including skill text and hashes, so resume uses the same instructions. Explicit model options on `mine` and `acceptance` take precedence over dashboard settings. Skills guide agents; they cannot alter the sandbox, verifier, protected paths, or merge policy.
+
 ## Environment variables
 
 | Variable | Purpose |

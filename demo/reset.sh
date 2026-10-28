@@ -24,9 +24,29 @@ if [ ! -d "$SNAP" ]; then
   echo "no snapshot at $SNAP; run demo/prepare.ts first" >&2
   exit 1
 fi
-# Worktrees are registered inside each clone's .git by absolute path, and the snapshot restores the same paths.
-rm -rf "$ROOT"
-cp -R "$SNAP" "$ROOT"
+# Prepare the replacement before moving the live tree. The dashboard and MCP server
+# may still have open files in the old tree; a directory swap keeps the reset usable.
+STAGED="$ROOT.reset-$$"
+OLD="$ROOT.old-$$"
+trap 'rm -rf "$STAGED"' EXIT HUP INT TERM
+cp -R "$SNAP" "$STAGED"
+# Agent preferences belong to the user, not the disposable demo run state.
+if [ -f "$ROOT/home/agent-config.json" ]; then cp "$ROOT/home/agent-config.json" "$STAGED/home/agent-config.json"; fi
+if [ -d "$ROOT/home/agent-skills" ]; then
+  rm -rf "$STAGED/home/agent-skills"
+  cp -R "$ROOT/home/agent-skills" "$STAGED/home/agent-skills"
+fi
+if [ -e "$ROOT" ]; then mv "$ROOT" "$OLD"; fi
+mv "$STAGED" "$ROOT"
+trap - EXIT HUP INT TERM
+python3 -I - "$ROOT/home/dashboard.json" <<'EOF'
+import datetime, json, pathlib, sys
+file = pathlib.Path(sys.argv[1])
+config = json.loads(file.read_text()) if file.exists() else {}
+config["visible_after"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+file.write_text(json.dumps(config, indent=2) + "\n")
+EOF
+if [ -e "$OLD" ]; then rm -rf "$OLD" || echo "warning: old demo directory remains at $OLD" >&2; fi
 echo "restored $ROOT from $SNAP ($(date))"
 echo "prepared runs:"
 python3 -I - "$ROOT/state.json" <<'EOF'

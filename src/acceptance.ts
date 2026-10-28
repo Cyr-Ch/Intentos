@@ -16,6 +16,7 @@ import { parseJunit, type JunitCase } from "./verification/junit.ts";
 import { headSha, isDirty, isGitRepo } from "./util/git.ts";
 import { nowIso } from "./util/ids.ts";
 import { redact } from "./util/redact.ts";
+import { appendRoleSkills, captureAgentSnapshot } from "./agent-skills.ts";
 
 /**
  * Acceptance tests for a ticket, written before anyone implements it, by a model other than the one that will.
@@ -281,9 +282,13 @@ export async function writeAcceptanceTests(repoInput: string, ticket: string, op
   const policyId = policy.policy_id.replace(/^fallback:/, "");
   const expect: Expectation = opts.expect ?? "fail";
   const head = headSha(repoPath);
-  const model = resolveAcceptanceModel(opts.model);
+  const agentConfig = captureAgentSnapshot();
+  const role = agentConfig.roles.acceptance;
+  const model = resolveAcceptanceModel(opts.model ?? role.model);
+  const reasoning = opts.reasoningEffort ?? role.reasoning;
   if (!opts.engine && !model) throw new Error("no model named for the acceptance tests: pass --model <slug> (one the Codex account can run, other than the model that will implement) or set INTENTOS_ACCEPTANCE_MODEL");
-  const engine = opts.engine ?? new LiveCodexEngine({ model, reasoningEffort: opts.reasoningEffort });
+  if (!opts.engine && model && agentConfig.roles.implementer.model === model) throw new Error("acceptance model must differ from the implementer model");
+  const engine = opts.engine ?? new LiveCodexEngine({ model, reasoningEffort: reasoning });
   const hiddenRoot = path.resolve(opts.hiddenTestsRoot ?? paths.hiddenTests);
   const target = path.join(hiddenRoot, policyId, "tasks", opts.taskId);
   if (fs.existsSync(target) && fs.readdirSync(target).length && !opts.force) throw new Error(`${target} already has acceptance tests; pass --force to replace them`);
@@ -291,6 +296,7 @@ export async function writeAcceptanceTests(repoInput: string, ticket: string, op
   const outDir = path.resolve(opts.outDir ?? path.join(paths.home, "acceptance", repoIdFor(repoPath), opts.taskId));
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, "agent_config.json"), JSON.stringify({ role: { ...role, model, reasoning }, captured_at: agentConfig.captured_at }, null, 2) + "\n");
   let pack: EvidencePack | null = null;
   if (opts.store) {
     try {
@@ -302,7 +308,7 @@ export async function writeAcceptanceTests(repoInput: string, ticket: string, op
   const python = repoInterpreter(repoPath);
   const pythonpath = pythonpathFor(policy);
   const maxRounds = Math.max(1, Math.min(opts.rounds ?? 2, 4));
-  let prompt = buildAcceptancePrompt({ repoPath, policyId, taskId: opts.taskId, ticket, expect, pack, pythonpath });
+  let prompt = appendRoleSkills(buildAcceptancePrompt({ repoPath, policyId, taskId: opts.taskId, ticket, expect, pack, pythonpath }), role);
   let threadId: string | null = null;
   let resolvedModel: string | null = model;
   let engineName = engine.name;
@@ -340,7 +346,7 @@ export async function writeAcceptanceTests(repoInput: string, ticket: string, op
     lastRejected = verdict.rejected;
     log(`round ${round}: ${answer.files.length} module(s), ${verdict.accepted.length} accepted${verdict.rejected.length ? `, ${verdict.rejected.length} rejected: ${verdict.rejected.map((r) => `${r.path} (${r.reasons[0]})`).join("; ")}` : ""}`);
     if (!verdict.rejected.length) break;
-    prompt = buildAcceptanceFixPrompt(verdict.rejected, expect);
+    prompt = appendRoleSkills(buildAcceptanceFixPrompt(verdict.rejected, expect), role);
   }
   if (!kept.size) throw new Error(`no acceptance module survived the check at ${head.slice(0, 10)}${lastRejected.length ? `: ${lastRejected.map((r) => `${r.path}: ${r.reasons.join(" | ")}`).join("; ")}` : ""}`);
   fs.rmSync(target, { recursive: true, force: true });
