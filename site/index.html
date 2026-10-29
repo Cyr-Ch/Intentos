@@ -618,17 +618,17 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
       <div class="evidence-block">
         <div class="evidence-head">
           <div>
-            <h3>Can coordination keep main healthy under parallel agents?</h3>
-            <p>Fresh origin and two clones per run. A change lands on main after the agent's first tool call. Five scenarios: rename, required parameter, module move, a meaning change behind an unchanged signature, and an unrelated control.</p>
+            <h3>Can two agents share one main without breaking it?</h3>
+            <p>Two agents work on the same repository at once. While the second is mid-task, the first one's change lands on main and alters something the second is using: a renamed function, a new required parameter, a moved module, or a function that now returns cents instead of dollars with the same signature. A fifth scenario changes something unrelated, to check for false alarms. Each scenario ran three times with and three times without IntentOS's coordination: 15 runs per arm.</p>
           </div>
           <a class="btn" href="case-studies/mergeguard.html">Read the case study</a>
         </div>
         <div class="metrics">
-          <div class="metric"><strong>12 → 0</strong><span>Codex runs that left main broken, raw git versus mergeguard (15 runs per arm).</span></div>
-          <div class="metric"><strong>9 / 9</strong><span>API clashes caught before merge, all by a specific note during the task. 0 false notes on the control.</span></div>
-          <div class="metric"><strong>+16 s</strong><span>Mean extra wall time per run, with +2.9 tool calls and +388 output tokens.</span></div>
+          <div class="metric"><strong>12 → 0</strong><span>Runs that ended with main broken. Without coordination 12 of 15; with it, 0 of 15.</span></div>
+          <div class="metric"><strong>9 / 9</strong><span>Rename, parameter and module-move runs where the agent was told mid-task what had changed and fixed it before merging. No false alarm on the unrelated change.</span></div>
+          <div class="metric"><strong>+16 s</strong><span>What the coordination cost per run: about 16 seconds, 3 more tool calls and 400 more output tokens.</span></div>
         </div>
-        <p class="footnote">Three meaning changes (dollars to cents, same signature) passed the sync check and broke main before the guardian bisected and undid them, 3 of 3. That blind spot is by design and is why the gate also runs the merged result. Same pattern across Claude Haiku (40 → 0 over 50 runs) and Sonnet (12 → 0). Scenarios are synthetic and reviewers were simulated.</p>
+        <p class="footnote">The one case the mid-task check cannot see is a change of meaning behind an unchanged signature (dollars to cents). In all three of those runs the branch merged and main broke; the guardian then found the culprit merge and opened an undo PR that restored it, 3 of 3. That is why the merge gate also runs the hidden tests on the merged result. Scenarios were synthetic and reviewers were simulated.</p>
       </div>
     </div>
   </section>
