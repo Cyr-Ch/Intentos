@@ -9,7 +9,7 @@
   <meta property="og:description" content="Verification and coordination for coding agents. Open source, runs locally beside your agent.">
   <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="site.css?v=5">
+  <link rel="stylesheet" href="site.css?v=6">
 </head>
 <body>
 
@@ -199,30 +199,27 @@
       <div class="who-head">
         <div class="kicker">Who it is for</div>
         <h3>The two people who decide whether agents work for a team</h3>
-        <p class="sub">Whoever files the tickets the agents build from, and whoever sets the rules the agents build under. IntentOS gives each of them a different piece.</p>
+        <p class="sub">Whoever files the tickets, and whoever sets the rules.</p>
       </div>
       <div class="grid c2 personas">
         <div class="card persona">
           <div class="role">Writing the tickets</div>
-          <h3>Product managers, founders and leads who file the work</h3>
-          <p>Your ticket is now an agent's spec. "Make the dashboard work better" becomes a seven-file surprise.</p>
+          <h3>Product managers, founders and leads</h3>
+          <p>Your ticket is now an agent's spec.</p>
           <ul>
-            <li>Ticket QA before anything is planned: gaps the repository can fill are filled, with references checked against the code</li>
-            <li>The questions only your team can answer, each written so one answer closes it, with the default the agent would take</li>
-            <li>Contradictions with approved rules are flagged first; a ticket that is already solved is told so</li>
-            <li>On GitHub, the report lands as a comment and the issue moves from <code>unfinished</code> to <code>ready for planning</code></li>
+            <li>Gaps the repository can answer are filled in, with checked references</li>
+            <li>Questions only your team can answer, one answer each</li>
+            <li>Contradictions and already-solved tickets flagged before anything is planned</li>
           </ul>
         </div>
         <div class="card persona">
           <div class="role">Rolling out agents</div>
           <h3>Platform, developer-experience and CTO-office teams</h3>
-          <p>You answer for main, but you cannot read every PR the agents open. You need one place per repository that says what is protected, what blocks, and when a human has to look.</p>
+          <p>One policy per repository: what is protected, what blocks, when a human looks.</p>
           <ul>
-            <li>Rules mined by a model from your own tests, fix commits and docs, each backed by a hidden test the implementing agent never sees. Review them if you want to; it is not required</li>
-            <li>One <code>policies/&lt;repo&gt;.yaml</code> in version control, outside the target repo, with the rules, protected paths and review tiers in one place</li>
-            <li>Review tiers 0, 1 or 2 computed from each diff, so most changes merge with no human and the ones that need one get a named approval bound to a specific commit</li>
-            <li>A report per run and a merge gate that re-verifies the branch on the main of right now; when main goes red anyway, a guardian bisects to the culprit and opens a validated undo PR</li>
-            <li>Optional container-isolated verifier that fails closed; a local dashboard for runs, policy and the knowledge base; per-role model settings, so the model that mines rules is never the one implementing under them</li>
+            <li>Rules mined by a model from your tests, commits and docs; review optional</li>
+            <li>Review tiers 0, 1 or 2 per diff, named approvals only when asked</li>
+            <li>A merge gate that re-verifies on current main, and a guardian that undoes what breaks it</li>
           </ul>
         </div>
       </div>
