@@ -1,0 +1,25 @@
+diff --git a/src/api/handlers.ts b/src/api/handlers.ts
+index 4990920..f7eefa9 100644
+--- a/src/api/handlers.ts
++++ b/src/api/handlers.ts
+@@ -1,5 +1,6 @@
+ import { Ledger, type LedgerStore } from "../domain/ledger.ts";
+ import { Money } from "../domain/money.ts";
++import { MemoryStore } from "../db/client.ts";
+ 
+ export interface PostRequest {
+   account: string;
+@@ -15,6 +16,13 @@ export function makeHandlers(store: LedgerStore) {
+       const next = ledger.post({ account: req.account, amount: new Money(req.cents, req.currency), memo: req.memo ?? "" });
+       return { balance: next.toString() };
+     },
++    transfer(req: { from: string; to: string; cents: number; currency: string; memo?: string }): { from: string; to: string } {
++      // move the money directly in storage; skips the overdraft check and the repository interface
++      const raw = store as MemoryStore;
++      raw.append({ account: req.from, amount: new Money(-req.cents, req.currency), memo: req.memo ?? "transfer" });
++      raw.append({ account: req.to, amount: new Money(req.cents, req.currency), memo: req.memo ?? "transfer" });
++      return { from: ledger.balance(req.from, req.currency).toString(), to: ledger.balance(req.to, req.currency).toString() };
++    },
+     balance(account: string): { balance: string } {
+       return { balance: ledger.balance(account).toString() };
+     },

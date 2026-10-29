@@ -447,3 +447,30 @@ linked to their diff; at HEAD 19 current, 12 partially stale, 12 stale (pre-rena
 modules). `explain "Raise an error instead of a warning when a profile is created without holidays"` returns #43
 (`oemof.demand.tools.set_holidays_in_df`, the two holiday tests) at relevance 1, then #25 and #41.
 Limits: definitions by indentation walk-up only; first merged pull request per ticket; ranking is heuristic.
+
+## Single-authority mining and TypeScript support (2026-10-29)
+The deterministic miner is gone. `python/policy_suggest.py`, `src/suggest.ts`, `intentos suggest`, the relevance
+ranker, clusters, `--classify`, `--record` and `feedback.json` are removed; the sections above that describe them
+are history. What replaces them is an **evidence digest** (`python/policy_evidence.py`, `intentos evidence`, MCP
+`evidence`, cached per revision in `<out>/evidence.json`): every test with its first assertion and the production
+files it exercises, every commit that touched code with the tests it added, modal sentences with heading and line,
+ADRs with status and supersession, import edges, stale directories, changelog deprecations. Nothing in it is scored
+or classified; the model (Codex with the skill, or `mine` with another model) decides what is a rule and the
+`Ingestor` checks the answer as before (references, production paths, a test per invariant, run at HEAD). The
+review's fold-related heuristic now uses shared production paths or scope tags (`relatedCandidates`). Trade-off:
+there is no offline candidate list without a model, and the per-reviewer ranking feedback loop is gone with the
+ranker it fed.
+
+TypeScript repositories are supported end to end: probe (`package.json`, vitest/jest, tsconfig), draft policy with
+`{node}`/`{node_modules}` and `env`, indexer (`src/knowledge/ts_extract.ts`, TypeScript compiler API), evidence
+digest (vitest titles with `describe` chains, relative and tsconfig-alias imports), hidden invariants lifted as
+whole vitest files with the chosen test marked `.only` or written by the model (`.test.ts`, imports relative to the
+hidden directory and checked against tracked files), verification through the repository's vitest/jest with a
+wrapper config under `<repo>/.intentos_hidden/` and `node_modules` linked into the snapshot, architecture rules
+(`src/verification/ts_rules.ts`; both checkers run on a mixed change), scope check aware of `.test.ts`, acceptance
+tests as vitest modules, `isToolingPath` keeping `node_modules`/`.intentos_hidden` out of dirtiness/scope/diff.
+Fixture `fixtures/ts_ledger` + `policies/ts_ledger.yaml` + hidden tests + offline patches for `task-ts-transfer`;
+`tests/integration/typescript.test.ts` (12) runs probe, index, digest, propose, rules and the offline pipeline (good
+patch → REVIEW_READY, bad patch → FAILED on ARCH-001 and a failing hidden task test). Python tests:
+`python/tests/test_policy_evidence.py` (7). Limits: Docker-mode verification is still Python-only; jest is covered by
+the invocation code but only vitest has a fixture; test titles built from template expressions are skipped.

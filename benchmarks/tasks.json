@@ -220,6 +220,23 @@
       "hazards": [],
       "offline_patches": {},
       "notes": "acceptance tests by gpt-5.6-terra at 6757f4f659 (2026-10-27T11:42:34.959Z); pass at base"
+    },
+    {
+      "id": "task-ts-transfer",
+      "fixture": "ts_ledger",
+      "title": "TypeScript: transfer between accounts",
+      "request": "Add a transfer between two accounts to the ledger",
+      "expected_route": "implement",
+      "hidden_tests": "benchmarks/hidden_tests/ts_ledger/tasks/task-ts-transfer",
+      "hazards": [
+        "a transfer must not leave the source account negative (INV-002)",
+        "handlers must not reach into storage directly (ARCH-001)"
+      ],
+      "offline_patches": {
+        "good": "benchmarks/offline_patches/task-ts-transfer.good.patch",
+        "bad": "benchmarks/offline_patches/task-ts-transfer.bad.patch"
+      },
+      "notes": "ts_ledger fixture (vitest). The bad patch moves money in the API layer through the storage class, bypassing Ledger.post."
     }
   ]
 }

@@ -12,7 +12,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { KnowledgeStore } from "../knowledge/storage.ts";
-import { fallbackPolicy, policyForRepo, type Policy } from "../knowledge/policy.ts";
+import { fallbackPolicy, fillArgv, policyForRepo, projectTestCommand, type Policy } from "../knowledge/policy.ts";
+import { linkNodeModules } from "../knowledge/js.ts";
 import { indexRepository } from "../knowledge/indexer.ts";
 import type { EvidencePack } from "../knowledge/retrieval.ts";
 import type { ChangeContract } from "../contracts/schemas.ts";
@@ -68,11 +69,11 @@ function repoRow(store: KnowledgeStore, repoId: string) {
 export function mergeCheckCommand(policy: Policy, repoPath: string): string | null {
   // Evaluation-only switch: lets a test land a change that the merged-tree run would refuse, to exercise the guardian.
   if (process.env.INTENTOS_COORDINATION_MERGE_CHECK === "0") return null;
-  const cmd = policy.commands.pytest_project;
+  const cmd = projectTestCommand(policy)?.cmd;
   if (!cmd?.argv) return null;
   const python = repoInterpreter(repoPath);
   const junit = path.join(os.tmpdir(), `intentos-merge-check-${process.pid}.xml`);
-  const argv = cmd.argv.map((a) => a.replace("{python}", python).replace("{snapshot}", "{checkout}").replace("{junit}", junit)).filter((a) => !a.includes("{hidden_tests_dir}"));
+  const argv = fillArgv(cmd.argv, { python, snapshot: "{checkout}", hidden_tests_dir: "{hidden_tests_dir}", junit, node_modules: path.join(repoPath, "node_modules") }).filter((a) => !a.includes("{hidden_tests_dir}"));
   return argv.map((a) => (/[\s"']/.test(a) ? JSON.stringify(a) : a)).join(" ");
 }
 
@@ -99,6 +100,7 @@ export function verifyMergedResult(store: KnowledgeStore, rs: RunStore, coord: C
   removeWorktree(repoPath, candidate);
   fs.rmSync(candidate, { recursive: true, force: true });
   addWorktree(repoPath, candidate, main);
+  if (policy.language === "typescript") linkNodeModules(repoPath, candidate);
   try {
     const merge = git(candidate, ["-c", "user.name=intentos", "-c", "user.email=intentos@localhost", "merge", "--no-ff", "-m", `candidate: ${rs.runId} onto ${coord.mainBranch}`, head], { allowFail: true });
     if (merge.status !== 0) {

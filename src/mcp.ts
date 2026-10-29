@@ -15,9 +15,9 @@ import { fallbackPolicy, loadPolicyFile, policyForRepo } from "./knowledge/polic
 import { policyIdFor, runProbe } from "./onboard.ts";
 import { isGitRepo } from "./util/git.ts";
 import { renderEvidencePack } from "./reports/explain.ts";
-import { autoApprove, autoApprover, decide, defaultReviewer, finishReview, loadReviewState, publicState, reviewPage, startReviewServer, type Decision, type ReviewServer, type ReviewState } from "./review.ts";
-import type { Candidate } from "./suggest.ts";
-import { describeAuthor, ingestProposals, loadMined, minedRows, SKILL_NAME, skillText, type Author } from "./propose.ts";
+import { autoApprove, autoApprover, decide, defaultReviewer, finishReview, loadReviewState, publicState, relatedCandidates, reviewPage, startReviewServer, type Decision, type ReviewServer, type ReviewState } from "./review.ts";
+import { renderDigest, type Candidate } from "./candidates.ts";
+import { describeAuthor, ingestProposals, loadDigest, SKILL_NAME, skillText, type Author } from "./propose.ts";
 import { mineWithModel, resolveMiningModel } from "./mine.ts";
 import { createRun, executeRun, type RunOptions } from "./orchestrator/runner.ts";
 import { RunStore } from "./orchestrator/store.ts";
@@ -43,7 +43,7 @@ import crypto from "node:crypto";
  * host → server; the model only sees the outcome. `review_close` confirms finishing the same way.
  *
  * Onboarding from the host: `status` says where a repository stands and which tool to call next; `onboard` runs the
- * CLI (`intentos onboard`, then `intentos suggest --classify`) in a child process and returns at once with a job id,
+ * CLI (`intentos onboard`) in a child process and returns at once with a job id,
  * because hosts time out tool calls long before a venv, a test run and an index are done; the model polls `status`.
  * The server's MCP `instructions` carry the working order (status → onboard → status… → review_start → review_next…
  * → review_close), so a host needs one sentence from the user and no knowledge of the CLI.
@@ -56,7 +56,7 @@ import crypto from "node:crypto";
 
 const SERVER_INSTRUCTIONS = [
   "IntentOS keeps a repository's business rules as an approved policy (invariants, architecture rules, decisions) backed by hidden tests, and gives you an evidence pack before you plan a change. Always pass absolute repository paths.",
-  `Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) Mine the business rules, one of two ways. (a) The independent miner: call mine with a model other than yourself, when the user asks for an independent, second or unbiased opinion, names a model, or when status says INTENTOS_MINING_MODEL is set; it runs the ${SKILL_NAME} skill in a separate read-only Codex thread with that model, checks and tests the result like propose, sends rejections back once, and writes the review list in the background: poll status until phase is "done". The review list then records that model as its author; do not resubmit its candidates with propose (that would record you as the author) and do not rewrite its tests: IntentOS already ran them. (b) Yourself: follow the skill (call mining_guide if it is not installed in this host): read the tests, the git history, the documents and the structure; state each rule with evidence; pick an existing test or write one that proves it; submit the list with propose. mined gives the deterministic miner's raw list as a starting point. IntentOS checks every reference and runs every test; fix the rejected ones and call propose again with append=true. (4) After mine, IntentOS has already written the accepted rules into the policy file and the hidden tests (approved_by auto:<model>); status reports how many and the file. Tell the user that the rules were created, where the file is, and that any rule can be edited or removed there; do not review them yourself. Only when the user asks to review candidates one by one (or called mine with review=true): review_start. If its result says ui=widget, the reviewer works inside the inline widget: do not call review_next (it would show the same candidate again as a form); wait for the reviewer to say they are done. If it says ui=link, give the reviewer the link. Otherwise call review_next repeatedly: each call shows the reviewer one candidate through this host's own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never submit a candidate without evidence from the repository. (5) review_close when no candidates remain, or when the reviewer says they are done and the widget did not finish. (6) Implementing a ticket under IntentOS: call run with the ticket text (and task_id when the user names a benchmark ticket id) on an indexed repository; it starts the pipeline in the background (evidence pack, planner, compiled contract, a separate implementer thread in a git worktree with coordination hooks, independent verification with hidden tests, bounded repairs): poll status about every 20 seconds until phase is "done", then report job.result.run to the user: the state, the verification (acceptance tests, invariants, architecture, scope, coordination, findings) and the report path. Never claim success the verifier did not record. (7) Merging: only when the user asks, call merge with the run_id (or pr for a PR the guardian opened) and the approver names the user gives you; never invent approvers, never approve on their behalf. It opens a PR with a review tier, runs the branch's CI and the sync check against main, verifies the branch merged onto current main with the hidden tests, and fast-forwards main only when everything holds; poll status until done and report job.result.merge, including why a merge was refused. (8) When main is red, call guard: it reruns, bisects to the culprit merge, finds its partner and opens a validated undo PR; report job.result.guard. runs lists this repository's runs.`,
+  `Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) Mine the business rules, one of two ways. (a) The independent miner: call mine with a model other than yourself, when the user asks for an independent, second or unbiased opinion, names a model, or when status says INTENTOS_MINING_MODEL is set; it runs the ${SKILL_NAME} skill in a separate read-only Codex thread with that model, checks and tests the result like propose, sends rejections back once, and writes the review list in the background: poll status until phase is "done". The review list then records that model as its author; do not resubmit its candidates with propose (that would record you as the author) and do not rewrite its tests: IntentOS already ran them. (b) Yourself: follow the skill (call mining_guide if it is not installed in this host): call evidence for the digest (tests, commits, must/never sentences, ADRs, import edges, stale directories), read the code behind the facts that look like rules; state each rule with evidence; pick an existing test or write one that proves it; submit the list with propose. IntentOS checks every reference and runs every test; fix the rejected ones and call propose again with append=true. (4) After mine, IntentOS has already written the accepted rules into the policy file and the hidden tests (approved_by auto:<model>); status reports how many and the file. Tell the user that the rules were created, where the file is, and that any rule can be edited or removed there; do not review them yourself. Only when the user asks to review candidates one by one (or called mine with review=true): review_start. If its result says ui=widget, the reviewer works inside the inline widget: do not call review_next (it would show the same candidate again as a form); wait for the reviewer to say they are done. If it says ui=link, give the reviewer the link. Otherwise call review_next repeatedly: each call shows the reviewer one candidate through this host's own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never submit a candidate without evidence from the repository. (5) review_close when no candidates remain, or when the reviewer says they are done and the widget did not finish. (6) Implementing a ticket under IntentOS: call run with the ticket text (and task_id when the user names a benchmark ticket id) on an indexed repository; it starts the pipeline in the background (evidence pack, planner, compiled contract, a separate implementer thread in a git worktree with coordination hooks, independent verification with hidden tests, bounded repairs): poll status about every 20 seconds until phase is "done", then report job.result.run to the user: the state, the verification (acceptance tests, invariants, architecture, scope, coordination, findings) and the report path. Never claim success the verifier did not record. (7) Merging: only when the user asks, call merge with the run_id (or pr for a PR the guardian opened) and the approver names the user gives you; never invent approvers, never approve on their behalf. It opens a PR with a review tier, runs the branch's CI and the sync check against main, verifies the branch merged onto current main with the hidden tests, and fast-forwards main only when everything holds; poll status until done and report job.result.merge, including why a merge was refused. (8) When main is red, call guard: it reruns, bisects to the culprit merge, finds its partner and opens a validated undo PR; report job.result.guard. runs lists this repository's runs.`,
   "Before planning or implementing a change: explain for the evidence pack, policy for the approved rules. explain also lists precedents, resolved tickets and the pull requests that solved them, linked to the code they changed; when the task is of the same kind and the precedent is current, follow its location and pattern. Load them once per repository with precedents (owner/name of the issue tracker; pulls=owner/name when the pull requests live upstream).",
 ].join("\n");
 
@@ -184,17 +184,17 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     id: string;
     kind: "onboard" | "mine" | "run" | "merge" | "guard";
     repo: string;
-    phase: "onboarding" | "mining" | "classifying" | "checking" | "running" | "merging" | "guarding" | "done" | "failed";
+    phase: "onboarding" | "mining" | "checking" | "running" | "merging" | "guarding" | "done" | "failed";
     started_at: string;
     finished_at: string | null;
     log: string[];
-    result: { policy_id: string | null; policy_file: string | null; suite: string | null; index: string | null; candidates: number | null; kept: number | null; filtered: number | null; note: string | null; model: string | null; accepted: number | null; rejected: number | null; rounds: number | null; approved?: number | null; without_test?: number | null; run?: Record<string, unknown>; merge?: Record<string, unknown>; guard?: Record<string, unknown> };
+    result: { policy_id: string | null; policy_file: string | null; suite: string | null; index: string | null; candidates: number | null; kept: number | null; filtered: number | null; note: string | null; language: string | null; evidence: Record<string, number> | null; model: string | null; accepted: number | null; rejected: number | null; rounds: number | null; approved?: number | null; without_test?: number | null; run?: Record<string, unknown>; merge?: Record<string, unknown>; guard?: Record<string, unknown> };
     error: string | null;
   }
   const jobs = new Map<string, Job>();
   const running = (j: Job | undefined): j is Job => !!j && j.phase !== "done" && j.phase !== "failed";
   const kindOf = (j: Job): string => ({ mine: "mining", onboard: "onboarding", run: "a run", merge: "a merge", guard: "the guardian" })[j.kind];
-  const newJob = (kind: Job["kind"], repo: string, phase: Job["phase"]): Job => ({ id: crypto.randomBytes(4).toString("hex"), kind, repo, phase, started_at: nowIso(), finished_at: null, log: [], result: { policy_id: null, policy_file: null, suite: null, index: null, candidates: null, kept: null, filtered: null, note: null, model: null, accepted: null, rejected: null, rounds: null }, error: null });
+  const newJob = (kind: Job["kind"], repo: string, phase: Job["phase"]): Job => ({ id: crypto.randomBytes(4).toString("hex"), kind, repo, phase, started_at: nowIso(), finished_at: null, log: [], result: { policy_id: null, policy_file: null, suite: null, index: null, candidates: null, kept: null, filtered: null, note: null, language: null, evidence: null, model: null, accepted: null, rejected: null, rounds: null }, error: null });
   const push = (job: Job, line: string) => {
     job.log.push(line);
     if (job.log.length > 400) job.log.splice(0, job.log.length - 400);
@@ -225,26 +225,23 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       job.finished_at = nowIso();
     }
   };
-  const runJob = async (job: Job, a: { policy_id?: string; policy_file?: string; classify: boolean; install: boolean; run_tests: boolean; force: boolean }): Promise<void> => {
+  const runJob = async (job: Job, a: { policy_id?: string; policy_file?: string; language?: string; install: boolean; run_tests: boolean; force: boolean }): Promise<void> => {
     try {
       job.phase = "onboarding";
-      const r1 = await runCli(["onboard", job.repo, ...(a.policy_id ? ["--policy-id", a.policy_id] : []), ...(a.policy_file ? ["--out", a.policy_file] : []), ...(a.install ? [] : ["--no-install"]), ...(a.run_tests ? [] : ["--no-test"]), ...(a.force ? ["--force"] : [])], (l) => push(job, l));
+      const r1 = await runCli(["onboard", job.repo, ...(a.policy_id ? ["--policy-id", a.policy_id] : []), ...(a.policy_file ? ["--out", a.policy_file] : []), ...(a.language ? ["--language", a.language] : []), ...(a.install ? [] : ["--no-install"]), ...(a.run_tests ? [] : ["--no-test"]), ...(a.force ? ["--force"] : [])], (l) => push(job, l));
       if (r1.status !== 0) throw new Error(`intentos onboard failed: ${lastLine(r1.stderr) ?? `exit ${r1.status}`}`);
-      const onboard = JSON.parse(r1.stdout) as { policy_id: string; policy_file: string; smoke: { status: string; summary: string }; index: { mode: string } | null };
+      const onboard = JSON.parse(r1.stdout) as { policy_id: string; policy_file: string; smoke: { status: string; summary: string }; index: { mode: string } | null; probe: { language: string } };
       job.result.policy_id = onboard.policy_id;
       job.result.policy_file = onboard.policy_file;
+      job.result.language = onboard.probe.language;
       job.result.suite = `${onboard.smoke.status}: ${onboard.smoke.summary}`;
       job.result.index = onboard.index?.mode ?? null;
-      job.phase = a.classify ? "classifying" : "mining";
-      const r2 = await runCli(["suggest", job.repo, "--policy-id", onboard.policy_id, ...(a.classify ? ["--classify"] : [])], (l) => push(job, l));
-      if (r2.status !== 0) throw new Error(`intentos suggest failed: ${lastLine(r2.stderr) ?? `exit ${r2.status}`}`);
-      const s = JSON.parse(r2.stdout) as { candidates: Candidate[]; classification: { used: boolean; kept: number; filtered: number; note: string | null } };
-      job.result.candidates = s.candidates.length;
-      job.result.kept = s.classification.used ? s.classification.kept : s.candidates.length;
-      job.result.filtered = s.classification.used ? s.classification.filtered : 0;
-      job.result.note = s.classification.note;
+      job.phase = "mining";
+      push(job, "building the evidence digest…");
+      const digest = loadDigest(job.repo, { policyId: onboard.policy_id });
+      job.result.evidence = digest.counts;
       job.phase = "done";
-      log(`onboard ${job.repo}: job ${job.id} done (${job.result.candidates} candidates, ${job.result.kept} kept; suite ${onboard.smoke.status})`);
+      log(`onboard ${job.repo}: job ${job.id} done (${onboard.probe.language}; suite ${onboard.smoke.status}; digest ${digest.counts.tests ?? 0} tests, ${digest.counts.commits ?? 0} commits)`);
     } catch (e) {
       job.phase = "failed";
       job.error = (e as Error).message;
@@ -328,12 +325,11 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     }
     const outDir = outDirOverride ? path.resolve(outDirOverride) : path.join(paths.home, "onboard", repoIdFor(repo));
     const suggestionsFile = path.join(outDir, "suggestions.json");
-    let suggestions: { total: number; classified: number; kept: number; authored_by: "codex" | "miner"; author: Author | null; file: string } | null = null;
+    let suggestions: { total: number; kept: number; authored_by: "codex"; author: Author | null; file: string } | null = null;
     if (fs.existsSync(suggestionsFile)) {
       const parsed = JSON.parse(fs.readFileSync(suggestionsFile, "utf8")) as { candidates: Candidate[]; authored_by?: string; author?: Author };
       const cs = parsed.candidates;
-      const byHost = parsed.authored_by === "codex";
-      suggestions = { total: cs.length, classified: cs.filter((c) => c.classification).length, kept: cs.filter((c) => !c.classification || c.classification.keep).length, authored_by: byHost ? "codex" : "miner", author: byHost ? (parsed.author ?? { via: "host", model: null }) : null, file: suggestionsFile };
+      suggestions = { total: cs.length, kept: cs.length, authored_by: "codex", author: parsed.author ?? { via: "host", model: null }, file: suggestionsFile };
     }
     const decisionsFile = path.join(outDir, "review-decisions.json");
     const decided = fs.existsSync(decisionsFile) ? (JSON.parse(fs.readFileSync(decisionsFile, "utf8")) as Decision[]).filter((d) => d.action !== "skip").length : 0;
@@ -356,19 +352,17 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         : !policyExists
           ? `not onboarded: call onboard with repo=${repo}`
           : !suggestions
-            ? `onboarded; now mine the business rules: ${mineHint}, or do it yourself with the ${SKILL_NAME} skill (mining_guide has the text: call mined, write the candidates with a test each, submit them with propose)`
-            : suggestions.authored_by !== "codex"
-              ? `the current ${suggestions.total} candidate(s) are the deterministic miner's; replace them: ${mineHint}, or author your own with the ${SKILL_NAME} skill and propose; or call review_start to review them as they are`
-              : pending
-                ? `${pending} candidate(s) are not in the policy yet (mined with review=true, or left pending for lack of a test): call review_start for a person to decide, or tell the user they can add them by hand to the policy file`
-                : `review complete (${approved} approved rule(s)): call explain before planning a change and policy to read the rules`;
+            ? `onboarded; now mine the business rules: ${mineHint}, or do it yourself with the ${SKILL_NAME} skill (mining_guide has the text: call evidence, read the code behind the facts, write the candidates with a test each, submit them with propose)`
+            : pending
+              ? `${pending} candidate(s) are not in the policy yet (mined with review=true, or left pending for lack of a test): call review_start for a person to decide, or tell the user they can add them by hand to the policy file`
+              : `review complete (${approved} approved rule(s)): call explain before planning a change and policy to read the rules`;
     return { repo, policy_id: policyId, policy_file: policyFile, policy: { exists: policyExists, approved_rules: approved }, indexed, suggestions, decided, pending, mining_model: miningModel, job: job ? { id: job.id, kind: job.kind, phase: job.phase, started_at: job.started_at, finished_at: job.finished_at, result: job.result, error: job.error, log_tail: job.log.slice(-12) } : null, next };
   };
 
   server.registerTool(
     "status",
     {
-      description: "Where a repository stands with IntentOS: policy file present, index present, candidates mined / classified / awaiting the reviewer and who authored them, the progress of a running onboard or mine job, and the next tool to call. Call this first, and poll it while onboard or mine runs.",
+      description: "Where a repository stands with IntentOS: policy file present, index present, candidates awaiting the reviewer and who authored them, the progress of a running onboard or mine job, and the next tool to call. Call this first, and poll it while onboard or mine runs.",
       inputSchema: z.object({ repo: z.string().describe("absolute path of the repository root"), policy_id: z.string().optional(), policy_file: z.string().optional().describe("policy file (default policies/<policy-id>.yaml)"), out_dir: z.string().optional().describe("directory of the review files (default .intentos/onboard/<repo-id>)") }),
     },
     async ({ repo, policy_id, policy_file, out_dir }) => {
@@ -377,7 +371,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         log(`status ${s.repo}: ${s.next}`);
         const tail = s.job?.log_tail.slice(-5) ?? [];
         return text(
-          `${s.repo}: policy ${s.policy.exists ? `${s.policy_file} (${s.policy.approved_rules} approved rule(s))` : "none"}; index ${s.indexed ? "yes" : "no"}; candidates ${s.suggestions ? `${s.suggestions.total} (${s.suggestions.authored_by === "codex" ? `authored by ${describeAuthor(s.suggestions.author)}` : "from the deterministic miner"}), ${s.suggestions.kept} kept, ${s.pending} undecided` : "none"}${s.job ? `; job ${s.job.id} (${s.job.kind}) ${s.job.phase}${tail.length ? `\n  ${tail.join("\n  ")}` : ""}` : ""}\nNext: ${s.next}`,
+          `${s.repo}: policy ${s.policy.exists ? `${s.policy_file} (${s.policy.approved_rules} approved rule(s))` : "none"}; index ${s.indexed ? "yes" : "no"}; candidates ${s.suggestions ? `${s.suggestions.total} (authored by ${describeAuthor(s.suggestions.author)}), ${s.pending} undecided` : "none"}${s.job ? `; job ${s.job.id} (${s.job.kind}) ${s.job.phase}${tail.length ? `\n  ${tail.join("\n  ")}` : ""}` : ""}\nNext: ${s.next}`,
           s,
         );
       } catch (e) {
@@ -389,12 +383,12 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
   server.registerTool(
     "onboard",
     {
-      description: 'Bring a repository under IntentOS, in the background: probe it, create a per-repo venv with its dependencies, write the DRAFT policy, run its test suite once, index it, mine the deterministic raw candidate list. Returns at once with a job id; poll status until phase is "done" (minutes), then mine the business rules with the intentos-policy-mining skill (mined, propose) and call review_start. Refuses to overwrite an existing policy unless force=true.',
+      description: 'Bring a repository under IntentOS, in the background: probe it (Python or TypeScript), create a per-repo venv with its dependencies (or install node_modules), write the DRAFT policy, run its test suite once, index it, build the evidence digest. Returns at once with a job id; poll status until phase is "done" (minutes), then mine the business rules with the intentos-policy-mining skill (evidence, propose) or the independent miner (mine) and call review_start. Refuses to overwrite an existing policy unless force=true.',
       inputSchema: z.object({
         repo: z.string().describe("absolute path of the repository root (a Git checkout)"),
         policy_id: z.string().optional().describe("policy id (default: sanitised project name)"),
         policy_file: z.string().optional().describe("where to write the draft policy (default policies/<policy-id>.yaml)"),
-        classify: z.boolean().optional().describe("let a Codex side thread sort the mined candidates (default false: you author the candidates yourself with the intentos-policy-mining skill after onboarding)"),
+        language: z.enum(["python", "typescript"]).optional().describe("override the probe's language decision for a repository that has both"),
         install: z.boolean().optional().describe("create the venv and install dependencies (default true)"),
         run_tests: z.boolean().optional().describe("run the suite once at the base revision (default true)"),
         force: z.boolean().optional().describe("overwrite an existing policy file; approved rules in it are lost (default false)"),
@@ -409,12 +403,11 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         const policyId = policyIdFor(runProbe(repo), repo, a.policy_id);
         const policyFile = a.policy_file ? path.resolve(a.policy_file) : path.join(resolvePaths().policies, `${policyId}.yaml`);
         if (fs.existsSync(policyFile) && !a.force) return fail(`${policyFile} already exists: this repository is onboarded. Call status or review_start to continue, or onboard with force=true to start over (the draft is rewritten; approved rules in that file are lost).`);
-        const classify = a.classify ?? false;
         const job = newJob("onboard", repo, "onboarding");
         jobs.set(repo, job);
-        log(`onboard ${repo}: job ${job.id} started (classify=${classify}, install=${a.install ?? true}, run_tests=${a.run_tests ?? true}, force=${a.force ?? false})`);
-        void runJob(job, { policy_id: a.policy_id, policy_file: a.policy_file, classify, install: a.install ?? true, run_tests: a.run_tests ?? true, force: a.force ?? false });
-        return text(`Onboarding started for ${repo} (job ${job.id}): venv and dependencies, draft policy ${policyFile}, one run of the suite, index, raw candidate mining${classify ? ", classification by Codex" : ""}. This takes a few minutes. Call status with repo=${repo} about every 20 seconds until phase is "done", then follow the ${SKILL_NAME} skill (mined, propose) and call review_start.`, { job_id: job.id, phase: job.phase, repo, policy_id: policyId, policy_file: policyFile });
+        log(`onboard ${repo}: job ${job.id} started (language=${a.language ?? "auto"}, install=${a.install ?? true}, run_tests=${a.run_tests ?? true}, force=${a.force ?? false})`);
+        void runJob(job, { policy_id: a.policy_id, policy_file: a.policy_file, language: a.language, install: a.install ?? true, run_tests: a.run_tests ?? true, force: a.force ?? false });
+        return text(`Onboarding started for ${repo} (job ${job.id}): dependencies, draft policy ${policyFile}, one run of the suite, index, evidence digest. This takes a few minutes. Call status with repo=${repo} about every 20 seconds until phase is "done", then follow the ${SKILL_NAME} skill (evidence, propose) or call mine, and call review_start.`, { job_id: job.id, phase: job.phase, repo, policy_id: policyId, policy_file: policyFile });
       } catch (e) {
         return fail((e as Error).message);
       }
@@ -532,18 +525,18 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
 
   // ---- Mining by the host (the intentos-policy-mining skill): the raw list, the guide, the submission.
   server.registerTool(
-    "mined",
+    "evidence",
     {
-      description: "The deterministic miner's raw candidate list for a repository (rule-like tests with hidden-test drafts, fix commits, must/never sentences from documents, layer imports, frozen directories), cached per revision. A starting point for the intentos-policy-mining skill, never the review list; cite an entry in propose with from_mined to inherit its evidence and test.",
-      inputSchema: z.object({ repo: z.string().describe("absolute path of the repository root"), policy_id: z.string().optional(), out_dir: z.string().optional() }),
+      description: "The evidence digest for a repository, cached per revision: every test with its first assertion and the production code it imports, commits touching code with the files and tests they changed (fix-like ones marked), must/never sentences from documents, ADRs with their status, import edges between directories, directories nobody has touched for a year, changelog entries announcing deprecations. Facts with the references to cite in propose; nothing is ranked or selected. The intentos-policy-mining skill starts here: read the code behind the facts that look like rules before stating one.",
+      inputSchema: z.object({ repo: z.string().describe("absolute path of the repository root"), policy_id: z.string().optional(), out_dir: z.string().optional(), section: z.enum(["all", "tests", "commits", "documents", "adrs", "imports", "stale_dirs", "changelog"]).optional().describe("one section of the digest (default all)") }),
     },
-    async ({ repo, policy_id, out_dir }) => {
+    async ({ repo, policy_id, out_dir, section }) => {
       try {
-        const mined = loadMined(repo, { policyId: policy_id, outDir: out_dir });
-        const rows = minedRows(mined);
-        log(`mined ${repo}: ${rows.length} raw candidate(s) at ${mined.head.slice(0, 7)}`);
-        const lines = rows.map((r) => `${r.id} [${r.kind}, ${r.score.toFixed(2)}] ${r.title}: ${r.statement}${r.test ? ` (test ${r.test})` : ""}`);
-        return text(`${rows.length} raw candidate(s) at ${mined.head.slice(0, 7)}; noise included, select and restate per the skill:\n${lines.join("\n")}`, { head: mined.head, count: rows.length, candidates: rows });
+        const digest = loadDigest(repo, { policyId: policy_id, outDir: out_dir });
+        log(`evidence ${repo}: ${Object.entries(digest.counts).map(([k, v]) => `${k} ${v}`).join(", ")} at ${digest.head.slice(0, 7)}`);
+        const sec = section ?? "all";
+        const structured = sec === "all" ? digest : { head: digest.head, language: digest.language, [sec]: digest[sec] };
+        return text(sec === "all" ? renderDigest(digest) : `${sec} (${(digest[sec] as unknown[]).length}) at ${digest.head.slice(0, 7)}:\n${JSON.stringify(digest[sec], null, 1)}`, structured as Record<string, unknown>);
       } catch (e) {
         return fail((e as Error).message);
       }
@@ -559,7 +552,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
   server.registerTool(
     "propose",
     {
-      description: "Submit host-authored policy candidates for a repository, written per the intentos-policy-mining skill. Each candidate: kind, title, statement, category, rationale, confidence, relevance, evidence[{type, ref, excerpt}], applies_to_paths[], test {existing | source} (required for invariants), rule (architecture rules), sources, from_mined. IntentOS checks every reference against the repository, lifts an existing test or runs the one you wrote in the repository's venv at the current revision, and keeps only what passes; the result lists rejections with reasons. Replaces the review list unless append=true. Then call review_start.",
+      description: "Submit host-authored policy candidates for a repository, written per the intentos-policy-mining skill. Each candidate: kind, title, statement, category, rationale, confidence, relevance, evidence[{type, ref, excerpt}], applies_to_paths[], test {existing | source} (required for invariants; pytest or vitest/jest to match the repository), rule (architecture rules), sources. IntentOS checks every reference against the repository, lifts an existing test or runs the one you wrote in the repository's environment at the current revision, and keeps only what passes; the result lists rejections with reasons. Replaces the review list unless append=true. Then call review_start.",
       inputSchema: z.object({
         repo: z.string().describe("absolute path of the repository root"),
         candidates: z.array(z.record(z.string(), z.unknown())).min(1).max(40).describe("candidate objects; mining_guide documents the fields"),
@@ -626,13 +619,12 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     server,
     "review_start",
     {
-      description: "Start the IntentOS policy review for a repository: the candidates mined by `intentos suggest` are shown one by one for a person to approve or reject. In hosts that render MCP Apps the review appears inline; otherwise the result contains a local URL for the reviewer to open. The model cannot approve candidates.",
+      description: "Start the IntentOS policy review for a repository: the candidates from propose or mine are shown one by one for a person to approve or reject. In hosts that render MCP Apps the review appears inline; otherwise the result contains a local URL for the reviewer to open. The model cannot approve candidates.",
       inputSchema: z.object({
         repo: z.string().describe("absolute path of the repository root"),
-        include_filtered: z.boolean().optional().describe("also show candidates the classifier set aside"),
         policy_id: z.string().optional(),
         policy_file: z.string().optional().describe("policy file to append to (default policies/<policy-id>.yaml)"),
-        out_dir: z.string().optional().describe("directory of the last suggest run"),
+        out_dir: z.string().optional().describe("directory of the review files (default .intentos/onboard/<repo-id>)"),
         hidden_tests_root: z.string().optional(),
         by: z.string().optional().describe("reviewer name for approved_by (default: git user.name)"),
       }),
@@ -643,20 +635,20 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         const job = jobs.get(path.resolve(args.repo));
         if (running(job)) return fail(`${kindOf(job)} of ${args.repo} is still running (job ${job.id}, phase ${job.phase}); call status until it is done, then review_start`);
         if (session?.http) await session.http.close();
-        const state = await loadReviewState(args.repo, { policyId: args.policy_id, outDir: args.out_dir, policyFile: args.policy_file, hiddenTestsRoot: args.hidden_tests_root, by: args.by ?? defaultReviewer(), includeFiltered: args.include_filtered, store: opts.store, log });
+        const state = await loadReviewState(args.repo, { policyId: args.policy_id, outDir: args.out_dir, policyFile: args.policy_file, hiddenTestsRoot: args.hidden_tests_root, by: args.by ?? defaultReviewer(), store: opts.store, log });
         const widget = uiSupported();
         const http = widget ? null : await startReviewServer(state, { port: 0, open: false, log });
         session = { state, token: crypto.randomBytes(16).toString("hex"), http, ui: widget ? "widget" : "link", started_at: nowIso() };
         log(`review_start ${args.repo}: ${state.candidates.length} candidates, ui=${widget ? "widget" : "link"}; ${describeClient()}`);
         const pending = state.candidates.filter((c) => !state.decisions.some((d) => d.id === c.id)).length;
-        const summary = state.candidates.slice(0, 40).map((c) => ({ id: c.id, kind: c.kind, title: c.title, score: c.score, relevance: c.relevance, decided: state.decisions.find((d) => d.id === c.id)?.action ?? null }));
-        const unclassified = state.candidates.length > 0 && state.candidates.every((c) => !c.classification);
-        const head = `Policy review for ${state.policy_id}: ${state.candidates.length} candidate(s), ${pending} pending. Approvals go to ${state.policy_file}.${state.author ? ` Candidates authored by ${describeAuthor(state.author)}, checked and tested by IntentOS.` : ""}${unclassified ? " These candidates are ranked but not classified (noise included); onboard with classify=true first for a filtered list." : ""}`;
+        const summary = state.candidates.slice(0, 40).map((c) => ({ id: c.id, kind: c.kind, title: c.title, category: c.category, relevance: c.relevance, decided: state.decisions.find((d) => d.id === c.id)?.action ?? null }));
+        const head = `Policy review for ${state.policy_id}: ${state.candidates.length} candidate(s), ${pending} pending. Approvals go to ${state.policy_file}.${state.author ? ` Candidates authored by ${describeAuthor(state.author)}, checked and tested by IntentOS.` : ""}`;
         const body = widget ? "The review is rendered inline; the reviewer approves, rejects and finishes there. Do not try to approve on their behalf, and do not call review_next: it would show the same candidate a second time as a form. Wait for the reviewer to say they are done." : `This host does not render MCP Apps. Ask the reviewer to open this link in a browser to approve or reject candidates: ${http!.url}`;
         return text(`${head}\n${body}`, { policy_id: state.policy_id, policy_file: state.policy_file, candidates: summary, pending, ui: widget ? "widget" : "link", ...(http ? { url: http.url } : {}) });
       } catch (e) {
         const msg = (e as Error).message;
         if (/run intentos onboard/.test(msg)) return fail(`${args.repo} is not onboarded (no policy file). Call onboard with repo=${args.repo}, poll status until phase is "done", then call review_start again.`);
+        if (/^no candidates for/.test(msg)) return fail(`${args.repo} has no candidates yet. Mine the rules first: call mine with a model other than yourself, or follow the ${SKILL_NAME} skill (evidence, then propose); then call review_start again.`);
         return fail(msg);
       }
     },
@@ -670,16 +662,16 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     if (id) return state.candidates.find((c) => c.id === id) ?? null;
     return state.candidates.find((c) => !state.decisions.some((d) => d.id === c.id)) ?? null;
   };
-  const relatedFoldable = (state: ReviewState, c: Candidate): Candidate[] => (c.cluster_members ?? []).map((m) => state.candidates.find((x) => x.id === m)).filter((m): m is Candidate => !!m && m.kind === "invariant" && c.kind === "invariant" && !!m.suggested_hidden_test && !state.decisions.some((d) => d.id === m.id));
+  const relatedFoldable = (state: ReviewState, c: Candidate): Candidate[] => (c.kind === "invariant" ? state.candidates.filter((m) => m.id !== c.id && m.kind === "invariant" && !!m.suggested_hidden_test && !state.decisions.some((d) => d.id === m.id) && relatedCandidates(c, m)) : []);
 
   const decisionForm = (state: ReviewState, c: Candidate) => {
-    const proposed = (c.classification?.rule ?? c.statement).slice(0, 400);
+    const proposed = c.statement.slice(0, 400);
     const related = relatedFoldable(state, c);
     const pending = state.candidates.filter((x) => !state.decisions.some((d) => d.id === x.id)).length;
     const lines = [
-      `IntentOS policy review — ${c.id} (${pending} pending) · ${c.kind.replace("_", " ")} · score ${c.score.toFixed(2)} (${c.relevance})`,
+      `IntentOS policy review — ${c.id} (${pending} pending) · ${c.kind.replace("_", " ")} · ${c.category.replace("_", " ")} (relevance ${c.relevance})`,
       `${c.title}`,
-      c.classification ? `classifier: ${c.classification.category.replace("_", " ")}, ${c.classification.keep ? "keep" : "set aside"} — ${c.classification.reason}` : "",
+      `${c.category.replace("_", " ")} · relevance ${c.relevance} · confidence ${c.confidence}${c.rationale ? ` — ${c.rationale}` : ""}`,
       "Evidence:",
       ...c.evidence.slice(0, 4).map((e) => `- ${e.type} ${e.ref}: ${e.excerpt}`.slice(0, 200)),
       c.applies_to_paths?.length ? `applies to: ${c.applies_to_paths.join(", ")}` : "",
@@ -694,7 +686,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       statement: { type: "string", title: "Rule statement", description: "One sentence that must hold; edit before approving", default: proposed, maxLength: 400 },
       reason: { type: "string", title: "Reason (for rejections, optional)", maxLength: 300 },
     };
-    if (related.length) properties.fold_related = { type: "boolean", title: `Fold the ${related.length} related candidate(s) into this rule as extra hidden tests`, default: true };
+    if (related.length) properties.fold_related = { type: "boolean", title: `Fold the ${related.length} related candidate(s) (${related.map((r) => r.title).join("; ")}) into this rule as extra hidden tests`, default: false };
     const form: Omit<ElicitRequestFormParams, "mode"> = { message: lines.join("\n"), requestedSchema: { type: "object", properties, required: ["decision"] } };
     return form;
   };
@@ -707,7 +699,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
   const decisionText = (state: ReviewState, d: Decision): string => {
     const pending = state.candidates.filter((x) => !state.decisions.some((dd) => dd.id === x.id)).length;
     const next = nextPending(state);
-    const tail = next ? ` ${pending} pending; next: ${next.id} ${next.title}. Call review_next again to continue.` : " No candidates pending; call review_close to finish (feedback + re-index).";
+    const tail = next ? ` ${pending} pending; next: ${next.id} ${next.title}. Call review_next again to continue.` : " No candidates pending; call review_close to finish (re-index).";
     if (d.action === "accept") return `${d.id} approved as ${d.result!.assigned_id}${d.merged_ids?.length ? ` (folded ${d.merged_ids.join(", ")})` : ""}; policy ${d.result!.policy_file}${d.result!.hidden_test ? `; hidden test ${d.result!.hidden_test}` : ""}${d.result!.warnings.length ? `; note: ${d.result!.warnings.join(" | ")}` : ""}.${tail}`;
     return `${d.id} ${d.action === "reject" ? `rejected${d.reason ? ` (${d.reason})` : ""}` : "skipped"}.${tail}`;
   };
@@ -769,14 +761,14 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
 
   server.registerTool(
     "review_close",
-    { description: "Ask the reviewer (through the host's own prompt) to confirm finishing the policy review; on confirmation records feedback for the next suggest run and re-indexes. The confirmation comes from the reviewer, not the model.", inputSchema: z.object({}) },
+    { description: "Ask the reviewer (through the host's own prompt) to confirm finishing the policy review; on confirmation re-indexes the repository. The confirmation comes from the reviewer, not the model.", inputSchema: z.object({}) },
     async (_args, ctx: ServerContext): Promise<CallToolResult | InputRequiredResult> => {
       if (!session) return fail("no review in progress");
       const state = session.state;
       if (state.finished) return text("already finished", { finished: state.finished });
       const pending = state.candidates.filter((x) => !state.decisions.some((d) => d.id === x.id)).length;
       const finishField: PrimitiveSchemaDefinition = { type: "boolean", title: "Finish now", default: true };
-      const form: Omit<ElicitRequestFormParams, "mode"> = { message: `Finish the IntentOS policy review for ${state.policy_id}? ${state.decisions.filter((d) => d.action === "accept").length} approved, ${state.decisions.filter((d) => d.action === "reject").length} rejected, ${pending} still pending. Finishing records feedback for the next run and re-indexes the repository.`, requestedSchema: { type: "object", properties: { finish: finishField }, required: ["finish"] } };
+      const form: Omit<ElicitRequestFormParams, "mode"> = { message: `Finish the IntentOS policy review for ${state.policy_id}? ${state.decisions.filter((d) => d.action === "accept").length} approved, ${state.decisions.filter((d) => d.action === "reject").length} rejected, ${pending} still pending. Finishing re-indexes the repository.`, requestedSchema: { type: "object", properties: { finish: finishField }, required: ["finish"] } };
       let confirmed: boolean | null = null;
       if (modernEra()) {
         const responses = ctx.mcpReq.inputResponses;
@@ -794,7 +786,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       const finished = finishReview(state);
       if (session.http) await session.http.close().catch(() => {});
       log(`review_close: approved ${finished.accepted}, merged ${finished.merged}, rejected ${finished.rejected}`);
-      return text(`Review finished: approved ${finished.accepted}${finished.assigned.length ? ` (${finished.assigned.join("; ")})` : ""}, folded ${finished.merged}, rejected ${finished.rejected}, skipped ${finished.skipped}, pending ${finished.pending}.${finished.feedback ? ` Feedback recorded (${finished.feedback.accept_tokens.length} accept / ${finished.feedback.reject_tokens.length} reject terms).` : ""}${finished.index ? ` Re-indexed (${finished.index.mode}).` : ""} Commit the policy, the hidden tests and any new policy-notes section.`, { finished });
+      return text(`Review finished: approved ${finished.accepted}${finished.assigned.length ? ` (${finished.assigned.join("; ")})` : ""}, folded ${finished.merged}, rejected ${finished.rejected}, skipped ${finished.skipped}, pending ${finished.pending}.${finished.index ? ` Re-indexed (${finished.index.mode}).` : ""} Commit the policy, the hidden tests and any new policy-notes section.`, { finished });
     },
   );
 
@@ -824,7 +816,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       }
     },
   );
-  server.registerTool("review_finish", { description: "Widget only: finish the review (feedback for the next suggest run, re-index).", inputSchema: z.object({ token: z.string() }), _meta: appOnly }, async ({ token }) => {
+  server.registerTool("review_finish", { description: "Widget only: finish the review (re-index).", inputSchema: z.object({ token: z.string() }), _meta: appOnly }, async ({ token }) => {
     const s = requireToken(token);
     if ("content" in s) return s;
     const finished = s.state.finished ?? finishReview(s.state);
@@ -863,7 +855,7 @@ function runCli(args: string[], onLine: (line: string) => void): Promise<{ statu
       buf += d;
       const lines = buf.split("\n");
       buf = lines.pop() ?? "";
-      for (const l of lines) if (l.trim()) onLine(l.replace(/^\[(onboard|suggest)\] /, ""));
+      for (const l of lines) if (l.trim()) onLine(l.replace(/^\[onboard\] /, ""));
     });
     child.on("error", (e) => resolve({ status: null, stdout, stderr: `${stderr}\n${e.message}` }));
     child.on("close", (status) => {

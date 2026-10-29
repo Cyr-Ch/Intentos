@@ -9,12 +9,14 @@ import { matchesAny } from "../util/paths.ts";
 import type { Authority, EdgeRow, EpistemicStatus, EvidenceRow, KnowledgeStore, NodeRow } from "./storage.ts";
 import { fallbackPolicy, policyForRepo, type Policy, type SourceRef } from "./policy.ts";
 import { linkPrecedent, precedentsFile, readPrecedentsFile, renamesBetween, type GraphLookup, type PrecedentAttributes } from "./precedents.ts";
+import { extractTypeScript } from "./ts_extract.ts";
+import { isJsSourceFile } from "./js.ts";
 
 // ---- raw indexer output (mirrors python/index_repo.py dataclasses) ---------
 
 export interface RawSymbol {
   id: string;
-  kind: "module" | "class" | "function" | "method";
+  kind: "module" | "class" | "function" | "method" | "interface" | "type" | "enum";
   qualified_name: string;
   name: string;
   path: string;
@@ -92,6 +94,27 @@ export interface PythonIndexerOptions {
   onlyFiles?: string[];
 }
 
+/**
+ * Raw extraction of a repository: the Python extractor (`.py`, `.md`, the repository metadata) and the TypeScript
+ * extractor (`.ts`, `.tsx`, `.js`, …) merged into one `RawIndex`. The Python side always runs: it lists the tracked
+ * files and reads the documents that both languages' policies cite.
+ */
+export function runExtractors(repoPath: string, paths: IntentosPaths = resolvePaths(), opts: PythonIndexerOptions = {}): RawIndex {
+  const raw = runPythonIndexer(repoPath, paths, opts);
+  const tsFiles = raw.files.filter(isJsSourceFile);
+  if (!tsFiles.length) return raw;
+  const ts = extractTypeScript(repoPath, raw.files, { onlyFiles: opts.onlyFiles });
+  raw.modules = [...new Set([...raw.modules, ...ts.modules])].sort();
+  raw.symbols.push(...ts.symbols);
+  raw.imports.push(...ts.imports);
+  raw.calls.push(...ts.calls);
+  raw.tests.push(...ts.tests);
+  raw.skipped.push(...ts.skipped);
+  raw.limitations.push("TypeScript/JavaScript: symbols, imports, calls and it()/test() blocks are extracted syntactically with the TypeScript compiler (no type checker); dynamic imports and computed member names are not resolved.");
+  if (opts.onlyFiles) raw.only_files = [...new Set([...(raw.only_files ?? []), ...tsFiles.filter((f) => opts.onlyFiles!.includes(f))])].sort();
+  return raw;
+}
+
 export function runPythonIndexer(repoPath: string, paths: IntentosPaths = resolvePaths(), opts: PythonIndexerOptions = {}): RawIndex {
   const script = path.join(paths.python, "index_repo.py");
   const args = ["-I", script, repoPath];
@@ -120,9 +143,9 @@ export function runPythonIndexer(repoPath: string, paths: IntentosPaths = resolv
 
 /** Mirrors the extractor: only these files are parsed, and these basenames are never read. */
 const IGNORED_BASENAMES = new Set([".env", ".env.local", ".env.production", "id_rsa", "credentials.json"]);
-const isIndexedFile = (p: string): boolean => (p.endsWith(".py") || p.toLowerCase().endsWith(".md")) && !IGNORED_BASENAMES.has(path.posix.basename(p));
+const isIndexedFile = (p: string): boolean => (p.endsWith(".py") || p.toLowerCase().endsWith(".md") || isJsSourceFile(p)) && !IGNORED_BASENAMES.has(path.posix.basename(p)) && !p.split("/").includes("node_modules");
 
-const INDEX_CACHE_VERSION = 1;
+const INDEX_CACHE_VERSION = 2;
 /** Fraction of indexed files above which an incremental run is not worth it. */
 const INCREMENTAL_MAX_CHANGED_RATIO = 0.6;
 
@@ -146,7 +169,7 @@ export interface IncrementalPlan {
   carried: string[];
 }
 
-/** Blob ids of the indexable files (`.py`, `.md`) at a revision. */
+/** Blob ids of the indexable files (`.py`, `.md`, TypeScript/JavaScript sources) at a revision. */
 export function listIndexedBlobs(repoPath: string, revision: string): Record<string, string> {
   const blobs: Record<string, string> = {};
   for (const entry of git(repoPath, ["ls-tree", "-r", "-z", revision]).stdout.split("\0")) {
@@ -166,11 +189,12 @@ export function indexCacheFile(paths: IntentosPaths, repoId: string, revision: s
 
 let extractorFingerprintMemo: { file: string; value: string } | null = null;
 
-/** Short hash of the Python extractor's source: a cache written by a different extractor is never reused. */
+/** Short hash of both extractors' sources: a cache written by a different extractor is never reused. */
 export function extractorFingerprint(paths: IntentosPaths = resolvePaths()): string {
   const file = path.join(paths.python, "index_repo.py");
   if (extractorFingerprintMemo?.file === file) return extractorFingerprintMemo.value;
-  const value = shortHash(fs.readFileSync(file, "utf8"), 16);
+  const tsExtractor = path.join(path.dirname(new URL(import.meta.url).pathname), "ts_extract.ts");
+  const value = shortHash(fs.readFileSync(file, "utf8") + (fs.existsSync(tsExtractor) ? fs.readFileSync(tsExtractor, "utf8") : ""), 16);
   extractorFingerprintMemo = { file, value };
   return value;
 }
@@ -205,14 +229,14 @@ export function planIncremental(prevBlobs: Record<string, string>, headBlobs: Re
  * Merge the cached raw extraction of the previous revision with a partial extraction of the changed files.
  * Carried entries are taken from the cache only for files whose blob id is unchanged; everything from a changed
  * or deleted file comes from the partial run (or is dropped). The result is ordered like a full extraction
- * (all `.py` files, then all `.md` files, in `git ls-files` order), so the graph builder sees identical input.
+ * (all `.py` files, then all `.md` files, then TypeScript/JavaScript files, in `git ls-files` order), so the graph builder sees identical input.
  */
 export function mergeRawIndex(prevRaw: RawIndex, partialRaw: RawIndex, plan: IncrementalPlan): RawIndex {
   const carried = new Set(plan.carried);
   const deleted = new Set(plan.deleted);
   const keep = <T extends { path: string }>(rows: T[]): T[] => rows.filter((r) => carried.has(r.path) && !deleted.has(r.path));
   const order = new Map<string, number>();
-  [...partialRaw.files.filter((f) => f.endsWith(".py")), ...partialRaw.files.filter((f) => f.toLowerCase().endsWith(".md"))].forEach((f, i) => order.set(f, i));
+  [...partialRaw.files.filter((f) => f.endsWith(".py")), ...partialRaw.files.filter((f) => f.toLowerCase().endsWith(".md")), ...partialRaw.files.filter(isJsSourceFile)].forEach((f, i) => order.set(f, i));
   const rank = (file: string): number => order.get(file) ?? Number.MAX_SAFE_INTEGER;
   const inExtractionOrder = <T extends { path: string }>(rows: T[]): T[] =>
     rows.map((r, i) => ({ r, i })).sort((a, b) => rank(a.r.path) - rank(b.r.path) || a.i - b.i).map((x) => x.r);
@@ -388,11 +412,11 @@ export function indexRepository(store: KnowledgeStore, repoPathInput: string, op
 
   let raw: RawIndex;
   if (plan && prevCache) {
-    const partial = runPythonIndexer(repoPath, paths, { onlyFiles: plan.changed });
+    const partial = runExtractors(repoPath, paths, { onlyFiles: plan.changed });
     if (partial.repo.head_sha !== revision) throw new Error(`HEAD moved during indexing (${revision} -> ${partial.repo.head_sha}); retry.`);
     raw = mergeRawIndex(prevCache.raw, partial, plan);
   } else {
-    raw = runPythonIndexer(repoPath, paths);
+    raw = runExtractors(repoPath, paths);
     if (raw.repo.head_sha !== revision) throw new Error(`HEAD moved during indexing (${revision} -> ${raw.repo.head_sha}); retry.`);
     raw.limitations.push(...fallbackNotes);
   }

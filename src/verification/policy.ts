@@ -6,6 +6,7 @@ import type { Finding } from "./results.ts";
 import { matchesAny } from "../util/paths.ts";
 import type { ChangedFile } from "../util/git.ts";
 import { resolvePaths, resolvePython } from "../config.ts";
+import { runTsArchitectureRules } from "./ts_rules.ts";
 
 export interface ArchitectureCheckOutput {
   findings: Finding[];
@@ -51,14 +52,28 @@ export function runArchitectureRules(snapshot: string, policy: Policy, contract:
   let checked = 0;
   const errors: ArchitectureCheckOutput["errors"] = [];
   if (astRules.length) {
-    const script = path.join(resolvePaths().python, "architecture_rules.py");
-    const payload = JSON.stringify({ root: snapshot, rules: astRules, changed_files: changedPaths });
-    const res = spawnSync(resolvePython(), ["-I", script], { input: payload, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-    if (res.status !== 0) {
-      errors.push({ path: "", error: `architecture_rules.py exited ${res.status}: ${res.stderr.trim()}` });
-    } else {
-      const out = JSON.parse(res.stdout) as { findings: Array<{ rule_id: string; kind: string; path: string; line: number; message: string; in_changed_file: boolean }>; checked_files: number; errors: ArchitectureCheckOutput["errors"] };
-      checked = out.checked_files;
+    // Python files through the Python AST checker, TypeScript/JavaScript files through the TypeScript compiler; the
+    // policy's language decides which runs (both for a mixed repository).
+    type RawFinding = { rule_id: string; kind: string; path: string; line: number; message: string; in_changed_file: boolean };
+    const outs: Array<{ findings: RawFinding[]; checked_files: number; errors: ArchitectureCheckOutput["errors"] }> = [];
+    const hasPy = policy.language !== "typescript" || changedPaths.some((p) => p.endsWith(".py"));
+    const hasTs = policy.language === "typescript" || changedPaths.some((p) => /\.[cm]?[jt]sx?$/.test(p));
+    if (hasPy) {
+      const script = path.join(resolvePaths().python, "architecture_rules.py");
+      const payload = JSON.stringify({ root: snapshot, rules: astRules, changed_files: changedPaths });
+      const res = spawnSync(resolvePython(), ["-I", script], { input: payload, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (res.status !== 0) errors.push({ path: "", error: `architecture_rules.py exited ${res.status}: ${res.stderr.trim()}` });
+      else outs.push(JSON.parse(res.stdout) as (typeof outs)[number]);
+    }
+    if (hasTs) {
+      try {
+        outs.push(runTsArchitectureRules(snapshot, astRules, changedPaths));
+      } catch (e) {
+        errors.push({ path: "", error: `TypeScript architecture checker failed: ${(e as Error).message}` });
+      }
+    }
+    for (const out of outs) {
+      checked += out.checked_files;
       errors.push(...out.errors);
       for (const f of out.findings) {
         findings.push({
@@ -94,15 +109,15 @@ export function runScopeCheck(changed: ChangedFile[], contract: ChangeContract, 
     } else if (!inScope) {
       findings.push({ id: nextId(), category: "scope", severity: "blocking", rule_id: "SCOPE-ALLOWLIST", source_evidence_ids: [], test: null, expected: `changes within ${contract.allowed_paths.join(", ")}`, observed: `${c.status} ${c.path}`, message: `file outside the contract's allowed paths: ${c.path}`, location: c.path, log_path: null, authority: "deterministic" });
     }
-    if (/(^|\/)tests?\//.test(c.path) && c.status === "deleted") {
+    if ((/(^|\/)(tests?|__tests__)\//.test(c.path) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(c.path)) && c.status === "deleted") {
       findings.push({ id: nextId(), category: "process", severity: "review", rule_id: "TESTS-DELETED", source_evidence_ids: [], test: null, expected: "existing tests preserved", observed: `deleted ${c.path}`, message: `existing test file deleted: ${c.path}`, location: c.path, log_path: null, authority: "deterministic" });
     }
     return { path: c.path, status: c.status, in_scope: inScope, protected: prot };
   });
   // Removed lines inside pre-existing test files indicate weakened tests.
   for (const file of diffFiles(diffText)) {
-    if (!/(^|\/)tests?\//.test(file.path) || file.isNew) continue;
-    const removedAsserts = file.removed.filter((l) => /^\s*(assert|def test_|@pytest\.mark)/.test(l));
+    if (!(/(^|\/)(tests?|__tests__)\//.test(file.path) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file.path)) || file.isNew) continue;
+    const removedAsserts = file.removed.filter((l) => /^\s*(assert|def test_|@pytest\.mark)/.test(l) || /^\s*(expect\(|(it|test)(\.\w+)*\s*\(|assert\.)/.test(l));
     if (removedAsserts.length) {
       findings.push({ id: nextId(), category: "process", severity: "review", rule_id: "TESTS-WEAKENED", source_evidence_ids: [], test: null, expected: "existing assertions preserved", observed: `${removedAsserts.length} assertion/test line(s) removed in ${file.path}`, message: `existing test lines removed in ${file.path}: ${removedAsserts.slice(0, 3).map((l) => l.trim()).join(" | ")}`, location: file.path, log_path: null, authority: "deterministic" });
     }

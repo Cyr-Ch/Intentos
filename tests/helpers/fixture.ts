@@ -40,6 +40,40 @@ export function setupFixtureEnv(): TestEnv {
   };
 }
 
+/**
+ * Builds the ts_ledger fixture (a vitest TypeScript repository) into an isolated temp INTENTOS_HOME, links this
+ * checkout's node_modules into it (the fixture declares vitest + typescript, which IntentOS itself depends on) and
+ * indexes it under policies/ts_ledger.yaml.
+ */
+export function setupTsFixtureEnv(): TestEnv {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "intentos-ts-test-"));
+  process.env.INTENTOS_HOME = home;
+  const repo = path.join(home, "fixtures", "ts_ledger");
+  const res = spawnSync(resolvePython(), [path.join(PROJECT_ROOT, "python", "build_fixture.py"), path.join(PROJECT_ROOT, "fixtures", "ts_ledger"), repo, "--force"], { encoding: "utf8" });
+  if (res.status !== 0) throw new Error(`fixture build failed: ${res.stderr}\n${res.stdout}`);
+  fs.symlinkSync(path.join(PROJECT_ROOT, "node_modules"), path.join(repo, "node_modules"), "dir");
+  const store = new KnowledgeStore(path.join(home, "intentos.db"));
+  indexRepository(store, repo);
+  const indexed = loadIndexedRepo(store, repo);
+  return {
+    home,
+    repo,
+    store,
+    indexed,
+    cleanup: () => {
+      store.close();
+      fs.rmSync(home, { recursive: true, force: true });
+    },
+  };
+}
+
+export const TS_PATCHES = {
+  good: path.join(PROJECT_ROOT, "benchmarks", "offline_patches", "task-ts-transfer.good.patch"),
+  bad: path.join(PROJECT_ROOT, "benchmarks", "offline_patches", "task-ts-transfer.bad.patch"),
+};
+
+export const TS_TASK = "Add a transfer between two accounts to the ledger";
+
 export function gitHead(repo: string): string {
   return spawnSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" }).stdout.trim();
 }

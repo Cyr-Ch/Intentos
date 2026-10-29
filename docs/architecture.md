@@ -1,6 +1,6 @@
 # Architecture
 
-IntentOS is a modular monorepo with one controller (TypeScript) and two deterministic Python helpers.
+IntentOS is a modular monorepo with one controller (TypeScript) and deterministic Python helpers.
 Codex remains the code-editing engine; IntentOS supplies grounded context, a compiled contract, an
 isolated execution environment and independent verification.
 
@@ -21,7 +21,7 @@ Orchestrator (src/orchestrator)  ── durable state machine (SQLite runs/run_e
    ├── CODEX       src/codex      ── adapter.ts (@openai/codex-sdk only here): read-only planner thread,
    │                                 workspace-write implementer thread in the worktree; offline.ts simulated engine
    ├── VERIFY      src/verification ── snapshot worktree → copy hidden tests beside it → run only allowlisted
-   │                                 commands (pytest/junit), AST architecture rules, scope/frozen-path diff checks,
+   │                                 commands (pytest or vitest/jest, junit), AST architecture rules (Python, TS), scope/frozen-path diff checks,
    │                                 bounded counterexample probes → VerificationResult
    └── REPORT      src/reports    ── report.md / report.json from persisted artifacts only
 ```
@@ -96,47 +96,38 @@ invariants/rules/decisions, runs the drafted `pytest_project` command once again
 the JUnit result, then indexes. `repoInterpreter()` (`src/knowledge/venv.ts`) makes the verifier, the counterexample
 probes and `environment.json` use the repository's venv when it exists; `INTENTOS_PYTHON` overrides it.
 
-## Policy suggestions (`intentos suggest`)
+## Evidence digest (`intentos evidence`, MCP `evidence`)
 
-`src/suggest.ts` runs the read-only miner `python/policy_suggest.py` and renders its candidates as a review
-document, paste-ready YAML and ADR drafts. The miner reads `git log` (fix/revert/never/must messages and the files
-they touched, with regression tests added in the same commit), test functions whose names contain rule tokens
-(negations rank higher; the function source becomes a hidden-test draft), Markdown/RST sections with modal sentences
-(one candidate per section, source = path + heading), ADR fields (`Status`, `Supersedes` → decision status and
-lineage), module-level internal imports aggregated per layer directory (an edge A→B with no B→A becomes
-"B must not import A"), directories whose name or history says frozen, and changelog deprecations. Candidates are
-ranked by a business-relevance score and every policy block carries `approved_by: TODO`. The ranker builds a domain
-vocabulary from the repository's own identifiers, docstrings and headings (generic and infrastructure words
-excluded; plurals folded) and scores each candidate on domain density (0.35), rule shape versus fix shape (0.15),
-corroboration by distinct evidence types across its cluster (0.2), import-graph centrality of the paths it applies
-to (0.1), test age from `git log -S` (0.1) and a prior by source type (0.1). Clusters link candidates that share
-rarity-weighted distinctive terms, capped at eight members so a common word cannot chain the whole list.
-`tests/integration/suggest_rank.test.ts` is the precision benchmark against the fixture's real policy. With
-`--classify`, batches of twenty top candidates go to one read-only planning thread with a strict JSON schema
-(category, keep, reason, rule, cluster, duplicate_of); unknown ids are ignored, a rewrite that uses an identifier
-absent from the evidence is rejected, and set-aside candidates remain visible. With `--with-codex` the kept
-candidates' evidence goes to a thread that drafts ADR prose; an ADR whose `candidate_ids` include an id that was not
-offered is dropped. `--record` compares the last `suggestions.json` with the policy file (adopted hidden test,
-cited source heading, matching rule or statement) and writes accept/reject term weights the miner applies next time.
-Nothing the command writes is read back as authority.
+IntentOS has no rule miner of its own. `python/policy_evidence.py` (read-only, stdlib) builds a **digest of facts**
+the model reads before stating rules, and `loadDigest` (`src/propose.ts`) caches it per revision in
+`<out>/evidence.json`: every test (pytest function, or vitest/jest `it`/`test` title with its `describe` chain) with
+its first assertion and the production files it imports (relative imports and `tsconfig` path aliases resolved, so
+the model knows which code each test exercises; `rule_like` marks names with negation or modal tokens), every commit
+that touched code with the source and test files it changed and the tests it added (`looks_like_fix` marks fix-shaped
+subjects), every modal sentence (must/never/always/only/required/not allowed) from Markdown/RST documents with its
+heading and line, ADRs with `status` and `supersedes`, import edges between directories, directories nobody has
+touched in a long time, and changelog deprecations. Nothing is scored, clustered or classified: `renderDigest` prints
+the same facts for a person, the MCP `evidence` tool serves the digest whole or by section, and the skill tells the
+model to read the code behind the facts that look like rules before stating any. What the model decides is checked by
+the `Ingestor` (next sections), never trusted.
 
 ## Review UI (`intentos review`)
 
 `src/review.ts` serves a single page from a Node `http` server bound to 127.0.0.1 with a random token in the URL
 (every API call must carry it; nothing is reachable from other hosts or without the printed link). The page lists the
-candidates of the last `suggest` run and shows one card at a time: rule statement (prefilled with the classifier's
-rewrite when there is one, editable), evidence, where it applies, the source it will cite, and the hidden test that
+candidates of the last `propose` or `mine` run and shows one card at a time: rule statement (editable), evidence, where it applies, the source it will cite, and the hidden test that
 will be written. Approving calls `acceptCandidate`: the next free `INV-`/`ARCH-`/`DEC-` id is allocated from the policy
 document, the block is appended with `yaml`'s document API so comments survive, the file is validated against
 `PolicySchema` and restored on failure, the hidden-test draft is written under `benchmarks/hidden_tests/<id>/invariants/`
 with a header stating its origin and any TODOs, and a candidate without a Markdown source gets a section in
 `docs/intentos-policy.md` of the repository (created on first use) so the policy can bind it by heading. Rejections
-and skips are persisted in `review-decisions.json`; Finish records feedback, re-indexes and stops the server.
+and skips are persisted in `review-decisions.json`; Finish re-indexes and stops the server. Related candidates (same
+production paths or scope tag, `relatedCandidates`) can be folded into one approval as extra hidden tests.
 
 ## MCP server (`intentos mcp`)
 
 `src/mcp.ts` builds an `McpServer` (SDK v2) with the MCP Apps extension. Model-visible tools: `explain` (evidence
-pack), `policy` (approved rules with sources), `review_start` (loads the last `suggest` run into a review session;
+pack), `policy` (approved rules with sources), `evidence` (the digest), `review_start` (loads the last `propose`/`mine` run into a review session;
 `_meta.ui.resourceUri` points at `ui://intentos/review.html`). App-only tools (`_meta.ui.visibility: ["app"]`):
 `review_session`, `review_state`, `review_decide`, `review_finish`; they also require the session's widget token, which
 only `review_session` returns, so a model-initiated approval is refused even by a host that ignores visibility. The
@@ -144,8 +135,8 @@ widget resource is the same review page in `widget` mode: the apps browser bundl
 leaves its exports on `globalThis.__mcpApps`, the page connects to the host over `PostMessageTransport` and routes
 its three API calls to the app-only tools. When the client does not declare the UI extension (`getUiCapability`),
 `review_start` starts the local HTTP review server and returns its token-protected URL. For hosts that declare
-elicitation, `review_next` builds a form (decision enum defaulting to skip, editable statement prefilled with the
-classifier's rewrite, optional reason, fold-related toggle) and obtains the reviewer's answer through the host: on
+elicitation, `review_next` builds a form (decision enum defaulting to skip, editable statement, optional reason, fold-related toggle
+listing the related candidates) and obtains the reviewer's answer through the host: on
 2026-07-28-era clients by returning an `input_required` result that the client fulfils and retries
 (`acceptedContent` on the retry), on earlier clients through the push-style `elicitInput` request. `review_close`
 confirms finishing the same way. The session remembers how the host showed the review (`ui: widget | link`): when the
@@ -154,9 +145,9 @@ capabilities (the Codex app declares the UI extension at call time and elicitati
 the widget. Client capabilities, negotiated protocol version and tool calls are logged to `.intentos/mcp.log`.
 
 Onboarding from the host: `status` reports whether the repository has a policy file (and how many approved rules), an
-index, mined and classified candidates and how many are undecided, plus the state of a running job and the next tool
+index, host-authored candidates and how many are undecided, plus the state of a running job and the next tool
 to call. `onboard` validates the request (Git checkout, no existing policy unless `force`), then runs `intentos
-onboard` and `intentos suggest [--classify]` as child processes of the server with `--json` (their stderr progress
+onboard` as a child process of the server with `--json` and builds the evidence digest (their stderr progress
 lines become the job log) and returns immediately with a job id, because hosts time out tool calls long before a
 venv, a test run and an index finish; the model polls `status`. The server declares MCP `instructions` with the
 working order (status → onboard → status… → review_start → review_next… → review_close; explain and policy before
@@ -167,23 +158,25 @@ the absolute node path for the same reason.
 
 ## Host-authored candidates (`skills/intentos-policy-mining`, `intentos propose`)
 
-The review list is what the coding agent selected, not what the miner emitted. The skill (`SKILL.md` with the
+The review list is what a model selected and backed with a test. The skill (`SKILL.md` with the
 `name`/`description` frontmatter Codex requires, plus `agents/openai.yaml` for the desktop app) tells the agent what a
 business rule is, where to look in which order, how to state a rule with evidence and how to supply a test: an
-existing test node, or a self-contained pytest module it writes. `installSkill` symlinks the folder into
+existing test node, or a self-contained test module it writes (pytest, or vitest/jest importing production code
+relative to the hidden directory). `installSkill` symlinks the folder into
 `~/.agents/skills` (Codex follows symlinked skill folders); the `mining_guide` tool serves the same text to hosts
 without skills, and the server instructions point at both.
 
 `ingestProposals` (`src/propose.ts`) is the trust boundary. Shape errors reject one proposal, never the batch
-(`ProposalSchema`). `from_mined` merges the evidence, paths and existing test of a candidate from `mined.json`, the
-deterministic miner's raw output cached per revision by `loadMined` (never written over the review list). The Python
-`Ingestor` (`policy_suggest.py --ingest`) checks every reference against the tracked files and the commit graph,
-refuses test paths in `applies_to_paths`, requires a test for every invariant, lifts an existing test with the
-miner's `_draft_hidden_test` (imports, constants, fixtures, class setup) and builds the policy block the same way as
-for mined candidates; a written test is only parsed there. Back in TypeScript each test runs in the repository's
-venv at HEAD with the policy's `pythonpath`: a written module from `<out>/proposed_tests/`, an existing test by its
-node id; a failure rejects the candidate with the pytest tail. Accepted candidates are written as `suggestions.json`
-with `authored_by: "codex"` and the classification fields filled from the agent's category and rationale, so
+(`ProposalSchema`). The Python `Ingestor` (`policy_evidence.py --ingest`) checks every reference against the
+tracked files and the commit graph, refuses test paths in `applies_to_paths`, requires a test for every invariant,
+lifts an existing test (a pytest test with its imports, constants, fixtures and class setup; a vitest/jest file
+copied whole with its relative imports re-pointed to `../../src/…` and the chosen test marked `.only`) and builds the
+policy block; a written test is only parsed there (and, for TypeScript, its relative imports must resolve to tracked
+files). Back in TypeScript each test runs at HEAD in the repository's environment: Python in the venv with the
+policy's `pythonpath`, TypeScript through the repository's vitest/jest with a wrapper config under
+`<repo>/.intentos_hidden/` (removed afterwards); a written module from `<out>/proposed_tests/`, an existing test by
+its node id or title; a failure rejects the candidate with the runner's tail. Accepted candidates are written as
+`suggestions.json` with `authored_by: "codex"` and the agent's category and rationale, so
 `review_start`, the widget, the elicitation forms and `acceptCandidate` work unchanged; `append` keeps an earlier
 host-authored list and continues the ids, a plain call replaces it and clears stale decisions. The hidden-test header
 says whether the test was lifted or written by the agent and validated at the base revision.
@@ -193,8 +186,8 @@ says whether the test was lifted or written by the agent and validated at the ba
 `mineWithModel` is the second author of host-shaped candidates: the same skill, run by IntentOS in a separate
 read-only Codex thread with a model the user names, so the model that finds the rules is not the one driving the
 session or later implementing under them. It builds one prompt from the skill text (frontmatter stripped, a preamble
-that maps the MCP steps onto the thread: the raw list from `loadMined` is inlined in place of `mined`, the structured
-answer replaces `propose`, there is no `review_start`) and runs it through `LiveCodexEngine.plan`; the engine now
+that maps the MCP steps onto the thread: the rendered digest from `loadDigest` is inlined in place of `evidence`,
+the structured answer replaces `propose`, there is no `review_start`) and runs it through `LiveCodexEngine.plan`; the engine now
 takes `{model, reasoningEffort}` overrides and `plan` resumes a thread by id. The answer is structured output under
 `MINE_SCHEMA`: every field present, null or an empty list where it does not apply, because strict schemas allow no
 optional keys; `normalizeProposal` strips those to the shape `ProposalSchema` takes, and `ingestProposals` runs
@@ -206,6 +199,24 @@ summary to `result.json`; `ReplayEngine` feeds saved answers back through the ch
 fake engine through `McpOptions.mineEngine`); `status` reports the phase (`mining`, `checking`), the model and the
 counts, and `review_start`, `publicState` and the widget header carry `author`. The model is required (`model`, else
 `INTENTOS_MINING_MODEL`): the server cannot know which model the host runs, so it never defaults to one.
+
+## TypeScript repositories
+
+The same pipeline runs on a TypeScript repository (`policy.language: typescript`). The probe reads `package.json`
+(name, scripts, vitest or jest, package manager), `tsconfig.json` and the source/test directories, and the draft
+policy's commands use `{node}` and `{node_modules}` placeholders with `env` (`CI=1`). `src/knowledge/ts_extract.ts`
+(TypeScript compiler API) adds modules, functions, classes, imports and `it`/`test` titles to the same world model
+the Python indexer fills. The verifier copies hidden tests as `.test.ts` files beside the snapshot and runs them
+through the repository's own vitest/jest with a wrapper config (`writeVitestWrapperConfig`) that includes only the
+hidden directory and allows `.only`; the snapshot links the repository's `node_modules`, and `isToolingPath` keeps
+`node_modules` and `.intentos_hidden` out of dirtiness, scope and diff checks. `src/verification/ts_rules.ts`
+evaluates the same architecture-rule kinds (`forbidden_import` by specifier or resolved repository path,
+`forbidden_call` including `new`, `required_import`, `forbidden_names`) over the files the rules target; the Python
+and TypeScript checkers both run when a change touches both languages. Acceptance tests (`intentos acceptance`) are
+written as vitest modules and judged at base the same way as pytest modules. `fixtures/ts_ledger` (a small ledger
+with `src/domain`, `src/db`, `src/api`) and `policies/ts_ledger.yaml` are the TypeScript counterpart of the Python
+fixture; `tests/integration/typescript.test.ts` runs the offline pipeline on it, good patch to `REVIEW_READY` and bad
+patch to `FAILED` on an architecture rule and a failing hidden task test. Docker-mode verification stays Python-only.
 
 ## Architectural surprise (review signals)
 

@@ -88,6 +88,14 @@ else `.intentos/venv`), `{snapshot}` the read-only copy of the worktree, `{hidde
 copied next to it, `{junit}` the JUnit file the verifier parses. Tests must import the code through `pythonpath`,
 never through an editable install of your clone, because the snapshot is what is being judged.
 
+A TypeScript repository sets `language: typescript` and uses `{node}` (the node binary) and `{node_modules}` (the
+repository's `node_modules`, linked into the snapshot) instead; a command may also carry `env` (`CI: "1"`).
+`policies/ts_ledger.yaml` shows the shape: `test_project` runs the repository's vitest with `--root {snapshot}`,
+`hidden_task_tests` and `hidden_invariants` run the `.test.ts` files under `{hidden_tests_dir}` through a wrapper
+config IntentOS writes (it includes only the hidden directory and allows `.only`), and `architecture_rules` and
+`scope_check` are the same builtins, evaluated with the TypeScript compiler API. Hidden tests import production code
+relative to the hidden directory (`../../src/domain/money.ts`).
+
 Blocking commands that fail, time out, fail to start, or report zero collected tests become blocking findings; a
 consistency guard makes sure a non-passing blocking command can never be silently ignored.
 
@@ -180,29 +188,21 @@ MCP `propose` tool, or `mine` runs the same skill with a model other than the ho
 
 1. Run `intentos onboard <repo>`: it drafts identity, paths, scope tags and commands, creates the venv, runs the
    suite once and indexes. The draft is explicit about being a draft.
-2. Run `intentos suggest <repo> --write-adrs` to get candidates instead of a blank page. It mines commits whose
-   message records a fix or a prohibition, tests whose names read like rules (`test_subtraction_never_goes_negative`),
-   must/never/only sentences in documents with their heading, existing ADRs with their lineage, import relationships
-   that only ever go one way between layers (proposed as the rule that keeps it so), directories that look frozen,
-   and changelog deprecations. Each candidate carries its evidence, a confidence, a paste-ready block with
-   `approved_by: TODO`, and, for rule-like tests, a hidden-test draft lifted from the existing test. Candidates that
-   have no document of their own get an ADR draft with `Status: Proposed`; `--with-codex` lets Codex write the ADR
-   prose from the evidence in a read-only thread, and any ADR that cites evidence it was not given is dropped.
-   Candidates are ordered by a business-relevance score computed from the repository itself (how much of the
-   candidate is in the repository's own vocabulary rather than library or tooling words, whether it is shaped like a
-   property or like a fix, how many independent sources corroborate its cluster, how central the code it touches
-   is, how long its test has existed). `--classify` adds a model pass over the top candidates: Codex labels each as
-   business rule, robustness rule, implementation detail, environment, tooling or duplicate, keeps or sets aside,
-   rewrites the statement as one testable sentence, and names its cluster. The model cannot add candidates, its
-   rewrite is discarded if it uses an identifier the evidence does not contain, and set-aside candidates stay in
-   the review document under a rescue heading. `intentos review <repo>` then opens a local page that walks the
-   candidates one by one: approving writes the block into the policy with a real id and your name, writes the hidden
-   test file, and adds a section to `docs/intentos-policy.md` in the repository when nothing else can be cited;
-   rejecting records why. Finishing derives accept and reject terms from your decisions and the next run ranks with
-   them. The same review runs inside an MCP host as a widget (`intentos mcp`, tool `review_start`); the approval
-   tools are hidden from the model and need a token only the widget receives. Nothing in the suggestion files has
-   authority: the review page is where a person turns a candidate into policy, and the policy file is still the only
-   thing that binds.
+2. Run `intentos evidence <repo>` to start from facts instead of a blank page. It prints the digest a model reads
+   before stating rules: every test with its first assertion and the production files it exercises, every commit
+   that touched code with the tests it added, must/never/only sentences in documents with their heading and line,
+   ADRs with their lineage, import edges between directories, directories nobody has touched in a long time, and
+   changelog deprecations. Nothing in it is ranked or classified: a rule is a judgement, and IntentOS leaves it to a
+   model (`intentos mine <repo> --model <slug>`, or Codex itself with the skill) or to you. What the model proposes
+   goes through `propose`: every reference is checked against the repository, an invariant must come with a test
+   (an existing one, lifted, or one the model wrote) and that test is run at the current revision; a failing test,
+   an invented reference or an untested invariant is rejected with the reason. `intentos review <repo>` then opens a
+   local page that walks the accepted candidates one by one: approving writes the block into the policy with a real
+   id and your name, writes the hidden test file, and adds a section to `docs/intentos-policy.md` in the repository
+   when nothing else can be cited; rejecting records why. The same review runs inside an MCP host as a widget
+   (`intentos mcp`, tool `review_start`); the approval tools are hidden from the model and need a token only the
+   widget receives. Nothing in the candidate files has authority: the review page is where a person turns a
+   candidate into policy, and the policy file is still the only thing that binds.
 3. Decide what must never change and write it down as Markdown in the repository, one heading per rule (ADRs,
    `docs/business-policy.md`). The indexer needs headings to bind. Accepted ADR drafts count: change their status.
 4. Turn each rule into an invariant or an architecture rule with `sources` pointing at those headings and

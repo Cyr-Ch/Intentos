@@ -4,8 +4,8 @@ import { LiveCodexEngine, type CodingEngine, type ImplementResult, type PlanRequ
 import { ensureHome, resolvePaths } from "./config.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 import { policyIdFor, runProbe } from "./onboard.ts";
-import { EVIDENCE_TYPES, ingestProposals, loadMined, minedRows, SKILL_NAME, skillText, type Author, type ProposeResult } from "./propose.ts";
-import type { Candidate, MinerOutput } from "./suggest.ts";
+import { EVIDENCE_TYPES, ingestProposals, loadDigest, SKILL_NAME, skillText, type Author, type ProposeResult } from "./propose.ts";
+import { renderDigest, type Candidate, type EvidenceDigest } from "./candidates.ts";
 import { isGitRepo } from "./util/git.ts";
 import { redact } from "./util/redact.ts";
 import { appendRoleSkills, captureAgentSnapshot } from "./agent-skills.ts";
@@ -77,7 +77,7 @@ export const MINE_SCHEMA: Record<string, unknown> = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["kind", "title", "statement", "category", "rationale", "confidence", "relevance", "evidence", "applies_to_paths", "test", "rule", "sources", "from_mined"],
+        required: ["kind", "title", "statement", "category", "rationale", "confidence", "relevance", "evidence", "applies_to_paths", "test", "rule", "sources"],
         properties: {
           kind: { type: "string", enum: ["invariant", "architecture_rule", "frozen_paths", "decision"] },
           title: { type: "string" },
@@ -91,7 +91,6 @@ export const MINE_SCHEMA: Record<string, unknown> = {
           test: { type: "object", additionalProperties: false, required: ["existing", "source"], properties: { existing: { type: ["string", "null"] }, source: { type: ["string", "null"] } } },
           rule: { type: "object", additionalProperties: false, required: ["kind", "paths", "forbidden_modules"], properties: { kind: { type: ["string", "null"] }, paths: { type: "array", items: { type: "string" } }, forbidden_modules: { type: "array", items: { type: "string" } } } },
           sources: { type: "array", items: { type: "object", additionalProperties: false, required: ["path", "heading"], properties: { path: { type: "string" }, heading: { type: ["string", "null"] } } } },
-          from_mined: { type: ["string", "null"] },
         },
       },
     },
@@ -125,25 +124,24 @@ export function normalizeProposal(raw: Record<string, unknown>): Record<string, 
   return out;
 }
 
-export function buildMiningPrompt(a: { repoPath: string; policyId: string; mined: MinerOutput; skill: string }): string {
-  const rows = minedRows(a.mined);
+export function buildMiningPrompt(a: { repoPath: string; policyId: string; digest: EvidenceDigest; skill: string }): string {
   const body = a.skill.replace(/^---[\s\S]*?\n---\n/, "").trim();
   const L: string[] = [];
   L.push("# IntentOS independent miner");
   L.push("");
   L.push(`You are the independent miner for the repository at ${a.repoPath} (IntentOS policy id \`${a.policyId}\`): a model other than the one driving the user's session finds the business rules, so that one model does not both write the rules and later implement changes under them. Follow the ${SKILL_NAME} skill below. You are in a read-only sandbox in the repository: read files, run git log and git show, grep, read the tests and the production code; do not try to modify anything.`);
   L.push("");
-  L.push("Differences from the skill as written for an MCP host: there are no MCP tools here. The repository is already onboarded. The deterministic miner's raw list is included below in place of a `mined` call (cite an entry with `from_mined` to inherit its evidence and test). Instead of calling `propose`, return the candidates as your final answer in the required JSON shape; IntentOS then checks every reference, lifts or runs every test at the current revision, and may send the rejected candidates back to you once for a fix. There is no review_start to call: the reviewer takes over after the check.");
+  L.push("Differences from the skill as written for an MCP host: there are no MCP tools here. The repository is already onboarded. The evidence digest is included below in place of an `evidence` call. Instead of calling `propose`, return the candidates as your final answer in the required JSON shape; IntentOS then checks every reference, lifts or runs every test at the current revision, and may send the rejected candidates back to you once for a fix. There is no review_start to call: the reviewer takes over after the check.");
   L.push("");
-  L.push('Output: a JSON object {"candidates": [...]} and nothing else. Every candidate carries every field; use null for a field that does not apply (`test.existing`, `test.source`, `rule.kind`, `from_mined`, `sources[].heading`) and an empty list for `applies_to_paths`, `rule.paths`, `rule.forbidden_modules` and `sources` when they do not apply. `rule.kind` is `forbidden_import` or `frozen_paths`. `test.source` is a complete pytest module as the skill describes.');
+  L.push(`Output: a JSON object {"candidates": [...]} and nothing else. Every candidate carries every field; use null for a field that does not apply (\`test.existing\`, \`test.source\`, \`rule.kind\`, \`sources[].heading\`) and an empty list for \`applies_to_paths\`, \`rule.paths\`, \`rule.forbidden_modules\` and \`sources\` when they do not apply. \`rule.kind\` is \`forbidden_import\` or \`frozen_paths\`. \`test.source\` is a complete ${a.digest.language === "typescript" ? "vitest/jest" : "pytest"} module as the skill describes.`);
   L.push("");
   L.push("## The skill");
   L.push("");
   L.push(body);
   L.push("");
-  L.push(`## The deterministic miner's raw list (${rows.length} entries at ${a.mined.head.slice(0, 7)}; noise included, select and restate)`);
+  L.push(`## The evidence digest (facts, not rules: select, read the code behind them, and state what holds)`);
   L.push("");
-  for (const r of rows) L.push(`- ${r.id} [${r.kind}, ${Number(r.score).toFixed(2)}] ${r.title}: ${r.statement}${r.test ? ` (test ${r.test})` : ""}${r.evidence.length ? `; evidence: ${r.evidence.map((e) => `${e.type} ${e.ref}`).join(", ")}` : ""}`);
+  L.push(renderDigest(a.digest));
   return redact(L.join("\n"));
 }
 
@@ -213,13 +211,13 @@ export async function mineWithModel(repoInput: string, opts: MineOptions = {}, l
   if (!opts.engine && model && agentConfig.roles.implementer.model === model) throw new Error("miner model must differ from the implementer model");
   const engine = opts.engine ?? new LiveCodexEngine({ model, reasoningEffort: reasoning });
   const maxRounds = Math.max(1, Math.min(opts.rounds ?? 2, 5));
-  const mined = loadMined(repoPath, { policyId, outDir });
-  log(`raw list: ${mined.candidates.length} entries at ${mined.head.slice(0, 7)}; asking ${model ?? engine.name} to mine the rules (round 1 of at most ${maxRounds})…`);
+  const digest = loadDigest(repoPath, { policyId, outDir });
+  log(`evidence digest: ${digest.counts.tests ?? 0} tests, ${digest.counts.commits ?? 0} commits, ${digest.counts.documents ?? 0} document sentences at ${digest.head.slice(0, 7)}; asking ${model ?? engine.name} to mine the rules (round 1 of at most ${maxRounds})…`);
 
   let threadId: string | null = null;
   let resolvedModel: string | null = model;
   let engineName = engine.name;
-  let prompt = appendRoleSkills(buildMiningPrompt({ repoPath, policyId, mined, skill: skillText() }), role);
+  let prompt = appendRoleSkills(buildMiningPrompt({ repoPath, policyId, digest, skill: skillText() }), role);
   const rounds: MineRound[] = [];
   const accepted: ProposeResult["accepted"] = [];
   const rejectedAll: ProposeResult["rejected"] = [];

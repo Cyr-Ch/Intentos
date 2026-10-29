@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { setupFixtureEnv, type TestEnv } from "../helpers/fixture.ts";
-import { suggestPolicy, type Candidate } from "../../src/suggest.ts";
+import type { Candidate } from "../../src/candidates.ts";
+import { seedCandidates } from "../helpers/seed_candidates.ts";
 import { loadReviewState, startReviewServer, type FinishResult, type ReviewServer, type ReviewState } from "../../src/review.ts";
 import { loadPolicyFile } from "../../src/knowledge/policy.ts";
 import { PROJECT_ROOT } from "../../src/config.ts";
@@ -30,10 +31,10 @@ decisions: []
 
 beforeAll(async () => {
   env = setupFixtureEnv();
-  await suggestPolicy(env.repo, { writeAdrs: false, withCodex: false, outDir: outDir() });
   policyFile = path.join(env.home, "policies", "startup_billing.yaml");
   fs.mkdirSync(path.dirname(policyFile), { recursive: true });
   fs.writeFileSync(policyFile, MINIMAL_POLICY);
+  await seedCandidates(env.repo, outDir(), policyFile);
   hiddenRoot = path.join(env.home, "hidden_tests");
   state = await loadReviewState(env.repo, { outDir: outDir(), policyFile, hiddenTestsRoot: hiddenRoot, by: "tester", store: env.store });
   server = await startReviewServer(state, { port: 0, open: false });
@@ -68,6 +69,8 @@ describe("intentos review", () => {
     expect(body.candidates.length).toBeGreaterThan(10);
     expect(body.decisions).toEqual([]);
     expect(body.candidates[0]).toHaveProperty("hidden_test");
+    expect(body.candidates[0]).toHaveProperty("category");
+    expect(body.candidates[0]).toHaveProperty("rationale");
   });
 
   it("approving an invariant writes the policy block, the hidden test and a document section", async () => {
@@ -119,7 +122,6 @@ describe("intentos review", () => {
   it("folds related candidates into one invariant with several hidden tests", async () => {
     const declined = find(/declined payment leaves entitlements unchanged/i);
     const grants = find(/apply upgrade grants entitlements after payment/i);
-    expect(declined.cluster_members).toContain(grants.id); // the ranker put them in one cluster
     const { status, body } = await api("/api/decide", { method: "POST", body: JSON.stringify({ id: declined.id, action: "accept", statement: "Entitlements change only after a payment is confirmed; a declined payment leaves them unchanged.", merge_ids: [grants.id] }) });
     expect(status, JSON.stringify(body)).toBe(200);
     const d = body.decision;
@@ -155,15 +157,14 @@ describe("intentos review", () => {
     expect(decisions.some((d) => d.id === currency.id && d.action === "reject")).toBe(true);
   });
 
-  it("finishing records feedback, re-indexes and stops the server", async () => {
+  it("finishing re-indexes and stops the server", async () => {
     const { status, body } = await api("/api/finish", { method: "POST", body: "{}" });
     expect(status).toBe(200);
     const f = body.finished as FinishResult;
     expect(f).toMatchObject({ accepted: 5, merged: 1, rejected: 1, skipped: 1 });
+    expect(f.pending).toBe(state.candidates.length - 8);
     expect(f.assigned).toEqual(expect.arrayContaining([expect.stringMatching(/^INV-001 /), expect.stringMatching(/^ARCH-001 /), expect.stringMatching(/^DEC-001 /)]));
-    expect(f.feedback!.accepted_ids.length).toBeGreaterThanOrEqual(6); // folded candidates count as accepted: their hidden tests are in the policy
-    expect(f.feedback!.accept_tokens).toEqual(expect.arrayContaining(["cancelled", "discount"]));
-    expect(fs.existsSync(state.feedback_file)).toBe(true);
+    expect(fs.existsSync(f.decisions_file)).toBe(true);
     expect(f.index).not.toBeNull();
     expect(f.index!.unresolved_sources).toEqual([]); // the new docs/intentos-policy.md section and the existing heading both bind
     const result = await server.done;
@@ -174,6 +175,7 @@ describe("intentos review", () => {
   it("is wired into the CLI", () => {
     const res = spawnSync("node", ["--disable-warning=ExperimentalWarning", path.join(PROJECT_ROOT, "bin", "intentos.js"), "review", "--help"], { encoding: "utf8" });
     expect(res.status).toBe(0);
-    for (const flag of ["--by <name>", "--no-open", "--include-filtered", "--policy-file <file>"]) expect(res.stdout).toContain(flag);
+    for (const flag of ["--by <name>", "--no-open", "--policy-file <file>"]) expect(res.stdout).toContain(flag);
+    expect(res.stdout).not.toContain("--include-filtered");
   });
 });

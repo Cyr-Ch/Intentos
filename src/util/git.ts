@@ -39,8 +39,15 @@ export function currentBranch(dir: string): string | null {
   return res.status === 0 ? res.stdout.trim() : null;
 }
 
+/**
+ * Paths IntentOS never treats as part of the working tree: `node_modules`, which it links into worktrees and
+ * snapshots of TypeScript repositories (a symlink that `node_modules/` in .gitignore does not cover), and the
+ * hidden-test staging directory.
+ */
+export const isToolingPath = (rel: string): boolean => rel === "node_modules" || rel.startsWith("node_modules/") || rel === ".intentos_hidden" || rel.startsWith(".intentos_hidden/");
+
 export function isDirty(dir: string): boolean {
-  return git(dir, ["status", "--porcelain"]).stdout.trim().length > 0;
+  return git(dir, ["status", "--porcelain", "-z"]).stdout.split("\0").filter(Boolean).some((line) => !isToolingPath(line.slice(3)));
 }
 
 export function trackedFiles(dir: string): string[] {
@@ -51,7 +58,7 @@ export function trackedFiles(dir: string): string[] {
 export function workingTreeFiles(dir: string): string[] {
   const out = git(dir, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]).stdout.split("\0").filter(Boolean);
   // ls-files may list deleted-but-tracked files; keep only existing ones.
-  return [...new Set(out)].filter((f) => fs.existsSync(path.join(dir, f)));
+  return [...new Set(out)].filter((f) => !isToolingPath(f) && fs.existsSync(path.join(dir, f)));
 }
 
 export interface ChangedFile {
@@ -80,13 +87,13 @@ export function changedFiles(dir: string, baseSha: string): ChangedFile[] {
   }
   const untracked = git(dir, ["ls-files", "-z", "--others", "--exclude-standard"]).stdout.split("\0").filter(Boolean);
   for (const p of untracked) if (!result.has(p)) result.set(p, { path: p, status: "untracked" });
-  return [...result.values()].sort((a, b) => a.path.localeCompare(b.path));
+  return [...result.values()].filter((c) => !isToolingPath(c.path)).sort((a, b) => a.path.localeCompare(b.path));
 }
 
 /** Unified diff of the working tree vs base, including untracked files. */
 export function diffAgainstBase(dir: string, baseSha: string): string {
   // Stage untracked files in the index temporarily (intent-to-add) so they appear in the diff.
-  const untracked = git(dir, ["ls-files", "-z", "--others", "--exclude-standard"]).stdout.split("\0").filter(Boolean);
+  const untracked = git(dir, ["ls-files", "-z", "--others", "--exclude-standard"]).stdout.split("\0").filter(Boolean).filter((p) => !isToolingPath(p));
   if (untracked.length) git(dir, ["add", "-N", "--", ...untracked]);
   const diff = git(dir, ["diff", "--no-color", baseSha, "--"]).stdout;
   if (untracked.length) git(dir, ["reset", "-q", "--", ...untracked], { allowFail: true });

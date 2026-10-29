@@ -11,6 +11,7 @@ import { loadIndexedRepo } from "./knowledge/repo.ts";
 import { buildEvidencePack, type EvidencePack } from "./knowledge/retrieval.ts";
 import type { KnowledgeStore } from "./knowledge/storage.ts";
 import { repoInterpreter } from "./knowledge/venv.ts";
+import { isTsPolicy, jsRunner, jsTestInvocation, type JsRunnerKind } from "./knowledge/js.ts";
 import { loadBenchmarkTasks, type BenchmarkTask } from "./orchestrator/tasks.ts";
 import { parseJunit, type JunitCase } from "./verification/junit.ts";
 import { headSha, isDirty, isGitRepo } from "./util/git.ts";
@@ -22,7 +23,7 @@ import { appendRoleSkills, captureAgentSnapshot } from "./agent-skills.ts";
  * Acceptance tests for a ticket, written before anyone implements it, by a model other than the one that will.
  *
  * The side thread (read-only, in the repository) gets the ticket and the evidence pack and answers with pytest
- * modules as structured output. IntentOS trusts none of it until it has run: every module must be collected, and for
+ * modules (vitest/jest modules for a TypeScript repository) as structured output. IntentOS trusts none of it until it has run: every module must be collected, and for
  * a ticket that asks for new behaviour at least one test per module must fail at the current revision (a test that
  * passes before the change proves nothing about the change); for a ticket whose correct answer is "already done" every
  * test must pass now. Rejections go back to the same thread once. What survives is written under
@@ -116,9 +117,15 @@ export const ACCEPTANCE_SCHEMA: Record<string, unknown> = {
   },
 };
 
-const FILE_NAME = /^test_[a-z0-9_]+\.py$/;
+const PY_FILE_NAME = /^test_[a-z0-9_]+\.py$/;
+const TS_FILE_NAME = /^[a-z0-9_]+\.test\.ts$/;
+export type AcceptanceLanguage = "python" | "typescript";
+const fileNameRe = (language: AcceptanceLanguage) => (language === "typescript" ? TS_FILE_NAME : PY_FILE_NAME);
+/** Hidden task tests run from `<snapshot>/.intentos_hidden/task/`, two levels below the repository root. */
+const HIDDEN_TASK_DEPTH = "../../";
 
-export function buildAcceptancePrompt(a: { repoPath: string; policyId: string; taskId: string; ticket: string; expect: Expectation; pack: EvidencePack | null; pythonpath: string }): string {
+export function buildAcceptancePrompt(a: { repoPath: string; policyId: string; taskId: string; ticket: string; expect: Expectation; pack: EvidencePack | null; pythonpath: string; language?: AcceptanceLanguage; runner?: JsRunnerKind | null }): string {
+  const ts = a.language === "typescript";
   const L: string[] = [];
   L.push("# IntentOS acceptance tests");
   L.push("");
@@ -137,11 +144,19 @@ export function buildAcceptancePrompt(a: { repoPath: string; policyId: string; t
     L.push("- The ticket describes behaviour that the repository may already have. Write tests that assert exactly that behaviour; IntentOS runs them now and rejects any that fail, because the right answer to this ticket may be that nothing needs to change.");
   }
   L.push("- Assert behaviour through interfaces the ticket names or that already exist (the entry points a user would call), never through implementation details, so that any compliant implementation passes. For a new function, method or parameter, use the name only when the ticket itself names it; when it does not, prefer reaching the behaviour through an existing entry point, and say in `notes` which name you had to assume.");
-  L.push("- Self-contained pytest modules: they run from a directory outside the repository with the package importable, so they cannot use fixtures from the repository's conftest.py; define what they need. No network, no files written outside tempfile, no sleeping.");
-  L.push("- Follow the repository's own test style (imports, how objects are built, tolerances). Keep each module focused; two or three modules at most.");
-  L.push(`- File names: \`test_<something>.py\`, a plain basename. The modules will be run with \`python -m pytest -o pythonpath=${a.pythonpath}\` from the repository root.`);
-  L.push("");
-  L.push('Output: a JSON object {"files": [{"path": "test_....py", "content": "<full module>", "covers": ["<one line per thing the module checks>"]}], "notes": "<assumptions, names you had to invent, anything the ticket leaves open>"} and nothing else.');
+  if (ts) {
+    L.push(`- Self-contained ${a.runner ?? "vitest"} modules (\`import { describe, it, expect } from "${a.runner ?? "vitest"}"\`). They run from \`.intentos_hidden/task/\` two levels below the repository root, so import production code with relative paths starting \`${HIDDEN_TASK_DEPTH}\` (for example \`${HIDDEN_TASK_DEPTH}src/domain/money.ts\`, with the same extension style the repository's own tests use). They cannot use the repository's setup files; define what they need. No network, no files written outside os.tmpdir(), no sleeping.`);
+    L.push("- Follow the repository's own test style (imports, how objects are built, tolerances). Keep each module focused; two or three modules at most.");
+    L.push(`- File names: \`<something>.test.ts\`, a plain lowercase basename. The modules will be run with the repository's ${a.runner ?? "vitest"} from the repository root.`);
+    L.push("");
+    L.push('Output: a JSON object {"files": [{"path": "<something>.test.ts", "content": "<full module>", "covers": ["<one line per thing the module checks>"]}], "notes": "<assumptions, names you had to invent, anything the ticket leaves open>"} and nothing else.');
+  } else {
+    L.push("- Self-contained pytest modules: they run from a directory outside the repository with the package importable, so they cannot use fixtures from the repository's conftest.py; define what they need. No network, no files written outside tempfile, no sleeping.");
+    L.push("- Follow the repository's own test style (imports, how objects are built, tolerances). Keep each module focused; two or three modules at most.");
+    L.push(`- File names: \`test_<something>.py\`, a plain basename. The modules will be run with \`python -m pytest -o pythonpath=${a.pythonpath}\` from the repository root.`);
+    L.push("");
+    L.push('Output: a JSON object {"files": [{"path": "test_....py", "content": "<full module>", "covers": ["<one line per thing the module checks>"]}], "notes": "<assumptions, names you had to invent, anything the ticket leaves open>"} and nothing else.');
+  }
   if (a.pack) {
     L.push("");
     L.push("## Context from the index (starting points; read the code to confirm)");
@@ -183,13 +198,43 @@ function parseAnswer(text: string): { files: Array<{ path: string; content: stri
 
 /** `-o pythonpath=...` from the policy's project test command, else `.`. */
 export function pythonpathFor(policy: Policy): string {
-  const argv = policy.commands.pytest_project?.argv ?? [];
+  const argv = policy.commands.pytest_project?.argv ?? policy.commands.test_project?.argv ?? [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a.startsWith("pythonpath=")) return a.slice("pythonpath=".length);
     if (a === "-o" && argv[i + 1]?.startsWith("pythonpath=")) return argv[i + 1]!.slice("pythonpath=".length);
   }
   return ".";
+}
+
+/**
+ * Run the candidate vitest/jest modules at the repository's current revision. They are copied to
+ * `<repo>/.intentos_hidden/task/` (the directory the verifier later runs them from, so relative imports match), run
+ * with the repository's own runner through a wrapper config, and removed again.
+ */
+export function runJsAtBase(repoPath: string, dir: string, prefer: JsRunnerKind | null): { cases: JunitCase[]; collectionErrors: Map<string, string>; output: string } {
+  const runner = jsRunner(repoPath, prefer);
+  if (!runner) return { cases: [], collectionErrors: new Map(), output: `no vitest or jest in ${path.join(repoPath, "node_modules")}; install the repository's dependencies first` };
+  const hidden = path.join(repoPath, ".intentos_hidden");
+  const target = path.join(hidden, "task");
+  const junit = path.join(dir, "junit.xml");
+  const files = fs.readdirSync(dir).filter((f) => TS_FILE_NAME.test(f));
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(target, { recursive: true });
+  try {
+    for (const f of files) fs.copyFileSync(path.join(dir, f), path.join(target, f));
+    const inv = jsTestInvocation(runner, { root: repoPath, file: target, junit });
+    const res = spawnSync(inv.argv[0]!, inv.argv.slice(1), { cwd: repoPath, encoding: "utf8", timeout: 600_000, env: { ...process.env, ...inv.env, CI: "1" } });
+    const output = `${res.stdout ?? ""}\n${res.stderr ?? ""}`;
+    const cases = (fs.existsSync(junit) ? parseJunit(fs.readFileSync(junit, "utf8")) : []).map((c) => ({ ...c, file: c.file ?? (TS_FILE_NAME.test(path.basename(c.classname)) ? path.basename(c.classname) : null) }));
+    const collectionErrors = new Map<string, string>();
+    // vitest reports a module that failed to import as one errored case named after the file, with no test name of its own
+    for (const c of cases) if (c.status === "error" && (!c.name || c.name === path.basename(c.classname) || /^Failed to (load|import)/i.test(c.message ?? ""))) collectionErrors.set(path.basename(c.classname), (c.message ?? "collection error").slice(0, 300));
+    for (const m of output.matchAll(/FAIL\s+\S*?([a-z0-9_]+\.test\.ts)\s*\[[^\]]*\]/g)) if (!collectionErrors.has(m[1]!)) collectionErrors.set(m[1]!, "the module failed to load");
+    return { cases, collectionErrors, output };
+  } finally {
+    fs.rmSync(hidden, { recursive: true, force: true });
+  }
 }
 
 /** Run the candidate modules at the repository's current revision and report every test's status. */
@@ -211,10 +256,10 @@ export function runAtBase(repoPath: string, dir: string, python: string, pythonp
   return { cases, collectionErrors, output };
 }
 
-/** The module a JUnit case belongs to, as a basename ending in .py. */
+/** The module a JUnit case belongs to, as a basename ending in .py (or the test file's basename for vitest/jest). */
 function moduleFile(c: JunitCase): string {
   const base = path.basename(c.file ?? c.name);
-  return base.endsWith(".py") ? base : `${base}.py`;
+  return base.endsWith(".py") || TS_FILE_NAME.test(base) ? base : `${base}.py`;
 }
 
 function fileOf(c: JunitCase, dir: string): string {
@@ -226,7 +271,8 @@ function fileOf(c: JunitCase, dir: string): string {
 }
 
 /** Judge the modules at base: which are accepted, which rejected and why. */
-export function judgeModules(files: Array<{ path: string; content: string }>, run: ReturnType<typeof runAtBase>, dir: string, expect: Expectation): { accepted: string[]; rejected: RejectedFile[]; statuses: TestStatus[] } {
+export function judgeModules(files: Array<{ path: string; content: string }>, run: ReturnType<typeof runAtBase>, dir: string, expect: Expectation, language: AcceptanceLanguage = "python"): { accepted: string[]; rejected: RejectedFile[]; statuses: TestStatus[] } {
+  const fileName = fileNameRe(language);
   const statuses: TestStatus[] = [];
   const byFile = new Map<string, JunitCase[]>();
   for (const c of run.cases) {
@@ -238,7 +284,7 @@ export function judgeModules(files: Array<{ path: string; content: string }>, ru
   const rejected: RejectedFile[] = [];
   for (const f of files) {
     const reasons: string[] = [];
-    if (!FILE_NAME.test(f.path)) reasons.push("file name must be a plain basename matching test_<name>.py");
+    if (!fileName.test(f.path)) reasons.push(language === "typescript" ? "file name must be a plain lowercase basename matching <name>.test.ts" : "file name must be a plain basename matching test_<name>.py");
     if (!f.content.trim()) reasons.push("empty module");
     const err = run.collectionErrors.get(f.path);
     const cases = (byFile.get(f.path) ?? []).filter((c) => !(c.status === "error" && (c.name.endsWith(".py") || !c.classname)));
@@ -255,7 +301,13 @@ export function judgeModules(files: Array<{ path: string; content: string }>, ru
   return { accepted, rejected, statuses };
 }
 
-function header(a: { taskId: string; ticket: string; model: string | null; engine: string; threadId: string | null; head: string; expect: Expectation; statuses: TestStatus[]; covers: string[] }): string {
+function header(a: { taskId: string; ticket: string; model: string | null; engine: string; threadId: string | null; head: string; expect: Expectation; statuses: TestStatus[]; covers: string[]; language?: AcceptanceLanguage }): string {
+  if (a.language === "typescript") {
+    const L = [`/**`, ` * Acceptance tests for ${a.taskId}, written before implementation by ${a.model ?? a.engine} (IntentOS acceptance${a.threadId ? `, thread ${a.threadId}` : ""}).`, ` *`, ` * Base revision ${a.head.slice(0, 10)}, ${nowIso()}. At that revision: ${a.statuses.map((s) => `${s.test} ${s.status}`).join(", ") || "no tests recorded"}.`, ` * Expectation: ${a.expect === "fail" ? "the requested behaviour does not exist yet; at least one test fails now and all pass once implemented" : "the behaviour already exists; all tests pass now"}.`, ` * Hidden from the implementer. Assert behaviour through public entry points so that any compliant implementation passes.`];
+    if (a.covers.length) L.push(` *`, ` * Covers:`, ...a.covers.map((c) => ` * - ${c}`));
+    L.push(` *`, ` * Ticket:`, ...a.ticket.trim().split("\n").map((l) => ` *     ${l.replace(/\*\//g, "* /")}`), ` */`, "");
+    return L.join("\n");
+  }
   const L = [`"""Acceptance tests for ${a.taskId}, written before implementation by ${a.model ?? a.engine} (IntentOS acceptance${a.threadId ? `, thread ${a.threadId}` : ""}).`, "", `Base revision ${a.head.slice(0, 10)}, ${nowIso()}. At that revision: ${a.statuses.map((s) => `${s.test} ${s.status}`).join(", ") || "no tests recorded"}.`, `Expectation: ${a.expect === "fail" ? "the requested behaviour does not exist yet; at least one test fails now and all pass once implemented" : "the behaviour already exists; all tests pass now"}.`, "Hidden from the implementer. Assert behaviour through public entry points so that any compliant implementation passes.", ""];
   if (a.covers.length) L.push("Covers:", ...a.covers.map((c) => `- ${c}`), "");
   L.push("Ticket:", ...a.ticket.trim().split("\n").map((l) => `    ${l}`), '"""', "");
@@ -305,10 +357,14 @@ export async function writeAcceptanceTests(repoInput: string, ticket: string, op
       log(`no evidence pack (${(e as Error).message.split("\n")[0]}); the model reads the repository without it`);
     }
   }
+  const language: AcceptanceLanguage = isTsPolicy(policy) ? "typescript" : "python";
+  const fileName = fileNameRe(language);
   const python = repoInterpreter(repoPath);
   const pythonpath = pythonpathFor(policy);
+  const runnerKind: JsRunnerKind | null = language === "typescript" ? (jsRunner(repoPath)?.kind ?? null) : null;
+  if (language === "typescript" && !runnerKind) throw new Error(`no vitest or jest in ${path.join(repoPath, "node_modules")}; install the repository's dependencies before writing acceptance tests`);
   const maxRounds = Math.max(1, Math.min(opts.rounds ?? 2, 4));
-  let prompt = appendRoleSkills(buildAcceptancePrompt({ repoPath, policyId, taskId: opts.taskId, ticket, expect, pack, pythonpath }), role);
+  let prompt = appendRoleSkills(buildAcceptancePrompt({ repoPath, policyId, taskId: opts.taskId, ticket, expect, pack, pythonpath, language, runner: runnerKind }), role);
   let threadId: string | null = null;
   let resolvedModel: string | null = model;
   let engineName = engine.name;
@@ -334,10 +390,10 @@ export async function writeAcceptanceTests(repoInput: string, ticket: string, op
     }
     const roundDir = path.join(outDir, `round-${round}`, "tests");
     fs.mkdirSync(roundDir, { recursive: true });
-    for (const f of answer.files) if (FILE_NAME.test(f.path)) fs.writeFileSync(path.join(roundDir, f.path), f.content);
-    const run = runAtBase(repoPath, roundDir, python, pythonpath);
-    fs.writeFileSync(path.join(outDir, `round-${round}`, "pytest.log"), run.output);
-    const verdict = judgeModules(answer.files, run, roundDir, expect);
+    for (const f of answer.files) if (fileName.test(f.path)) fs.writeFileSync(path.join(roundDir, f.path), f.content);
+    const run = language === "typescript" ? runJsAtBase(repoPath, roundDir, runnerKind) : runAtBase(repoPath, roundDir, python, pythonpath);
+    fs.writeFileSync(path.join(outDir, `round-${round}`, language === "typescript" ? `${runnerKind}.log` : "pytest.log"), run.output);
+    const verdict = judgeModules(answer.files, run, roundDir, expect, language);
     for (const p of verdict.accepted) {
       kept.set(p, answer.files.find((f) => f.path === p)!);
       keptStatuses.set(p, verdict.statuses.filter((s) => s.file === p));
@@ -357,7 +413,7 @@ export async function writeAcceptanceTests(repoInput: string, ticket: string, op
     const st = keptStatuses.get(p) ?? [];
     statuses.push(...st);
     const file = path.join(target, p);
-    fs.writeFileSync(file, header({ taskId: opts.taskId, ticket, model: resolvedModel, engine: engineName, threadId, head, expect, statuses: st, covers: f.covers }) + f.content.trimEnd() + "\n");
+    fs.writeFileSync(file, header({ taskId: opts.taskId, ticket, model: resolvedModel, engine: engineName, threadId, head, expect, statuses: st, covers: f.covers, language }) + f.content.trimEnd() + "\n");
     written.push(path.relative(PROJECT_ROOT, file).split(path.sep).join("/"));
   }
   const authored = { task_id: opts.taskId, policy_id: policyId, repo_path: repoPath, base: head, expect, model: resolvedModel, engine: engineName, thread_id: threadId, written_at: nowIso(), files: written, rounds, notes };

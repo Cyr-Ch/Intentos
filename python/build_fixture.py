@@ -24,7 +24,7 @@ from pathlib import Path
 
 AUTHOR_NAME = "Fixture Bot"
 AUTHOR_EMAIL = "fixture@example.com"
-IGNORED_DIRS = {"__pycache__", ".pytest_cache", ".git", ".venv"}
+IGNORED_DIRS = {"__pycache__", ".pytest_cache", ".git", ".venv", "node_modules"}
 
 
 class BuildError(Exception):

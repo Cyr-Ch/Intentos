@@ -91,7 +91,7 @@ async function main() {
   const indexed = loadIndexedRepo(store, repo);
   const outDir = args.out ?? path.join(paths.benchmarks, nowIso().replace(/[:.]/g, "-"));
   fs.mkdirSync(outDir, { recursive: true });
-  const tasks = loadBenchmarkTasks().filter((t) => !args.task || t.id === args.task);
+  const tasks = loadBenchmarkTasks().filter((t) => (args.task ? t.id === args.task : t.fixture === indexed.policy.policy_id));
   const rows: Row[] = [];
 
   for (const t of tasks) {

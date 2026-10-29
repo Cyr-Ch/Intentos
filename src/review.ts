@@ -9,7 +9,7 @@ import { PROJECT_ROOT, ensureHome, resolvePaths } from "./config.ts";
 import type { KnowledgeStore } from "./knowledge/storage.ts";
 import { indexRepository, repoIdFor, type IndexSummary } from "./knowledge/indexer.ts";
 import { loadPolicyFile } from "./knowledge/policy.ts";
-import { recordReviewFeedback, suggestPolicy, type Candidate, type ReviewFeedback } from "./suggest.ts";
+import type { Candidate, HiddenTestDraft } from "./candidates.ts";
 import type { Author } from "./propose.ts";
 import { nowIso } from "./util/ids.ts";
 
@@ -18,7 +18,7 @@ import { nowIso } from "./util/ids.ts";
  * Every approval lands where it belongs: the block goes into `policies/<id>.yaml` with a real id and the reviewer's
  * name (comments preserved), the hidden-test draft becomes a file under `benchmarks/hidden_tests/<id>/invariants/`,
  * and a candidate without a document source gets a section in `docs/intentos-policy.md` of the repository so the
- * policy can cite it. Rejections are recorded with their reason and feed the ranker through feedback.json.
+ * policy can cite it. Rejections are recorded with their reason in review-decisions.json.
  * The server binds to 127.0.0.1 only and every API call needs the token baked into the page URL.
  */
 
@@ -33,7 +33,6 @@ export interface ReviewOptions {
   docFile?: string;
   /** Who approves (goes into `approved_by`). */
   by: string;
-  includeFiltered?: boolean;
   store: KnowledgeStore;
   log?: (line: string) => void;
 }
@@ -71,8 +70,6 @@ export interface FinishResult {
   pending: number;
   assigned: string[];
   hidden_tests_needing_attention: string[];
-  feedback: ReviewFeedback | null;
-  feedback_error: string | null;
   index: { mode: IndexSummary["mode"]; policy_id: string; unresolved_sources: IndexSummary["unresolved_sources"] } | null;
   index_error: string | null;
   decisions_file: string;
@@ -85,14 +82,13 @@ export interface ReviewState {
   policy_file: string;
   suggestions_file: string;
   decisions_file: string;
-  feedback_file: string;
   hidden_tests_dir: string;
   doc_file: string;
   by: string;
   candidates: Candidate[];
   decisions: Decision[];
   finished: FinishResult | null;
-  /** Who authored the list when the host or the independent miner did (null: the deterministic miner). */
+  /** Who authored the list: the host agent or the independent side thread (null for a list written before authors were recorded). */
   author: Author | null;
   opts: ReviewOptions;
 }
@@ -103,17 +99,16 @@ export async function loadReviewState(repoInput: string, opts: ReviewOptions): P
   const repoId = repoIdFor(repoPath);
   const outDir = path.resolve(opts.outDir ?? path.join(paths.home, "onboard", repoId));
   const suggestionsFile = path.join(outDir, "suggestions.json");
-  if (!fs.existsSync(suggestionsFile)) {
-    opts.log?.("no suggestions yet; mining first (deterministic ranking only)…");
-    await suggestPolicy(repoPath, { policyId: opts.policyId, outDir, writeAdrs: false, withCodex: false }, opts.log);
-  }
+  const notOnboarded = (file: string) => new Error(`${file} not found; run intentos onboard ${repoPath} first so there is a policy to append to`);
+  if (opts.policyFile && !fs.existsSync(path.resolve(opts.policyFile))) throw notOnboarded(path.resolve(opts.policyFile));
+  if (!fs.existsSync(suggestionsFile)) throw new Error(`no candidates for ${repoPath} yet: mine the rules first (follow the intentos-policy-mining skill and call propose, or run intentos mine), then review`);
   const previous = JSON.parse(fs.readFileSync(suggestionsFile, "utf8")) as { policy_id: string; candidates: Candidate[]; authored_by?: string; author?: Author };
   const policyId = opts.policyId ?? previous.policy_id;
   const policyFile = path.resolve(opts.policyFile ?? path.join(paths.policies, `${policyId}.yaml`));
-  if (!fs.existsSync(policyFile)) throw new Error(`${policyFile} not found; run intentos onboard ${repoPath} first so there is a policy to append to`);
+  if (!fs.existsSync(policyFile)) throw notOnboarded(policyFile);
   const decisionsFile = path.join(outDir, "review-decisions.json");
   const decisions: Decision[] = fs.existsSync(decisionsFile) ? (JSON.parse(fs.readFileSync(decisionsFile, "utf8")) as Decision[]) : [];
-  const candidates = previous.candidates.filter((c) => opts.includeFiltered || !c.classification || c.classification.keep);
+  const candidates = previous.candidates;
   return {
     repo_path: repoPath,
     repo_id: repoId,
@@ -121,7 +116,6 @@ export async function loadReviewState(repoInput: string, opts: ReviewOptions): P
     policy_file: policyFile,
     suggestions_file: suggestionsFile,
     decisions_file: decisionsFile,
-    feedback_file: path.join(outDir, "feedback.json"),
     hidden_tests_dir: path.join(path.resolve(opts.hiddenTestsRoot ?? path.join(PROJECT_ROOT, "benchmarks", "hidden_tests")), policyId, "invariants"),
     doc_file: opts.docFile ?? "docs/intentos-policy.md",
     by: opts.by,
@@ -187,12 +181,27 @@ function ensureDocSection(repoPath: string, docFile: string, heading: string, bo
   return { path: docFile, heading, created: !exists };
 }
 
-function writeHiddenTest(dir: string, assignedId: string, title: string, draft: NonNullable<Candidate["suggested_hidden_test"]>): { file: string; complete: boolean } {
+/** Write the hidden test: `test_inv_001_<slug>.py` (pytest) or `inv_001_<slug>.test.ts` (vitest/jest), with a header saying where it came from. */
+/** Two candidates are related when they govern a common production path or share a scope tag (the fold-related offer in hosts). */
+export function relatedCandidates(a: Candidate, b: Candidate): boolean {
+  const norm = (p: string) => p.replace(/\/\*\*$/, "");
+  const pa = (a.applies_to_paths ?? []).map(norm);
+  const pb = (b.applies_to_paths ?? []).map(norm);
+  if (pa.some((x) => pb.some((y) => x === y || x.startsWith(`${y}/`) || y.startsWith(`${x}/`)))) return true;
+  const sa = new Set(a.scope ?? []);
+  return (b.scope ?? []).some((t) => sa.has(t));
+}
+
+export function writeHiddenTest(dir: string, assignedId: string, title: string, draft: HiddenTestDraft): { file: string; complete: boolean } {
   fs.mkdirSync(dir, { recursive: true });
-  let file = path.join(dir, `test_${assignedId.toLowerCase().replace("-", "_")}_${slug(title)}.py`);
+  const ts = draft.language === "typescript";
+  const base = `${ts ? "" : "test_"}${assignedId.toLowerCase().replace("-", "_")}_${slug(title)}`;
+  const ext = ts ? ".test.ts" : ".py";
+  let file = path.join(dir, `${base}${ext}`);
   let n = 2;
-  while (fs.existsSync(file)) file = path.join(dir, `test_${assignedId.toLowerCase().replace("-", "_")}_${slug(title)}_${n++}.py`);
-  const header = [`"""Hidden invariant test for ${assignedId}: ${title}.`, "", `${draft.from.startsWith("codex:") ? "Written by the coding agent (intentos-policy-mining skill), run and passing at the base revision" : `Lifted from ${draft.from}`} by intentos review. Hidden tests run from the verification snapshot and must check behaviour`, "through interfaces the task description implies, never names only one change introduces.", ...(draft.notes.length ? ["", "TODO before relying on this test:", ...draft.notes.map((n) => `- ${n}`)] : []), '"""', ""];
+  while (fs.existsSync(file)) file = path.join(dir, `${base}_${n++}${ext}`);
+  const lines = [`Hidden invariant test for ${assignedId}: ${title}.`, "", `${draft.from.startsWith("codex:") ? "Written by the coding agent (intentos-policy-mining skill), run and passing at the base revision" : `Lifted from ${draft.from}`} by intentos review. Hidden tests run from the verification snapshot and must check behaviour`, "through interfaces the task description implies, never names only one change introduces.", ...(draft.notes.length ? ["", "TODO before relying on this test:", ...draft.notes.map((n) => `- ${n}`)] : [])];
+  const header = ts ? ["/**", ...lines.map((l) => ` * ${l}`.trimEnd()), " */", ""] : ['"""' + lines[0], ...lines.slice(1), '"""', ""];
   fs.writeFileSync(file, header.join("\n") + draft.source.trimEnd() + "\n");
   return { file, complete: draft.standalone };
 }
@@ -204,7 +213,7 @@ function writeHiddenTest(dir: string, assignedId: string, title: string, draft: 
  */
 export function acceptCandidate(state: ReviewState, c: Candidate, statement: string | undefined, by: string, merged: Candidate[] = []): AcceptResult {
   const warnings: string[] = [];
-  const text = (statement ?? c.classification?.rule ?? c.statement).trim();
+  const text = (statement ?? c.statement).trim();
   if (!text) throw new Error("a rule needs a statement");
   if (merged.length && (c.kind !== "invariant" || merged.some((m) => m.kind !== "invariant"))) throw new Error("only invariant candidates can be folded into one approval");
   const group = [c, ...merged];
@@ -278,7 +287,7 @@ export function decide(state: ReviewState, input: { id: string; action: "accept"
       if (prior) throw new Error(`${m} is already ${prior.action === "accept" ? `approved as ${prior.result?.assigned_id}` : `folded into ${prior.merged_into}`}`);
       return cand;
     });
-    decision.statement = (input.statement ?? c.classification?.rule ?? c.statement).trim();
+    decision.statement = (input.statement ?? c.statement).trim();
     decision.result = acceptCandidate(state, c, decision.statement, state.by, merged);
     decision.merged_ids = merged.map((m) => m.id);
     for (const m of merged) mergedDecisions.push({ id: m.id, title: m.title, action: "merge", merged_into: decision.result.assigned_id, by: state.by, at: decision.at });
@@ -328,7 +337,7 @@ export function autoApprove(state: ReviewState, opts: { requireTest?: boolean } 
 
 /** How to name the automatic approver after who mined the list. */
 export function autoApprover(author: Author | null): string {
-  return `auto:${author?.model ?? (author ? "codex" : "miner")}`;
+  return `auto:${author?.model ?? "codex"}`;
 }
 
 export function finishReview(state: ReviewState): FinishResult {
@@ -341,17 +350,10 @@ export function finishReview(state: ReviewState): FinishResult {
     pending: state.candidates.filter((c) => !state.decisions.some((d) => d.id === c.id)).length,
     assigned: accepted.map((d) => `${d.result!.assigned_id} ${d.title}`),
     hidden_tests_needing_attention: accepted.filter((d) => d.result?.hidden_test && !d.result.hidden_test_complete).map((d) => d.result!.hidden_test!),
-    feedback: null,
-    feedback_error: null,
     index: null,
     index_error: null,
     decisions_file: state.decisions_file,
   };
-  try {
-    result.feedback = recordReviewFeedback(state.suggestions_file, state.policy_file, state.feedback_file);
-  } catch (e) {
-    result.feedback_error = (e as Error).message;
-  }
   try {
     const summary = indexRepository(state.opts.store, state.repo_path);
     result.index = { mode: summary.mode, policy_id: summary.policy_id, unresolved_sources: summary.unresolved_sources };
@@ -402,7 +404,7 @@ export function publicState(state: ReviewState) {
     by: state.by,
     finished: state.finished,
     author: state.author,
-    candidates: state.candidates.map((c) => ({ id: c.id, kind: c.kind, title: c.title, statement: c.statement, score: c.score, relevance: c.relevance, confidence: c.confidence, cluster: c.cluster, cluster_members: c.cluster_members, evidence: c.evidence.map((e) => ({ type: e.type, ref: e.ref, excerpt: e.excerpt, path: e.path ?? null, line: e.line ?? null })), applies_to_paths: c.applies_to_paths ?? [], sources: c.sources ?? [], classification: c.classification ?? null, hidden_test: c.suggested_hidden_test ? { from: c.suggested_hidden_test.from, source: c.suggested_hidden_test.source, notes: c.suggested_hidden_test.notes, standalone: c.suggested_hidden_test.standalone } : null, rule: c.rule ?? null, status: c.status ?? null })),
+    candidates: state.candidates.map((c) => ({ id: c.id, kind: c.kind, title: c.title, statement: c.statement, category: c.category, rationale: c.rationale, relevance: c.relevance, confidence: c.confidence, evidence: c.evidence.map((e) => ({ type: e.type, ref: e.ref, excerpt: e.excerpt, path: e.path ?? null, line: e.line ?? null })), applies_to_paths: c.applies_to_paths ?? [], sources: c.sources ?? [], hidden_test: c.suggested_hidden_test ? { from: c.suggested_hidden_test.from, language: c.suggested_hidden_test.language, source: c.suggested_hidden_test.source, notes: c.suggested_hidden_test.notes, standalone: c.suggested_hidden_test.standalone } : null, rule: c.rule ?? null, status: c.status ?? null })),
     decisions: state.decisions,
   };
 }
@@ -581,13 +583,12 @@ function render() {
   if (state.finished) { card.innerHTML = finishedHtml(state.finished); return; }
   const c = state.candidates.find(x => x.id === current);
   if (!c) { card.innerHTML = '<div class="empty">No candidates to review.</div>' + finishBar(); return; }
-  const d = decisionOf(c.id); const k = c.classification;
+  const d = decisionOf(c.id);
   card.innerHTML = '<div class="kind">' + esc(c.kind.replace('_',' ')) + ' · ' + esc(c.id) + '</div><h2>' + esc(c.title) + '</h2>'
-    + '<div class="row">score <b>' + c.score.toFixed(2) + '</b> (' + esc(c.relevance) + ') · evidence confidence <b>' + esc(c.confidence) + '</b></div>'
+    + '<div class="row"><b>' + esc((c.category || 'business_rule').replace('_',' ')) + '</b> · relevance <b>' + esc(c.relevance) + '</b> · evidence confidence <b>' + esc(c.confidence) + '</b></div>'
     + relatedHtml(c, d)
-    + (k ? '<div class="cls"><b>' + esc(k.category.replace('_',' ')) + '</b> · ' + (k.keep?'keep':'set aside') + ' — ' + esc(k.reason) + (k.rule_rejected ? '<br><span class="warnline">rewrite rejected: ' + esc(k.rule_rejected) + '</span>' : '') + '</div>' : '')
-    + '<label>Rule statement (edit before approving)</label><textarea id="stmt">' + esc((d && d.statement) || (k && k.rule) || c.statement) + '</textarea>'
-    + (k && k.rule ? '<div class="row">original: ' + esc(c.statement) + '</div>' : '')
+    + (c.rationale ? '<div class="cls">' + esc(c.rationale) + '</div>' : '')
+    + '<label>Rule statement (edit before approving)</label><textarea id="stmt">' + esc((d && d.statement) || c.statement) + '</textarea>'
     + '<label>Evidence</label><ul class="ev">' + c.evidence.map(e => '<li><code>' + esc(e.type) + ' ' + esc(e.ref) + '</code> ' + esc(e.excerpt) + '</li>').join('') + '</ul>'
     + (c.applies_to_paths.length ? '<div class="row" style="margin-top:8px">applies to: <b>' + esc(c.applies_to_paths.join(', ')) + '</b></div>' : '')
     + (c.sources.length ? '<div class="row">source: <b>' + esc(c.sources.map(s => s.path + (s.heading ? '#' + s.heading : '')).join(', ')) + '</b></div>' : '<div class="row">no document source: approving adds a section to <b>' + esc(state.doc_file) + '</b> in the repository</div>')
@@ -599,12 +600,12 @@ function render() {
   on('accept', () => act('accept')); on('reject', () => act('reject')); on('skip', () => act('skip')); on('finish', finish);
 }
 function relatedHtml(c, d) {
-  const members = (c.cluster_members || []).map(id => state.candidates.find(x => x.id === id)).filter(Boolean);
-  if (!members.length) return '';
   if (d && d.action === 'merge') return '<div class="cls">Folded into <b>' + esc(d.merged_into) + '</b> as one of its hidden tests.</div>';
-  const rows = members.map(m => { const md = decisionOf(m.id); const canFold = c.kind === 'invariant' && m.kind === 'invariant' && !md; const pre = canFold && !!m.hidden_test;
-    return '<li><label style="display:inline;margin:0;font-size:13px;color:var(--ink)"><input type="checkbox" class="fold" value="' + m.id + '"' + (pre ? ' checked' : '') + (canFold ? '' : ' disabled') + '> ' + esc(m.id) + ' · ' + esc(m.title) + (md ? ' <span class="st">(' + esc(md.action === 'accept' ? 'approved as ' + md.result.assigned_id : md.action === 'merge' ? 'folded into ' + md.merged_into : md.action) + ')</span>' : m.hidden_test ? '' : ' <span class="st">(no test)</span>') + '</label></li>'; }).join('');
-  return '<div class="cls"><b>Related candidates</b> share terms with this candidate and may describe the same rule. Tick the ones to fold into this approval: they become extra hidden tests of <i>one</i> invariant instead of separate entries.<ul class="ev">' + rows + '</ul></div>';
+  if (c.kind !== 'invariant') return '';
+  const others = state.candidates.filter(m => m.id !== c.id && m.kind === 'invariant' && !decisionOf(m.id) && m.hidden_test);
+  if (!others.length) return '';
+  const rows = others.map(m => '<li><label style="display:inline;margin:0;font-size:13px;color:var(--ink)"><input type="checkbox" class="fold" value="' + m.id + '"> ' + esc(m.id) + ' · ' + esc(m.title) + '</label></li>').join('');
+  return '<details><summary>Fold other invariant candidates into this approval (' + others.length + ' pending with a test)</summary><div class="cls">Ticked candidates become extra hidden tests of <i>one</i> invariant instead of separate entries.<ul class="ev">' + rows + '</ul></div></details>';
 }
 function finishBar() { return '<button class="btn fin" id="finish">Finish review' + (pending().length ? ' (' + pending().length + ' pending)' : '') + '</button>'; }
 async function act(action) {
@@ -620,7 +621,6 @@ async function finish() { try { await api('/api/finish', { method:'POST', body:'
 function finishedHtml(f) { return '<div class="done"><h2>Review finished</h2><ul>'
   + '<li>approved <b>' + f.accepted + '</b>' + (f.assigned.length ? ': ' + esc(f.assigned.join('; ')) : '') + (f.merged ? ' (' + f.merged + ' related candidate(s) folded in as extra hidden tests)' : '') + '</li><li>rejected <b>' + f.rejected + '</b>, skipped <b>' + f.skipped + '</b>, left pending <b>' + f.pending + '</b></li>'
   + (f.hidden_tests_needing_attention.length ? '<li class="warnline">hidden tests to finish by hand: ' + esc(f.hidden_tests_needing_attention.join(', ')) + '</li>' : '')
-  + (f.feedback ? '<li>feedback recorded for the next run: ' + f.feedback.accept_tokens.length + ' accept terms, ' + f.feedback.reject_tokens.length + ' reject terms</li>' : (f.feedback_error ? '<li class="warnline">feedback: ' + esc(f.feedback_error) + '</li>' : ''))
   + (f.index ? '<li>repository re-indexed (' + esc(f.index.mode) + ', policy ' + esc(f.index.policy_id) + ')' + (f.index.unresolved_sources.length ? '<span class="warnline"> — unresolved policy sources: ' + esc(f.index.unresolved_sources.map(u => u.owner + ' ' + u.path + (u.heading?'#'+u.heading:'')).join('; ')) + '</span>' : '') + '</li>' : (f.index_error ? '<li class="warnline">index: ' + esc(f.index_error) + '</li>' : ''))
   + '</ul><p class="row">Commit the policy, the hidden tests and any new section in the repository. You can close this tab; the local server has stopped.</p></div>'; }
 document.addEventListener('keydown', e => { if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return; const k = e.key.toLowerCase(); if (k==='a') act('accept'); else if (k==='r') act('reject'); else if (k==='s') act('skip'); });

@@ -12,6 +12,7 @@ import { OfflineEngine, type OfflineOptions } from "../codex/offline.ts";
 import { verifyWorktree } from "../verification/runner.ts";
 import { describeVerifier } from "../verification/sandbox.ts";
 import { repoInterpreter } from "../knowledge/venv.ts";
+import { linkNodeModules } from "../knowledge/js.ts";
 import type { VerificationResult } from "../verification/results.ts";
 import { RunStore, type TaskRecord } from "./store.ts";
 import { BudgetExceededError, RunBudget, defaultLimits, type RunLimits } from "./limits.ts";
@@ -253,6 +254,7 @@ export async function executeRun(store: KnowledgeStore, rs: RunStore, opts: RunO
       if (!worktree || !fs.existsSync(worktree)) {
         worktree = path.join(resolvePaths().worktrees, rs.runId);
         addWorktree(indexed.repoPath, worktree, rs.row.base_sha);
+        if (indexed.policy.language === "typescript") linkNodeModules(indexed.repoPath, worktree); // the implementer's test runner needs the dependencies
         rs.update({ worktree_path: worktree });
       }
       rs.transition("IMPLEMENTING", { worktree, engine: engine.name, simulated: engine.simulated });

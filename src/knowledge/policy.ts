@@ -23,8 +23,10 @@ export const SourceRefSchema = z.object({
 export const CommandSchema = z.object({
   description: z.string(),
   track: z.enum(["functional", "architecture", "business_invariant", "scope"]),
-  /** argv with placeholders: {python}, {snapshot}, {hidden_tests_dir}, {junit}. */
+  /** argv with placeholders: {python}, {snapshot}, {hidden_tests_dir}, {junit}, {node_modules} (the repository's node_modules). */
   argv: z.array(z.string()).optional(),
+  /** Extra environment for the command (same placeholders), e.g. JEST_JUNIT_OUTPUT_FILE={junit} for jest-junit. */
+  env: z.record(z.string(), z.string()).default({}),
   /** Built-in verifier implemented in TypeScript/Python instead of a shell command. */
   builtin: z.enum(["architecture_rules", "counterexamples", "scope_check", "architecture_surprise"]).optional(),
   timeout_s: z.number().int().positive().default(300),
@@ -114,6 +116,8 @@ export const PolicySchema = z.object({
     path_basename: z.string().optional(),
   }),
   description: z.string().optional(),
+  /** Primary language of the repository: decides which hidden-test shape, test runner and AST checker apply. */
+  language: z.enum(["python", "typescript"]).default("python"),
   /** Globs the implementer may edit (the universe for contract allowed_paths). */
   default_allowed_paths: z.array(z.string()).min(1),
   /** Globs the implementer must never edit (in addition to global protections). */
@@ -138,6 +142,41 @@ export type PolicyDecision = z.infer<typeof PolicyDecisionSchema>;
 export type PolicyCommand = z.infer<typeof CommandSchema>;
 export type SourceRef = z.infer<typeof SourceRefSchema>;
 
+/** Placeholder values for a command's argv/env: {python} {snapshot} {hidden_tests_dir} {junit} {node} {node_modules}. */
+export interface CommandVars {
+  python: string;
+  snapshot: string;
+  hidden_tests_dir: string;
+  junit: string;
+  node?: string;
+  node_modules?: string;
+}
+
+/** Substitute the placeholders in one string. `{node}` defaults to the running Node binary, `{node_modules}` to `<snapshot>/node_modules`. */
+export function fillPlaceholders(s: string, vars: CommandVars): string {
+  const node = vars.node ?? process.execPath;
+  const nodeModules = vars.node_modules ?? path.join(vars.snapshot, "node_modules");
+  return s.replaceAll("{python}", vars.python).replaceAll("{snapshot}", vars.snapshot).replaceAll("{hidden_tests_dir}", vars.hidden_tests_dir).replaceAll("{junit}", vars.junit).replaceAll("{node}", node).replaceAll("{node_modules}", nodeModules);
+}
+
+export function fillArgv(argv: string[], vars: CommandVars): string[] {
+  return argv.map((a) => fillPlaceholders(a, vars));
+}
+
+export function fillEnv(env: Record<string, string>, vars: CommandVars): Record<string, string> {
+  return Object.fromEntries(Object.entries(env).map(([k, v]) => [k, fillPlaceholders(v, vars)]));
+}
+
+/** The functional project-suite command: `pytest_project` (Python) or `test_project` (TypeScript), whichever the policy has. */
+export function projectTestCommand(policy: Policy): { name: string; cmd: PolicyCommand } | null {
+  for (const name of ["pytest_project", "test_project"]) {
+    const cmd = policy.commands[name];
+    if (cmd?.argv) return { name, cmd };
+  }
+  const entry = Object.entries(policy.commands).find(([, c]) => c.track === "functional" && c.argv && !c.requires_task_tests && !c.argv.some((a) => a.includes("{hidden_tests_dir}")));
+  return entry ? { name: entry[0], cmd: entry[1] } : null;
+}
+
 export function loadPolicyFile(file: string): Policy {
   const raw = YAML.parse(fs.readFileSync(file, "utf8"));
   const parsed = PolicySchema.safeParse(raw);
@@ -156,20 +195,32 @@ export function loadAllPolicies(dir = resolvePaths().policies): Policy[] {
     .map((f) => loadPolicyFile(path.join(dir, f)));
 }
 
-function pyprojectName(repoPath: string): string | null {
-  const file = path.join(repoPath, "pyproject.toml");
-  if (!fileExists(file)) return null;
-  const text = fs.readFileSync(file, "utf8");
-  const m = text.match(/^\s*name\s*=\s*"([^"]+)"/m);
-  return m?.[1] ?? null;
+/** The project names a repository declares: `[project].name` in pyproject.toml and `name` in package.json. */
+function projectNames(repoPath: string): string[] {
+  const names: string[] = [];
+  const pyproject = path.join(repoPath, "pyproject.toml");
+  if (fileExists(pyproject)) {
+    const m = fs.readFileSync(pyproject, "utf8").match(/^\s*name\s*=\s*"([^"]+)"/m);
+    if (m?.[1]) names.push(m[1]);
+  }
+  const pkg = path.join(repoPath, "package.json");
+  if (fileExists(pkg)) {
+    try {
+      const name = (JSON.parse(fs.readFileSync(pkg, "utf8")) as { name?: unknown }).name;
+      if (typeof name === "string" && name) names.push(name);
+    } catch {
+      /* unreadable package.json: fall back to the basename match */
+    }
+  }
+  return names;
 }
 
 /** Find the trusted policy applicable to a repository, or null when none matches. */
 export function policyForRepo(repoPath: string, policies = loadAllPolicies()): Policy | null {
-  const name = pyprojectName(repoPath);
+  const names = projectNames(repoPath);
   const base = path.basename(path.resolve(repoPath));
   for (const p of policies) {
-    if (p.applies_to.project_name && name && p.applies_to.project_name === name) return p;
+    if (p.applies_to.project_name && names.includes(p.applies_to.project_name)) return p;
   }
   for (const p of policies) {
     if (p.applies_to.path_basename && p.applies_to.path_basename === base) return p;

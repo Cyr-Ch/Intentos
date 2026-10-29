@@ -1,0 +1,50 @@
+diff --git a/src/api/handlers.ts b/src/api/handlers.ts
+index 4990920..d89f92d 100644
+--- a/src/api/handlers.ts
++++ b/src/api/handlers.ts
+@@ -15,6 +15,10 @@ export function makeHandlers(store: LedgerStore) {
+       const next = ledger.post({ account: req.account, amount: new Money(req.cents, req.currency), memo: req.memo ?? "" });
+       return { balance: next.toString() };
+     },
++    transfer(req: { from: string; to: string; cents: number; currency: string; memo?: string }): { from: string; to: string } {
++      ledger.transfer(req.from, req.to, new Money(req.cents, req.currency), req.memo);
++      return { from: ledger.balance(req.from, req.currency).toString(), to: ledger.balance(req.to, req.currency).toString() };
++    },
+     balance(account: string): { balance: string } {
+       return { balance: ledger.balance(account).toString() };
+     },
+diff --git a/src/domain/ledger.ts b/src/domain/ledger.ts
+index d606e91..e310ee2 100644
+--- a/src/domain/ledger.ts
++++ b/src/domain/ledger.ts
+@@ -33,4 +33,13 @@ export class Ledger {
+     this.store.append(entry);
+     return next;
+   }
++
++  /** Move `amount` from one account to another; the debit is checked first so nothing is recorded on an overdraft. */
++  transfer(from: string, to: string, amount: Money, memo = "transfer"): void {
++    const debit = new Money(-amount.cents, amount.currency);
++    const current = this.balance(from, amount.currency);
++    if (current.add(debit).isNegative()) throw new InsufficientFunds(from);
++    this.post({ account: from, amount: debit, memo });
++    this.post({ account: to, amount, memo });
++  }
+ }
+diff --git a/tests/ledger.test.ts b/tests/ledger.test.ts
+index 08e0bdd..985157e 100644
+--- a/tests/ledger.test.ts
++++ b/tests/ledger.test.ts
+@@ -16,4 +16,12 @@ describe("Ledger", () => {
+     expect(() => ledger.post({ account: "acc-1", amount: new Money(-250, "EUR"), memo: "withdrawal" })).toThrow(InsufficientFunds);
+     expect(ledger.balance("acc-1").cents).toBe(100);
+   });
++
++  it("transfers between accounts", () => {
++    const ledger = new Ledger(new MemoryStore());
++    ledger.post({ account: "a", amount: new Money(300, "EUR"), memo: "deposit" });
++    ledger.transfer("a", "b", new Money(100, "EUR"));
++    expect(ledger.balance("a").cents).toBe(200);
++    expect(ledger.balance("b").cents).toBe(100);
++  });
+ });

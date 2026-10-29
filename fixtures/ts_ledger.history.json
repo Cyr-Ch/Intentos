@@ -1,0 +1,29 @@
+[
+  {
+    "message": "Initial ledger domain: Money, Ledger, memory store, handlers",
+    "date": "2026-04-01T09:00:00+00:00",
+    "files": {
+      ".gitignore": "ts_ledger/.gitignore",
+      "package.json": "ts_ledger/package.json",
+      "tsconfig.json": "ts_ledger/tsconfig.json",
+      "vitest.config.ts": "ts_ledger/vitest.config.ts",
+      "README.md": "ts_ledger/README.md",
+      "docs/invariants.md": "ts_ledger.history/01-initial/docs-invariants.md",
+      "src/domain/money.ts": "ts_ledger/src/domain/money.ts",
+      "src/domain/ledger.ts": "ts_ledger.history/01-initial/src/domain/ledger.ts",
+      "src/db/client.ts": "ts_ledger/src/db/client.ts",
+      "src/api/handlers.ts": "ts_ledger/src/api/handlers.ts",
+      "tests/money.test.ts": "ts_ledger/tests/money.test.ts",
+      "tests/ledger.test.ts": "ts_ledger.history/01-initial/tests/ledger.test.ts"
+    }
+  },
+  {
+    "message": "Fix overdraft: Ledger.post rejects entries that would make a balance negative\n\nA withdrawal larger than the balance was recorded and the account went negative.\nPost now checks the resulting balance and throws InsufficientFunds before appending.\n\nFixes #7",
+    "date": "2026-04-09T15:30:00+00:00",
+    "files": {
+      "src/domain/ledger.ts": "ts_ledger/src/domain/ledger.ts",
+      "tests/ledger.test.ts": "ts_ledger/tests/ledger.test.ts",
+      "docs/invariants.md": "ts_ledger/docs/invariants.md"
+    }
+  }
+]

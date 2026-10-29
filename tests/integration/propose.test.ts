@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { setupFixtureEnv, type TestEnv } from "../helpers/fixture.ts";
-import { ingestProposals, installSkill, loadMined, SKILL_NAME, skillText } from "../../src/propose.ts";
+import { ingestProposals, installSkill, loadDigest, SKILL_NAME, skillText } from "../../src/propose.ts";
 import { acceptCandidate, loadReviewState } from "../../src/review.ts";
 import { PROJECT_ROOT } from "../../src/config.ts";
 
@@ -95,9 +95,10 @@ describe("intentos propose — host-authored candidates are checked, tested and 
     expect(written.suggested_hidden_test!.standalone).toBe(true);
     expect((written.suggested_hidden_test as { pending_run?: boolean }).pending_run).toBeUndefined();
     expect(r.candidates[0]!.suggested_hidden_test!.source).toMatch(/def make_contract/); // lifted with its fixture
-    const saved = JSON.parse(fs.readFileSync(r.files.json, "utf8")) as { authored_by: string; classification: { used: boolean; note: string } };
+    const saved = JSON.parse(fs.readFileSync(r.files.json, "utf8")) as { authored_by: string; note: string; author: { via: string } };
     expect(saved.authored_by).toBe("codex");
-    expect(saved.classification.note).toMatch(new RegExp(SKILL_NAME));
+    expect(saved.author.via).toBe("host");
+    expect(saved.note).toMatch(new RegExp(SKILL_NAME));
     expect(fs.readFileSync(r.files.markdown, "utf8")).toMatch(/CSV export ends with a TOTAL line/);
   }, 120_000);
 
@@ -123,16 +124,25 @@ describe("intentos propose — host-authored candidates are checked, tested and 
     expect(fs.existsSync(path.join(outDir, "review-decisions.json"))).toBe(false);
   }, 120_000);
 
-  it("from_mined inherits the mined candidate's evidence and test; mined is cached per revision", async () => {
-    const mined = loadMined(env.repo, { outDir });
-    expect(mined.candidates.length).toBeGreaterThan(10);
-    const withTest = mined.candidates.find((c) => c.evidence.some((e) => e.type === "test"))!;
-    const r = await ingestProposals(env.repo, [{ title: "From the miner", statement: "The behaviour proven by the cited test must be preserved as it is.", from_mined: withTest.id, rationale: "picked from the raw list" }, { title: "Unknown id", statement: "This cites a candidate id that was never mined here.", from_mined: "CAND-999" }], { policyFile, outDir });
+  it("the evidence digest lists the facts the miner reads, is cached per revision, and its test refs lift as they are", async () => {
+    const digest = loadDigest(env.repo, { outDir });
+    expect(digest.language).toBe("python");
+    expect(digest.head).toBe(head);
+    expect(digest.counts.tests).toBeGreaterThan(10);
+    expect(digest.tests.find((t) => t.ref === "tests/test_locked_contract.py::test_cancelled_contract_gets_no_discount")).toMatchObject({ rule_like: true, language: "python" });
+    expect(digest.tests.find((t) => t.ref === "tests/test_locked_contract.py::test_cancelled_contract_gets_no_discount")!.production_paths).toContain("app/services/pricing.py");
+    expect(digest.commits.some((c) => c.looks_like_fix)).toBe(true);
+    expect(digest.documents.some((d) => d.path === "docs/business-policy.md" && /never/i.test(d.sentence))).toBe(true);
+    expect(digest.adrs.length).toBe(3);
+    expect(digest.adrs.some((a) => a.status === "superseded")).toBe(true);
+    expect(digest.stale_dirs.some((d) => d.dir === "app/legacy")).toBe(true);
+    expect(digest.imports.some((e) => e.from_dir === "app/api" && e.to_dir === "app/services")).toBe(true);
+    const cached = JSON.parse(fs.readFileSync(path.join(outDir, "evidence.json"), "utf8")) as { head: string };
+    expect(cached.head).toBe(head);
+    const withTest = digest.tests.find((t) => t.rule_like)!;
+    const r = await ingestProposals(env.repo, [{ title: "From the digest", statement: "The behaviour proven by the cited test must be preserved as it is.", test: { existing: withTest.ref }, rationale: "picked from the digest" }], { policyFile, outDir });
     expect(r.accepted.map((a) => a.verified)).toEqual(["lifted"]);
     expect(r.candidates[0]!.evidence.map((e) => e.type)).toContain("test");
-    expect(r.rejected[0]!.reasons[0]).toMatch(/from_mined CAND-999/);
-    const cached = JSON.parse(fs.readFileSync(path.join(outDir, "mined.json"), "utf8")) as { head: string };
-    expect(cached.head).toBe(head);
   }, 120_000);
 
   it("installs the skill as a symlink Codex can scan, and the CLI is wired", () => {

@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import type { Policy, PolicyCommand } from "../knowledge/policy.ts";
+import { fillArgv, fillEnv, type CommandVars, type Policy, type PolicyCommand } from "../knowledge/policy.ts";
+import { isJsTestFile, linkNodeModules, writeVitestWrapperConfig } from "../knowledge/js.ts";
 import type { ChangeContract } from "../contracts/schemas.ts";
 import type { EvidencePack } from "../knowledge/retrieval.ts";
 import { changedFiles, diffAgainstBase, workingTreeFiles, headSha } from "../util/git.ts";
@@ -67,22 +68,34 @@ export function coordinationTrack(coord: CoordinationEnv, worktree: string): { s
   return { summary, findings, record };
 }
 
-/** Test function names discovered statically in a directory of pytest files (trusted hidden tests). */
+/**
+ * Test names discovered statically in a directory of trusted hidden tests: `def test_*` in pytest files, and the string
+ * titles of `it(`/`test(` blocks in vitest/jest files (`*.test.ts`, `*.spec.ts`, …).
+ */
 export function discoverTestNames(dir: string): Set<string> {
   const names = new Set<string>();
   if (!fs.existsSync(dir)) return names;
   const walk = (d: string) => {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       const p = path.join(d, e.name);
-      if (e.isDirectory()) walk(p);
-      else if (/^test_.*\.py$/.test(e.name)) {
+      if (e.isDirectory()) {
+        if (e.name !== "node_modules") walk(p);
+      } else if (/^test_.*\.py$/.test(e.name)) {
         for (const m of fs.readFileSync(p, "utf8").matchAll(/^\s*(?:async\s+)?def\s+(test_\w+)\s*\(/gm)) names.add(m[1]!);
+      } else if (isJsTestFile(e.name)) {
+        for (const m of fs.readFileSync(p, "utf8").matchAll(/^\s*(?:it|test)(?:\.(?:only|skip|concurrent|fails))*\s*\(\s*(['"`])((?:(?!\1).)+)\1/gm)) if (!m[2]!.includes("${")) names.add(m[2]!);
       }
     }
   };
   walk(dir);
   return names;
 }
+
+/** The leaf test name as the inventory check compares it: pytest parameters (`[...]`) and vitest `describe > ` prefixes removed. */
+export const leafTestName = (name: string): string => (name.includes(" > ") ? name.split(" > ").pop()! : name).replace(/\[.*$/, "");
+
+/** The vitest wrapper config hidden tests run with (see `writeVitestWrapperConfig`). */
+export const writeHiddenVitestConfig = (snapshot: string, hiddenDir: string): string => writeVitestWrapperConfig(snapshot, hiddenDir);
 
 const PROTECTED_ARTIFACT_PATTERNS = [/hidden_tests/i, /\bpolicies\//, /\.intentos\/runs/, /\.intentos_hidden/, /benchmarks\//, /intentos\.db/];
 
@@ -187,6 +200,13 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
   const hiddenDir = path.join(snapshot, ".intentos_hidden");
   if (input.hiddenInvariantTestsDir && fs.existsSync(input.hiddenInvariantTestsDir)) copyDir(input.hiddenInvariantTestsDir, path.join(hiddenDir, "invariants"));
   if (input.hiddenTaskTestsDir && fs.existsSync(input.hiddenTaskTestsDir)) copyDir(input.hiddenTaskTestsDir, path.join(hiddenDir, "task"));
+  // TypeScript repositories: the snapshot has no node_modules (ignored, never copied); the repository's is linked in, and a
+  // vitest config that collects the hidden tests is written next to them ({hidden_tests_dir}/vitest.config.mjs).
+  if (input.policy.language === "typescript") {
+    if (!linkNodeModules(input.repoPath ?? input.worktree, snapshot) && !fs.existsSync(path.join(snapshot, "node_modules"))) limitations.push("node_modules not found in the repository; install the dependencies (npm ci) before verification can run the test suite.");
+    writeHiddenVitestConfig(snapshot, hiddenDir);
+    if (mode === "docker") limitations.push("verifier: the container image runs Python only; TypeScript test commands are refused in docker mode (host mode verifies them).");
+  }
 
   const evidenceFor = (id: string): string[] => [...input.pack.invariants, ...input.pack.architecture_rules].find((c) => c.id === id)?.evidence_ids ?? [];
   const invariantByTestFile = new Map<string, string>();
@@ -264,7 +284,8 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
       }
     }
     const junit = path.join(attemptDir, `${v.command_id}.junit.xml`);
-    const argv = cmd.argv.map((a) => a.replace("{python}", python).replace("{snapshot}", snapshot).replace("{hidden_tests_dir}", hiddenDir).replace("{junit}", junit));
+    const vars: CommandVars = { python, snapshot, hidden_tests_dir: hiddenDir, junit };
+    const argv = fillArgv(cmd.argv, vars);
     if (unavailable) {
       // Fail closed: in docker mode nothing that executes candidate code may run on the host.
       commands.push(unavailableRecord(v.command_id, cmd));
@@ -273,7 +294,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
       }
       continue;
     }
-    const rec = execCommand(v.command_id, cmd, argv, snapshot, attemptDir, execContext(v.command_id));
+    const rec = execCommand(v.command_id, cmd, argv, snapshot, attemptDir, execContext(v.command_id), fillEnv(cmd.env, vars));
     commands.push(rec);
     const cases = parseJunitIfPresent(junit);
     rec.tests_passed = cases.filter((c) => c.status === "passed").length;
@@ -285,7 +306,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
     const hiddenSubdir = cmd.requires_task_tests ? path.join(hiddenDir, "task") : cmd.track === "business_invariant" ? path.join(hiddenDir, "invariants") : null;
     if (hiddenSubdir) {
       const expected = discoverTestNames(hiddenSubdir);
-      const reported = new Set(cases.map((c) => c.name.replace(/\[.*$/, "")));
+      const reported = new Set(cases.map((c) => leafTestName(c.name)));
       const missing = [...expected].filter((n) => !reported.has(n));
       const extra = [...reported].filter((n) => !expected.has(n));
       if (expected.size && (missing.length || extra.length)) {
@@ -304,7 +325,8 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
     }
     for (const c of cases) {
       if (c.status !== "failed" && c.status !== "error") continue;
-      const fileBase = c.file ? path.basename(c.file) : c.classname.split(".").pop() ?? "";
+      // pytest: file attribute or dotted classname; vitest/jest: the classname is the file path.
+      const fileBase = c.file ? path.basename(c.file) : c.classname.includes("/") ? path.basename(c.classname) : (c.classname.split(".").pop() ?? "");
       const invId = invariantByTestFile.get(fileBase) ?? invariantByTestFile.get(`${fileBase}.py`) ?? inferInvariantFromClassname(c.classname, invariantByTestFile);
       const isInvariant = cmd.track === "business_invariant";
       const isHiddenTask = v.command_id.includes("hidden");
@@ -374,7 +396,7 @@ export function verifyWorktree(input: VerifyInput): VerificationResult {
 }
 
 function inferInvariantFromClassname(classname: string, map: Map<string, string>): string | undefined {
-  for (const [file, id] of map) if (classname.includes(file.replace(/\.py$/, ""))) return id;
+  for (const [file, id] of map) if (classname.includes(file.replace(/\.py$/, "").replace(/\.(test|spec)\.[cm]?[jt]sx?$/, ""))) return id;
   return undefined;
 }
 
@@ -388,10 +410,10 @@ interface ExecContext {
   container: { name: string; settings: DockerSettings; resultsDir: string; hiddenDir: string; python: string } | null;
 }
 
-function execCommand(commandId: string, cmd: PolicyCommand, argv: string[], cwd: string, logDir: string, exec: ExecContext = { mode: "host", container: null }): CommandRecord {
+function execCommand(commandId: string, cmd: PolicyCommand, argv: string[], cwd: string, logDir: string, exec: ExecContext = { mode: "host", container: null }, extraEnv: Record<string, string> = {}): CommandRecord {
   const t0 = Date.now();
   const stdoutPath = path.join(logDir, `${commandId}.log`);
-  const env: Record<string, string> = { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: process.env.HOME ?? "/", PYTHONDONTWRITEBYTECODE: "1", PYTHONHASHSEED: "0", LANG: "C.UTF-8" };
+  const env: Record<string, string> = { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: process.env.HOME ?? "/", PYTHONDONTWRITEBYTECODE: "1", PYTHONHASHSEED: "0", LANG: "C.UTF-8", ...extraEnv };
   let spawnArgv = argv;
   if (exec.mode === "docker") {
     if (!exec.container) throw new Error("docker verifier mode requires a container context (preflight must pass before executing commands)");

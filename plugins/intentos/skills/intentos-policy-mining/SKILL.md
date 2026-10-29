@@ -1,6 +1,6 @@
 ---
 name: intentos-policy-mining
-description: Mine a repository's tests, git history, documents and structure for the business rules it already follows, pick or write a test that proves each one, and submit them to IntentOS (MCP tool `propose`) for a person to approve. Use when asked to bring a repository under IntentOS, find its business logic, or produce policy candidates. Not for implementing features or fixing bugs.
+description: Mine a repository's tests, git history, documents and structure (Python or TypeScript) for the business rules it already follows, pick or write a test that proves each one, and submit them to IntentOS (MCP tool `propose`) for a person to approve. Use when asked to bring a repository under IntentOS, find its business logic, or produce policy candidates. Not for implementing features or fixing bugs.
 ---
 
 # IntentOS policy mining
@@ -13,11 +13,15 @@ reject or edit a candidate on the reviewer's behalf, and never pad the list with
 ## Before you start
 
 1. Call `status` with the absolute repository path. If it is not onboarded, call `onboard` and poll `status` until
-   `phase` is `done`. Onboarding creates the venv your tests will run in, writes the draft policy and indexes the
-   repository.
-2. Call `mined`. It returns the deterministic miner's raw list: rule-like tests with ready-made hidden-test drafts,
-   fix commits, must/never sentences from documents, layer imports and frozen directories. It is a starting point with
-   noise, not the answer. Keep the ids: a proposal can cite one with `from_mined` and inherit its evidence and test.
+   `phase` is `done`. Onboarding creates the environment your tests will run in (a venv for Python, the repository's
+   `node_modules` for TypeScript), writes the draft policy, indexes the repository and builds the evidence digest.
+2. Call `evidence`. It returns the **evidence digest**: facts, not rules. Every test with its first assertion and the
+   production files it exercises (`*` marks rule-like names), every commit that touched code with the tests it added
+   (`*` marks fix-like messages), every must/never/always/only sentence from README, docs and CHANGELOG with its
+   heading and line, every ADR with its status, the import edges between directories, directories nobody has touched
+   in a long time, and deprecation entries. Nothing in it is ranked or classified; you decide what is a rule. Call it
+   with `section` (`tests`, `commits`, `documents`, `adrs`, `imports`, `stale_dirs`, `changelog`) for the full JSON of
+   one part. Then read the code behind the facts that look like rules before you state anything.
 3. If the user asks for an independent, second or unbiased opinion, names a model, or `status` says a mining model is
    configured, call `mine` with that model instead of mining yourself: IntentOS runs this skill in a separate read-only
    thread with that model and checks the result exactly as it checks yours; poll `status` until it is done, then call
@@ -44,9 +48,10 @@ Aim for 8 to 20 candidates. Fewer good ones beat a long list.
 
 ## Where to look, in this order
 
-1. **Tests** (strongest evidence). `grep -rn "def test_" tests/` and read names and assertions. Names containing
-   never, always, must, only, raises, warns, invalid, empty, negative, zero or limit usually guard a rule. Read the
-   test body to state the rule precisely, then read the production code it exercises.
+1. **Tests** (strongest evidence). Start from the digest's test list (pytest functions, or vitest/jest `it`/`test`
+   titles with their `describe` chain) and read names and assertions. Names containing never, always, must, only,
+   raises, throws, warns, invalid, empty, negative, zero or limit usually guard a rule. Read the test body to state
+   the rule precisely, then read the production code it exercises (the digest lists those files).
 2. **Git history.** `git log --no-merges --format='%h %s' -n 500`; for subjects with fix, regression, guard, validate,
    reject, must, never, always, ensure, warn or limit, run `git show --stat <sha>` and read the diff. A fix commit
    says what broke and therefore what must hold; its diff shows the guard. A rule fixed twice is a strong candidate.
@@ -63,15 +68,16 @@ Prefer rules corroborated by two sources: a test and the commit that added it, a
 - `statement`: one sentence, active voice, domain terms: "<subject> must | never <behaviour> [when <condition>]".
   Every identifier you use (function, class, constant) must appear in the evidence you cite.
 - `evidence`: one to eight items, each with `type` (`test`, `commit`, `doc`, `adr`, `changelog`, `import`,
-  `history`), a real `ref` (`tests/test_x.py::TestY::test_z`, a commit sha, `docs/x.md:12`) and an `excerpt` quoting
-  the source line. IntentOS checks that the file, line and commit exist; a proposal with an invented reference is
-  rejected.
-- `applies_to_paths`: globs of the production code the rule governs (`src/pkg/module.py`, `src/pkg/sub/**`). Not
+  `history`), a real `ref` (`tests/test_x.py::TestY::test_z`, `tests/ledger.test.ts::<it title>`, a commit sha,
+  `docs/x.md:12`) and an `excerpt` quoting the source line. IntentOS checks that the file, line and commit exist; a
+  proposal with an invented reference is rejected.
+- `applies_to_paths`: globs of the production code the rule governs (`src/pkg/module.py`, `src/domain/**`). Not
   test paths.
 - `category`: `business_rule` or `robustness_rule`. `rationale`: one or two sentences on why a user would notice.
   `confidence` and `relevance`: `high`, `medium` or `low`.
 - `kind`: `invariant` (needs a test), `architecture_rule` (needs `rule`, for example
-  `{"kind": "forbidden_import", "paths": ["src/pkg/api/**"], "forbidden_modules": ["pkg.persistence"]}`),
+  `{"kind": "forbidden_import", "paths": ["src/pkg/api/**"], "forbidden_modules": ["pkg.persistence"]}`; in a
+  TypeScript repository name modules as package specifiers or repository paths: `["node:fs", "src/db"]`),
   `frozen_paths` (`rule`: `{"kind": "frozen_paths", "paths": ["src/pkg/legacy/**"]}`), or `decision` (an ADR-style
   statement with `sources`).
 - `sources` (decisions, and rules a document states): the documents the rule cites, as
@@ -81,16 +87,20 @@ Prefer rules corroborated by two sources: a test and the commit that added it, a
 
 Every invariant needs `test`, one of:
 
-- `{"existing": "tests/test_x.py::TestY::test_z"}` when a test in the repository already proves the rule. IntentOS
-  lifts it with its imports, fixtures and class setup, and runs the original at the current revision. A test that
-  fails there is rejected: either the rule is not established or the repository is broken, and you tell the reviewer
-  which.
-- `{"source": "<a complete pytest module>"}` when nothing proves the rule yet (typical for rules found in commits
-  or documents). Requirements: import from the installed package only, no path hacks, no helpers from the repository's
-  tests directory, no conftest fixtures; deterministic (fixed dates, no randomness, no network, writes only under
-  `tmp_path`); one rule per test, named after the rule; assert the behaviour through public interfaces, not
-  implementation details; short. IntentOS runs it in the repository's venv at the current revision and rejects a
-  failing test with the pytest output.
+- `{"existing": "tests/test_x.py::TestY::test_z"}` (pytest) or `{"existing": "tests/ledger.test.ts::<it title>"}`
+  (vitest/jest) when a test in the repository already proves the rule. IntentOS lifts it (a pytest test with its
+  imports, fixtures and class setup; a vitest/jest file whole, with its relative imports re-pointed and the chosen
+  test marked `.only`) and runs the original at the current revision. A test that fails there is rejected: either
+  the rule is not established or the repository is broken, and you tell the reviewer which.
+- `{"source": "<a complete test module>"}` when nothing proves the rule yet (typical for rules found in commits or
+  documents). For Python: a pytest module importing from the installed package only, no path hacks, no helpers from
+  the repository's tests directory, no conftest fixtures. For TypeScript: a vitest/jest module (`import { it, expect }
+  from "vitest"`) that imports production code relative to the hidden directory two levels below the repository root,
+  for example `../../src/domain/money.ts`, with the same extension style the repository's own tests use; no setup
+  files. Both: deterministic (fixed dates, no randomness, no network, writes only under a temp dir); one rule per
+  test, named after the rule; assert the behaviour through public interfaces, not implementation details; short.
+  IntentOS runs it in the repository's environment at the current revision and rejects a failing test with the
+  runner's output.
 
 Prefer an existing test. Write one when none exists.
 

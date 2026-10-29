@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>IntentOS · Does the code belong, and is it safe to merge?</title>
-  <meta name="description" content="IntentOS is a Codex plugin for engineering teams running coding agents on an established Python codebase. It mines your repository's rules, compiles each ticket into an evidence-backed contract, verifies the result independently with hidden tests, and guards the merge.">
+  <meta name="description" content="IntentOS is a Codex plugin for engineering teams running coding agents on an established Python or TypeScript codebase. It mines your repository's rules, compiles each ticket into an evidence-backed contract, verifies the result independently with hidden tests, and guards the merge.">
   <meta property="og:title" content="IntentOS · The code works. But does it belong?">
   <meta property="og:description" content="Verification and coordination for Codex coding agents. Open source, runs locally beside Codex.">
   <meta property="og:type" content="website">
@@ -41,7 +41,7 @@
       <div>
         <div class="kicker">A Codex plugin for teams shipping agent-written code</div>
         <h1>The code works.<br>But does it <em>belong?</em></h1>
-        <p class="dek">IntentOS gives Codex a model of your repository's rules, history and architecture, then verifies every change independently and guards the merge. Built for engineering teams running coding agents against an established Python codebase.</p>
+        <p class="dek">IntentOS gives Codex a model of your repository's rules, history and architecture, then verifies every change independently and guards the merge. Built for engineering teams running coding agents against an established Python or TypeScript codebase.</p>
         <div class="cta">
           <a class="btn accent lg" href="#install">Install the plugin</a>
           <a class="btn lg" href="#evidence">Read the evidence</a>
@@ -121,11 +121,11 @@
     <div class="wrap">
       <div class="kicker">Who it is for</div>
       <h2 class="h2">Built for the person who owns main</h2>
-      <p class="lede">IntentOS is for established Python codebases where years of decisions live in tests, documents and closed tickets, and where coding agents are now doing real work in parallel.</p>
+      <p class="lede">IntentOS is for established Python and TypeScript codebases where years of decisions live in tests, documents and closed tickets, and where coding agents are now doing real work in parallel.</p>
       <div class="grid c3">
         <div class="card persona">
           <div class="role">Primary user</div>
-          <h3>The tech lead of an established Python codebase</h3>
+          <h3>The tech lead of an established Python or TypeScript codebase</h3>
           <p>You know the rules. The agents do not. You are the one paged when a green PR breaks billing.</p>
           <ul>
             <li>Rules mined from your own tests, fix commits and docs, each backed by a hidden test</li>
@@ -156,7 +156,7 @@
       </div>
       <div class="notfit">
         <strong>Not a fit today:</strong>
-        <p>Greenfield projects with no history to learn from. Repositories that are not Python with pytest (the indexer, miner and verifier are Python-first). Teams that want the agent to approve its own rules.</p>
+        <p>Greenfield projects with no history to learn from. Repositories that are not Python with pytest or TypeScript with vitest/jest (the indexer and verifier know those two). Teams that want the agent to approve its own rules.</p>
       </div>
     </div>
   </section>
@@ -466,7 +466,8 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
           <li><span>Container-isolated verifier</span><span class="pill good">Shipped, opt-in</span></li>
           <li><span>Local dashboard and agent skills</span><span class="pill good">Shipped</span></li>
           <li><span>GitHub App, hosted runners, tenant isolation</span><span class="pill warn">Roadmap</span></li>
-          <li><span>Languages beyond Python</span><span class="pill warn">Roadmap</span></li>
+          <li><span>TypeScript (vitest/jest): index, rules, hidden tests</span><span class="pill good">Shipped</span></li>
+          <li><span>Languages beyond Python and TypeScript</span><span class="pill warn">Roadmap</span></li>
         </ul>
       </div>
     </div>
@@ -488,7 +489,7 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
         </details>
         <details>
           <summary>Which languages and hosts does it support?</summary>
-          <div class="a"><p>Python repositories with pytest today: the indexer is AST-based and the verifier runs pytest in the repository's own virtual environment. Codex is the primary host (plugin, skills, elicitation forms in the CLI, the review widget in the app). Any MCP host can call the tools; hosts that render MCP Apps, such as Claude or VS Code, get the review as an inline widget.</p></div>
+          <div class="a"><p>Python repositories with pytest and TypeScript repositories with vitest or jest: the indexer is AST-based (Python <code>ast</code>, the TypeScript compiler API), the verifier runs pytest in the repository's own virtual environment or the repository's own test runner with its <code>node_modules</code>, and architecture rules are checked in both languages. Container-isolated verification is Python-only for now. Codex is the primary host (plugin, skills, elicitation forms in the CLI, the review widget in the app). Any MCP host can call the tools; hosts that render MCP Apps, such as Claude or VS Code, get the review as an inline widget.</p></div>
         </details>
         <details>
           <summary>What does it cost per run?</summary>

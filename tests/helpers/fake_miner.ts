@@ -27,7 +27,7 @@ export function fakeMiner(rounds: Round[], model = "fake-model", opts: { before?
 }
 
 /** Every field present, as the structured output schema requires. */
-const full = (c: Record<string, unknown>) => ({ kind: "invariant", category: "business_rule", rationale: "a user would notice", confidence: "high", relevance: "high", evidence: [], applies_to_paths: [], test: { existing: null, source: null }, rule: { kind: null, paths: [], forbidden_modules: [] }, sources: [], from_mined: null, ...c });
+const full = (c: Record<string, unknown>) => ({ kind: "invariant", category: "business_rule", rationale: "a user would notice", confidence: "high", relevance: "high", evidence: [], applies_to_paths: [], test: { existing: null, source: null }, rule: { kind: null, paths: [], forbidden_modules: [] }, sources: [], ...c });
 
 /** Round one on the startup_billing fixture: a lifted test, an invented reference, an architecture rule, an untested invariant. */
 export const ROUND_ONE = {

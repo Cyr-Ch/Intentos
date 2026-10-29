@@ -36,7 +36,7 @@ beforeAll(() => {
 afterAll(() => env.cleanup());
 
 describe("intentos mine — the independent miner runs the skill with another model through the same checks as propose", () => {
-  it("prompts with the skill and the raw list, checks round one, sends the rejections back to the same thread, and records the author", async () => {
+  it("prompts with the skill and the evidence digest, checks round one, sends the rejections back to the same thread, and records the author", async () => {
     const engine = fakeMiner([() => ROUND_ONE, () => ROUND_TWO], "other-model");
     const lines: string[] = [];
     const r = await mineWithModel(env.repo, { engine, model: "other-model", policyFile, outDir }, (l) => lines.push(l));
@@ -54,7 +54,7 @@ describe("intentos mine — the independent miner runs the skill with another mo
     ]);
     expect(r.rejected.map((x) => x.title)).toEqual(["Quotes carry a currency"]);
     expect(r.candidates.map((c) => c.title)).toEqual(ROUND_TITLES);
-    expect(lines).toEqual([expect.stringMatching(/^raw list: \d+ entries at [0-9a-f]{7}; asking other-model to mine the rules \(round 1 of at most 2\)/), "round 1: 4 candidate(s) from other-model; checking references and running tests…", "round 1: 2 accepted, 2 rejected; the review list has 2 candidate(s)", "round 2: 1 candidate(s) from other-model; checking references and running tests…", "round 2: 1 accepted, 0 rejected; the review list has 3 candidate(s)", "done: 3 accepted, 1 still rejected after 2 round(s); the review list has 3 candidate(s)"]);
+    expect(lines).toEqual([expect.stringMatching(/^evidence digest: \d+ tests, \d+ commits, \d+ document sentences at [0-9a-f]{7}; asking other-model to mine the rules \(round 1 of at most 2\)/), "round 1: 4 candidate(s) from other-model; checking references and running tests…", "round 1: 2 accepted, 2 rejected; the review list has 2 candidate(s)", "round 2: 1 candidate(s) from other-model; checking references and running tests…", "round 2: 1 accepted, 0 rejected; the review list has 3 candidate(s)", "done: 3 accepted, 1 still rejected after 2 round(s); the review list has 3 candidate(s)"]);
 
     // The first prompt carries the skill without its frontmatter, the repository path and the raw list; the second resumes the thread with the rejections.
     expect(engine.calls).toHaveLength(2);
@@ -62,8 +62,12 @@ describe("intentos mine — the independent miner runs the skill with another mo
     expect(engine.calls[0]!.prompt).toMatch(/## Where to look, in this order/);
     expect(engine.calls[0]!.prompt).not.toMatch(/^---\nname:/);
     expect(engine.calls[0]!.prompt).toContain(env.repo);
-    expect(engine.calls[0]!.prompt).toMatch(/raw list \(\d+ entries at [0-9a-f]{7}/);
-    expect(engine.calls[0]!.prompt).toMatch(/\n- CAND-001 \[/);
+    expect(engine.calls[0]!.prompt).toMatch(/## The evidence digest/);
+    expect(engine.calls[0]!.prompt).toMatch(/Repository .* at [0-9a-f]{7} \(python\)/);
+    expect(engine.calls[0]!.prompt).toMatch(/## Tests \(\d+;/);
+    expect(engine.calls[0]!.prompt).toMatch(/tests\/test_locked_contract\.py::test_cancelled_contract_gets_no_discount/);
+    expect(engine.calls[0]!.prompt).toMatch(/## Commits/);
+    expect(engine.calls[0]!.prompt).not.toMatch(/\n- CAND-\d+ \[/); // no pre-ranked candidate list: the model reads facts
     expect(engine.calls[1]!.threadId).toBe("thread-fake-1");
     expect(engine.calls[1]!.prompt).toMatch(/2 accepted \(Volume discount applies at the seat threshold; api never imports legacy\), 2 rejected/);
     expect(engine.calls[1]!.prompt).toMatch(/docs\/missing\.md is not a tracked file/);
@@ -74,8 +78,7 @@ describe("intentos mine — the independent miner runs the skill with another mo
     const s = JSON.parse(fs.readFileSync(path.join(outDir, "suggestions.json"), "utf8"));
     expect(s.authored_by).toBe("codex");
     expect(s.author).toEqual({ via: "side_thread", model: "other-model", engine: "fake-miner", thread_id: "thread-fake-1" });
-    expect(s.classification.model).toBe("other-model");
-    expect(s.classification.note).toMatch(/authored by other-model in an independent side thread/);
+    expect(s.note).toMatch(/authored by other-model in an independent side thread/);
     const state = await loadReviewState(env.repo, { policyFile, outDir, by: "tester", hiddenTestsRoot: path.join(env.home, "hidden") });
     expect(state.author).toEqual(s.author);
     expect(state.candidates.map((c) => c.id)).toEqual(["CAND-001", "CAND-002", "CAND-003"]);
@@ -106,14 +109,13 @@ describe("intentos mine — the independent miner runs the skill with another mo
   }, 120_000);
 
   it("normalizes the structured answer to the shape propose takes", () => {
-    expect(normalizeProposal({ title: "t", rationale: "", test: { existing: null, source: null }, rule: { kind: null, paths: [], forbidden_modules: [] }, sources: [], from_mined: null })).toEqual({ title: "t" });
-    expect(normalizeProposal({ title: "t", test: { existing: "a::b", source: null }, rule: { kind: "forbidden_import", paths: ["x/**"], forbidden_modules: ["y"] }, sources: [{ path: "d.md", heading: null }, "e.md"], evidence: [{ type: "doc", ref: "d.md:1", excerpt: "x", line: null }], from_mined: "CAND-003" })).toEqual({
+    expect(normalizeProposal({ title: "t", rationale: "", test: { existing: null, source: null }, rule: { kind: null, paths: [], forbidden_modules: [] }, sources: [] })).toEqual({ title: "t" });
+    expect(normalizeProposal({ title: "t", test: { existing: "a::b", source: null }, rule: { kind: "forbidden_import", paths: ["x/**"], forbidden_modules: ["y"] }, sources: [{ path: "d.md", heading: null }, "e.md"], evidence: [{ type: "doc", ref: "d.md:1", excerpt: "x", line: null }] })).toEqual({
       title: "t",
       test: { existing: "a::b" },
       rule: { kind: "forbidden_import", paths: ["x/**"], forbidden_modules: ["y"] },
       sources: [{ path: "d.md" }, "e.md"],
       evidence: [{ type: "doc", ref: "d.md:1", excerpt: "x" }],
-      from_mined: "CAND-003",
     });
   });
 });

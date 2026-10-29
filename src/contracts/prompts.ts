@@ -89,6 +89,11 @@ export function precedentsForContract(contract: ChangeContract, pack: EvidencePa
 }
 
 /** What the implementer is told when mergeguard coordination is on: other runs land on main while it works. */
+/** The suite the implementer is told to run: pytest unless the pack's commands name a TypeScript project suite. */
+export function suiteCommandHint(pack: Pick<EvidencePack, "commands">): string {
+  return pack.commands.some((c) => c.command_id === "test_project") ? "the project's test runner, e.g. npx vitest run or npx jest" : "python -m pytest -q";
+}
+
 export function coordinationRules(mainBranch: string): string[] {
   return [
     `- Other agents merge into ${mainBranch} while you work. A hook watches ${mainBranch} after each command and may tell you that a function, class or method you use was renamed, moved, removed or changed signature there. When it does: bring ${mainBranch} in with \`git stash && git merge --ff-only ${mainBranch} && git stash pop\` (resolve any conflict in your own uncommitted files), make the edit it names, re-run the tests, then finish. That fast-forward is the only way HEAD may move; never commit.`,
@@ -107,7 +112,7 @@ export function buildImplementationPrompt(contract: ChangeContract, pack: Eviden
   lines.push("- Do not commit, do not touch Git configuration, do not access the network.");
   if (opts.coordination) lines.push(...coordinationRules(opts.coordination.mainBranch));
   lines.push("- Reuse the listed existing abstractions instead of duplicating their logic. Follow the architecture rules exactly.");
-  lines.push("- Run the project's test suite (python -m pytest -q) before finishing. Your own success claims are not trusted: an independent verifier re-runs tests and hidden checks afterwards.");
+  lines.push(`- Run the project's test suite (${suiteCommandHint(pack)}) before finishing. Your own success claims are not trusted: an independent verifier re-runs tests and hidden checks afterwards.`);
   lines.push("- Finish with a short summary of files changed and how each business invariant is preserved.");
   lines.push("");
   lines.push(`## Task\n${task}`);
@@ -160,7 +165,7 @@ export function buildContinuePrompt(contract: ChangeContract, phase: "implement"
   lines.push(`- Edit ONLY files matching these allowed paths: ${contract.allowed_paths.join(", ")}.`);
   lines.push(`- NEVER create, modify or delete anything matching: ${contract.protected_paths.join(", ")}. Do not weaken, delete or skip existing tests.`);
   lines.push("- Do not commit, do not touch Git configuration, do not access the network.");
-  lines.push("- Run python -m pytest -q before finishing. Your own success claims are not trusted: an independent verifier re-runs tests and hidden checks afterwards.");
+  lines.push("- Run the project's test suite before finishing. Your own success claims are not trusted: an independent verifier re-runs tests and hidden checks afterwards.");
   lines.push("- Finish with a short summary of files changed and how each business invariant is preserved.");
   lines.push("");
   lines.push(`## Goal\n${contract.goal}`);
@@ -185,7 +190,7 @@ export function buildRepairPrompt(contract: ChangeContract, findings: Finding[],
   const lines: string[] = [];
   lines.push(`Repair attempt ${attempt}: the independent verifier rejected the current working tree. Fix the code so the checks below pass WITHOUT changing the contract, tests you did not write, or any protected path.`);
   lines.push(`Allowed paths: ${contract.allowed_paths.join(", ")}. Protected: ${contract.protected_paths.join(", ")}.`);
-  lines.push("Do not disable or delete checks. Re-run python -m pytest -q before finishing.");
+  lines.push("Do not disable or delete checks. Re-run the project's test suite before finishing.");
   if (opts.coordination && findings.some((f) => f.category === "coordination")) lines.push(...coordinationRules(opts.coordination.mainBranch));
   lines.push("");
   lines.push("## Blocking findings");

@@ -87,6 +87,71 @@ def normalise_name(spec: str) -> str:
     return re.split(r"[\s<>=!~\[;@]", spec.strip(), maxsplit=1)[0].lower().replace("_", "-")
 
 
+JS_TEST_FILE_RE = re.compile(r"\.(test|spec)\.[cm]?[jt]sx?$")
+JS_CONFIG_FILES = ("vitest.config.ts", "vitest.config.mts", "vitest.config.js", "vitest.config.mjs", "vite.config.ts", "vite.config.mts", "vite.config.js", "vite.config.mjs", "jest.config.ts", "jest.config.js", "jest.config.mjs", "jest.config.cjs", "jest.config.json", "babel.config.js", "babel.config.cjs", ".babelrc", "tsconfig.json", "tsconfig.base.json", "tsconfig.build.json")
+JS_PACKAGING_FILES = ("package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "bun.lock", ".npmrc", ".nvmrc")
+
+
+def probe_node(repo: str, warnings: list[str]) -> dict[str, Any] | None:
+    """A TypeScript/JavaScript project: package.json, the test runner, the package manager, source and test directories."""
+    pkg_file = os.path.join(repo, "package.json")
+    if not os.path.exists(pkg_file):
+        return None
+    try:
+        pkg = json.loads(read_text(pkg_file) or "{}")
+    except json.JSONDecodeError as exc:
+        warnings.append(f"package.json could not be parsed: {exc}")
+        pkg = {}
+    deps = {**(pkg.get("dependencies") or {}), **(pkg.get("devDependencies") or {})}
+    scripts = pkg.get("scripts") or {}
+    test_script = str(scripts.get("test") or "")
+    runner = "vitest" if "vitest" in deps or "vitest" in test_script else "jest" if "jest" in deps or "jest" in test_script else None
+    manager = "pnpm" if os.path.exists(os.path.join(repo, "pnpm-lock.yaml")) else "yarn" if os.path.exists(os.path.join(repo, "yarn.lock")) else "bun" if (os.path.exists(os.path.join(repo, "bun.lockb")) or os.path.exists(os.path.join(repo, "bun.lock"))) else "npm"
+    has_lock = any(os.path.exists(os.path.join(repo, f)) for f in ("package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "bun.lock", "npm-shrinkwrap.json"))
+    source_dirs: list[str] = []
+    test_dirs: list[str] = []
+    test_files = 0
+    ts_files = 0
+    for dirpath, dirnames, filenames in os.walk(repo):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and d not in ("node_modules", "dist", "build", "coverage", ".next", ".turbo") and not d.startswith(".")]
+        rel_dir = os.path.relpath(dirpath, repo).replace(os.sep, "/")
+        top = rel_dir.split("/")[0] if rel_dir != "." else ""
+        for fn in filenames:
+            if not re.search(r"\.[cm]?[jt]sx?$", fn) or fn.endswith(".d.ts"):
+                continue
+            ts_files += 1
+            if JS_TEST_FILE_RE.search(fn) or "__tests__" in rel_dir.split("/"):
+                test_files += 1
+                if top and top not in test_dirs:
+                    test_dirs.append(top)
+            elif top and top not in source_dirs:
+                source_dirs.append(top)
+    source_dirs = [d for d in source_dirs if d not in test_dirs or d in ("src", "lib", "app", "packages")]
+    test_dirs = [d for d in test_dirs if d in ("tests", "test", "__tests__", "spec", "e2e") or d not in source_dirs]
+    if runner is None:
+        warnings.append("no vitest or jest in package.json: the drafted test command assumes vitest; edit commands.test_project")
+    if runner == "jest" and "jest-junit" not in deps:
+        warnings.append("jest without jest-junit: install jest-junit (devDependency) so the verifier can read a JUnit report")
+    if not os.path.isdir(os.path.join(repo, "node_modules")):
+        warnings.append(f"node_modules missing: onboarding runs `{manager} install`; the verifier links the repository's node_modules into every snapshot")
+    configs = [f for f in JS_CONFIG_FILES if os.path.exists(os.path.join(repo, f))]
+    return {
+        "name": pkg.get("name"),
+        "runner": runner or "vitest",
+        "runner_declared": runner,
+        "package_manager": manager,
+        "has_lockfile": has_lock,
+        "test_script": test_script or None,
+        "source_dirs": sorted(source_dirs) or (["src"] if os.path.isdir(os.path.join(repo, "src")) else []),
+        "test_dirs": sorted(test_dirs),
+        "test_files": test_files,
+        "source_files": ts_files - test_files,
+        "config_files": configs,
+        "type_module": pkg.get("type") == "module",
+        "has_jest_junit": "jest-junit" in deps,
+    }
+
+
 def probe(repo: str) -> dict[str, Any]:
     repo = os.path.abspath(repo)
     warnings: list[str] = []
@@ -291,8 +356,28 @@ def probe(repo: str) -> dict[str, Any]:
     if os.path.isdir(os.path.join(repo, ".github")):
         protected.append(".github/**")
 
+    # Language: a package.json with TypeScript/JavaScript sources and no Python packaging makes it a TypeScript repository;
+    # with both, the one with more source files wins (Python when equal: IntentOS's own deeper support).
+    node = probe_node(repo, warnings)
+    py_files = sum(1 for d, dn, fns in os.walk(repo) if not any(part in SKIP_DIRS or part.startswith(".") or part == "node_modules" for part in os.path.relpath(d, repo).split(os.sep)) for fn in fns if fn.endswith(".py"))
+    has_py_packaging = any(os.path.exists(os.path.join(repo, f)) for f in ("pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"))
+    language = "python"
+    if node and (node["source_files"] + node["test_files"]) > 0 and (not has_py_packaging or (node["source_files"] > py_files)):
+        language = "typescript"
+    if language == "typescript":
+        name = node["name"] or name
+        for fn in sorted(os.listdir(repo)):
+            if (fn in JS_PACKAGING_FILES or fn in JS_CONFIG_FILES) and fn not in protected:
+                protected.append(fn)
+        if not node["test_files"]:
+            warnings.append("no *.test.ts / *.spec.ts files found: the verifier will have nothing to run until the project has tests")
+    elif node:
+        warnings.append("package.json found next to a Python project: IntentOS treats the repository as Python; pass --language typescript to onboard it as TypeScript")
+
     return {
         "repo": repo,
+        "language": language,
+        "node": node,
         "name": name,
         "requires_python": requires_python,
         "dependencies": deps,

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { setupFixtureEnv, type TestEnv } from "../helpers/fixture.ts";
-import { suggestPolicy } from "../../src/suggest.ts";
+import { seedCandidates } from "../helpers/seed_candidates.ts";
 import { autoApprove, autoApprover, loadReviewState } from "../../src/review.ts";
 import { loadPolicyFile } from "../../src/knowledge/policy.ts";
 
@@ -27,16 +27,16 @@ decisions: []
 
 beforeAll(async () => {
   env = setupFixtureEnv();
-  await suggestPolicy(env.repo, { writeAdrs: false, withCodex: false, outDir: outDir() });
   policyFile = path.join(env.home, "policies", "startup_billing.yaml");
   fs.mkdirSync(path.dirname(policyFile), { recursive: true });
   fs.writeFileSync(policyFile, MINIMAL_POLICY);
+  await seedCandidates(env.repo, outDir(), policyFile);
   hiddenRoot = path.join(env.home, "hidden_tests");
 });
 afterAll(() => env.cleanup());
 
 describe("automatic approval", () => {
-  it("approves every pending candidate that has a test, leaves testless invariants pending, records the approver and re-indexes", async () => {
+  it("approves every pending candidate that has a test (ingested invariants always do), records the approver and re-indexes", async () => {
     const state = await loadReviewState(env.repo, { outDir: outDir(), policyFile, hiddenTestsRoot: hiddenRoot, by: autoApprover({ via: "side_thread", model: "other-model" }), store: env.store });
     const before = state.candidates.length;
     expect(before).toBeGreaterThan(0);
@@ -52,7 +52,8 @@ describe("automatic approval", () => {
       expect(inv.verified_by.length).toBeGreaterThan(0);
       for (const t of inv.verified_by) expect(fs.existsSync(path.join(process.cwd(), t))).toBe(true);
     }
-    for (const w of r.without_test) expect(state.candidates.find((c) => c.id === w.id)!.kind).toBe("invariant");
+    expect(r.without_test).toHaveLength(0); // the Ingestor refuses invariants without a test, so nothing is left pending
+    expect(r.failed).toHaveLength(0);
     expect(r.finish.accepted).toBe(r.approved.length);
     expect(r.finish.skipped).toBe(r.without_test.length);
     expect(r.finish.index?.policy_id).toBe("startup_billing");
@@ -63,7 +64,7 @@ describe("automatic approval", () => {
   });
 
   it("names the approver after who mined the list", () => {
-    expect(autoApprover(null)).toBe("auto:miner");
+    expect(autoApprover(null)).toBe("auto:codex");
     expect(autoApprover({ via: "host", model: null })).toBe("auto:codex");
     expect(autoApprover({ via: "side_thread", model: "gpt-x" })).toBe("auto:gpt-x");
   });

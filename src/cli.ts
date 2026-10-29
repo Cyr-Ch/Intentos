@@ -11,11 +11,11 @@ import { renderEvidencePack } from "./reports/explain.ts";
 import { registerRunCommands } from "./cli_run.ts";
 import { registerMergeCommands } from "./cli_merge.ts";
 import { onboardRepository } from "./onboard.ts";
-import { recordReviewFeedback, suggestPolicy, type SuggestResult } from "./suggest.ts";
+import { renderDigest } from "./candidates.ts";
 import { autoApprove, autoApprover, defaultReviewer, loadReviewState, startReviewServer, type AutoApproveResult } from "./review.ts";
 import { expectationFor, loadTicketFile, writeAcceptanceTests, type AcceptanceResult } from "./acceptance.ts";
 import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
-import { ingestProposals, installSkill, SETUP_SKILL_NAME, SKILL_NAME, SKILL_NAMES, skillText } from "./propose.ts";
+import { ingestProposals, installSkill, loadDigest, SETUP_SKILL_NAME, SKILL_NAME, SKILL_NAMES, skillText } from "./propose.ts";
 import { mineWithModel, ReplayEngine } from "./mine.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
 import { currentName, precedentsFile, syncPrecedents, writePrecedentsFile, type PrecedentAttributes } from "./knowledge/precedents.ts";
@@ -37,23 +37,6 @@ function printAcceptance(r: AcceptanceResult): void {
   for (const round of r.rounds) if (round.rejected.length) console.log(`  round ${round.round} rejected: ${round.rejected.map((x) => `${x.path} (${x.reasons.join("; ")})`).join(" | ")}`);
   if (r.notes) console.log(`  notes: ${r.notes}`);
   console.log(`  bound as task ${r.task_id} in ${path.relative(PROJECT_ROOT, r.tasks_file)}; the implementer never sees ${path.relative(PROJECT_ROOT, r.dir)}`);
-}
-
-function printSuggestions(result: SuggestResult): void {
-  console.log(`Suggestions for ${result.repo_path} (policy ${result.policy_id}, ${result.head.slice(0, 7)})`);
-  console.log(`  candidates:   ${result.candidates.length} (${Object.entries(result.counts).map(([k, v]) => `${k} ${v}`).join(", ")}), ordered by business-relevance score`);
-  for (const c of result.candidates) {
-    const verdict = c.classification ? ` ${c.classification.keep ? "KEEP" : "drop"} ${c.classification.category}` : "";
-    console.log(`    ${c.id}  ${c.score.toFixed(2)} ${c.relevance.padEnd(6)} ${c.kind.padEnd(17)} ${c.title.slice(0, 60).padEnd(60)}${c.cluster_size > 1 ? ` [${c.cluster}]` : ""}${verdict}`);
-  }
-  if (result.classification.used) console.log(`  classified:   ${result.classification.classified} by ${result.classification.model ?? "codex"}: kept ${result.classification.kept}, set aside ${result.classification.filtered}${result.classification.rewrites_rejected ? `, ${result.classification.rewrites_rejected} rewrite(s) rejected` : ""}${result.classification.note ? ` (${result.classification.note})` : ""}`);
-  console.log(`  review:       ${result.files.markdown}`);
-  console.log(`  paste-ready:  ${result.files.yaml}`);
-  if (result.adr_dir) console.log(`  ADR drafts:   ${result.adrs.length} in ${result.adr_dir} (Status: Proposed)`);
-  if (result.codex.used) console.log(`  codex:        ${result.codex.model ?? "codex"}; ${result.adrs.filter((a) => a.synthesized_by === "codex").length} ADR(s) synthesised${result.codex.dropped ? `, ${result.codex.dropped} dropped for citing unknown evidence` : ""}`);
-  for (const w of result.warnings) console.log(`  warning:      ${w}`);
-  console.log("  next:");
-  for (const n of result.next_steps) console.log(`    - ${n}`);
 }
 
 const program = new Command();
@@ -219,32 +202,29 @@ program
   .option("--no-test", "do not run the project suite at the base revision")
   .option("--no-index", "do not index the repository")
   .option("--force", "overwrite an existing policy file", false)
-  .option("--suggest", "also mine the repository for policy candidates (see `intentos suggest`)", false)
-  .action(async (repo: string, opts: { policyId?: string; out?: string; python?: string; install: boolean; test: boolean; index: boolean; force: boolean; suggest: boolean }) => {
+  .option("--language <lang>", "python or typescript; overrides the probe for a repository that has both")
+  .action(async (repo: string, opts: { policyId?: string; out?: string; python?: string; install: boolean; test: boolean; index: boolean; force: boolean; language?: string }) => {
     const store = openStore();
     const json = program.opts().json as boolean;
     try {
       // Progress goes to stderr in every mode: with --json a caller (the MCP server's onboard job) streams it while stdout stays the result.
-      const result = onboardRepository(store, repo, { policyId: opts.policyId, out: opts.out, python: opts.python, install: opts.install, test: opts.test, index: opts.index, force: opts.force }, (line) => console.error(`[onboard] ${line}`));
-      const suggestions = opts.suggest ? await suggestPolicy(repo, { policyId: result.policy_id, writeAdrs: false, withCodex: false }, (line) => console.error(`[suggest] ${line}`)) : null;
+      if (opts.language && opts.language !== "python" && opts.language !== "typescript") fail(`--language must be python or typescript (got ${opts.language})`);
+      const result = onboardRepository(store, repo, { policyId: opts.policyId, out: opts.out, python: opts.python, install: opts.install, test: opts.test, index: opts.index, force: opts.force, language: opts.language as "python" | "typescript" | undefined }, (line) => console.error(`[onboard] ${line}`));
       if (json) {
-        console.log(JSON.stringify({ ...result, suggestions }, null, 2));
+        console.log(JSON.stringify(result, null, 2));
         return;
       }
       console.log(`Onboarded ${result.repo_path}`);
       console.log(`  repo_id:      ${result.repo_id}`);
-      console.log(`  layout:       ${result.probe.layout} (packages: ${result.probe.packages.join(", ") || "none"}; tests: ${result.probe.test_paths.join(", ") || "none found"})`);
-      console.log(`  interpreter:  ${result.interpreter}${result.venv ? `  (venv ${result.venv}; ${result.installed?.length ?? 0} package(s) installed)` : ""}`);
+      if (result.probe.language === "typescript") console.log(`  language:     typescript (${result.probe.node?.runner ?? "vitest"}, ${result.probe.node?.package_manager ?? "npm"}; sources: ${result.probe.node?.source_dirs.join(", ") || "none"}; tests: ${result.probe.node?.test_dirs.join(", ") || "none found"})`);
+      else console.log(`  layout:       ${result.probe.layout} (packages: ${result.probe.packages.join(", ") || "none"}; tests: ${result.probe.test_paths.join(", ") || "none found"})`);
+      console.log(`  interpreter:  ${result.interpreter}${result.venv ? `  (venv ${result.venv}; ${result.installed?.length ?? 0} package(s) installed)` : result.installed?.length ? `  (${result.installed.join("; ")})` : ""}`);
       console.log(`  policy:       ${result.policy_file} (DRAFT, id ${result.policy_id})`);
       console.log(`  suite:        ${result.smoke.status}${result.smoke.tests_passed !== null ? ` (${result.smoke.tests_passed} passed, ${result.smoke.tests_failed} failed)` : ""} — ${result.smoke.summary}`);
       if (result.index) console.log(`  index:        ${result.index.mode}, policy ${result.index.policy_id}, ${Object.entries(result.index.counts).filter(([k]) => k.startsWith("nodes.")).map(([k, v]) => `${k.slice(6)}=${v}`).join(", ")}`);
       for (const w of result.warnings) console.log(`  warning:      ${w}`);
       console.log("  next:");
       for (const n of result.next_steps) console.log(`    - ${n}`);
-      if (suggestions) {
-        console.log("");
-        printSuggestions(suggestions);
-      }
     } catch (err) {
       fail((err as Error).message);
     } finally {
@@ -253,62 +233,18 @@ program
   });
 
 program
-  .command("suggest")
-  .description("Mine a repository for policy candidates (commits, rule-like tests, must/never sentences, ADRs, layer imports, frozen dirs, changelog) and write review files; nothing is approved")
+  .command("evidence")
+  .description("Print the evidence digest a model reads before stating a repository's rules: tests with their first assertion, commits with the files and tests they touched, must/never sentences, ADRs, import edges, stale directories, changelog deprecations. Facts only; nothing is ranked or approved")
   .argument("<repo>", "path to the repository root (a Git checkout)")
-  .option("--policy-id <id>", "policy id used in the drafts (default: sanitised project name, else folder name)")
-  .option("--out <dir>", "directory for suggestions.json / policy-suggestions.md / policy-suggestions.yaml (default .intentos/onboard/<repo-id>)")
-  .option("--write-adrs", "write ADR drafts (Status: Proposed) into the repository", false)
-  .option("--adr-dir <dir>", "where ADR drafts go (default <repo>/docs/decisions)")
-  .option("--with-codex", "let Codex turn the mined evidence into ADR prose in a read-only thread (spends tokens; model text is validated against the evidence)", false)
-  .option("--max-commits <n>", "how many commits to scan", "500")
-  .option("--min-confidence <level>", "drop candidates below high|medium|low (evidence confidence)", "low")
-  .option("--min-score <0..1>", "drop candidates whose business-relevance score is below this", "0")
-  .option("--classify", "let Codex sort the top candidates (keep/drop, category, rule rewrite, cluster) in a read-only thread; verdicts are validated against the evidence", false)
-  .option("--classify-top <n>", "how many top-ranked candidates to classify", "40")
-  .option("--feedback <file>", "accept/reject token weights from earlier reviews (default <out>/feedback.json)")
-  .option("--record", "do not mine: compare the last suggestions with the policy file and write feedback.json for the next run", false)
-  .option("--approve", "write every kept candidate that has a test straight into the policy and the hidden tests, no review UI; you are told where the file is", false)
-  .action(async (repo: string, opts: { policyId?: string; out?: string; writeAdrs: boolean; adrDir?: string; withCodex: boolean; maxCommits: string; minConfidence: string; minScore: string; classify: boolean; classifyTop: string; feedback?: string; record: boolean; approve: boolean }) => {
+  .option("--policy-id <id>", "policy id (default: sanitised project name, else folder name)")
+  .option("--out <dir>", "directory for the cached evidence.json (default .intentos/onboard/<repo-id>)")
+  .option("--max-commits <n>", "how many commits to scan", "300")
+  .action((repo: string, opts: { policyId?: string; out?: string; maxCommits: string }) => {
     const json = program.opts().json as boolean;
     try {
-      if (opts.record) {
-        const paths = ensureHome(resolvePaths());
-        const outDir = path.resolve(opts.out ?? path.join(paths.home, "onboard", repoIdFor(path.resolve(repo))));
-        const suggestionsFile = path.join(outDir, "suggestions.json");
-        const previous = fs.existsSync(suggestionsFile) ? (JSON.parse(fs.readFileSync(suggestionsFile, "utf8")) as { policy_id: string }) : null;
-        const policyId = opts.policyId ?? previous?.policy_id;
-        if (!policyId) fail(`no previous suggestions in ${outDir}; run intentos suggest first or pass --policy-id`);
-        const fb = recordReviewFeedback(suggestionsFile, path.join(paths.policies, `${policyId}.yaml`), opts.feedback ?? path.join(outDir, "feedback.json"));
-        if (json) console.log(JSON.stringify(fb, null, 2));
-        else {
-          console.log(`Recorded review feedback for ${policyId}: accepted ${fb.accepted_ids.length} (${fb.accepted_ids.join(", ") || "none"}), rejected ${fb.rejected_ids.length}`);
-          console.log(`  accept terms: ${fb.accept_tokens.slice(0, 12).join(", ")}${fb.accept_tokens.length > 12 ? ", …" : ""}`);
-          console.log(`  reject terms: ${fb.reject_tokens.slice(0, 12).join(", ")}${fb.reject_tokens.length > 12 ? ", …" : ""}`);
-          console.log(`  -> ${opts.feedback ?? path.join(outDir, "feedback.json")} (used automatically by the next intentos suggest)`);
-        }
-        return;
-      }
-      const level = opts.minConfidence as "high" | "medium" | "low";
-      if (!["high", "medium", "low"].includes(level)) fail(`--min-confidence must be high, medium or low (got ${opts.minConfidence})`);
-      const minScore = Number(opts.minScore);
-      if (!(minScore >= 0 && minScore <= 1)) fail(`--min-score must be between 0 and 1 (got ${opts.minScore})`);
-      const result = await suggestPolicy(repo, { policyId: opts.policyId, outDir: opts.out, writeAdrs: opts.writeAdrs, adrDir: opts.adrDir, withCodex: opts.withCodex, maxCommits: Number(opts.maxCommits), minConfidence: level, minScore, classify: opts.classify, classifyTop: Number(opts.classifyTop), feedbackFile: opts.feedback }, (line) => console.error(`[suggest] ${line}`));
-      let approved: AutoApproveResult | null = null;
-      if (opts.approve) {
-        const store = openStore();
-        try {
-          const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, by: autoApprover(result.classification.model ? { via: "side_thread", model: result.classification.model } : null), store, log: (line) => console.error(`[approve] ${line}`) });
-          approved = autoApprove(state);
-        } finally {
-          store.close();
-        }
-      }
-      if (json) console.log(JSON.stringify({ ...result, approved }, null, 2));
-      else {
-        printSuggestions(result);
-        if (approved) printAutoApproval(approved);
-      }
+      const digest = loadDigest(repo, { policyId: opts.policyId, outDir: opts.out, maxCommits: Number(opts.maxCommits) });
+      if (json) console.log(JSON.stringify(digest, null, 2));
+      else console.log(renderDigest(digest));
     } catch (err) {
       fail((err as Error).message);
     }
@@ -332,19 +268,18 @@ program
   .command("review")
   .description("Open a local one-page UI to approve or reject the mined policy candidates; approvals land in the policy file, the hidden tests and the repository's policy notes")
   .argument("<repo>", "path to the repository root (a Git checkout)")
-  .option("--policy-id <id>", "policy id (default: from the last suggest run)")
-  .option("--out <dir>", "directory of the last suggest run (default .intentos/onboard/<repo-id>)")
+  .option("--policy-id <id>", "policy id (default: from the last propose/mine run)")
+  .option("--out <dir>", "directory of the last propose/mine run (default .intentos/onboard/<repo-id>)")
   .option("--policy-file <file>", "policy file to append to (default policies/<policy-id>.yaml)")
   .option("--by <name>", "reviewer name written into approved_by (default: git user.name)")
   .option("--doc-file <path>", "repository-relative Markdown file that receives sections for candidates without a source", "docs/intentos-policy.md")
   .option("--port <n>", "port for the local server (default: random)")
   .option("--no-open", "print the URL instead of opening the browser")
-  .option("--include-filtered", "also show candidates the classifier set aside", false)
   .option("--auto", "no UI: approve every pending candidate that has a test, write the policy and hidden tests, and say where the file is", false)
-  .action(async (repo: string, opts: { policyId?: string; out?: string; policyFile?: string; by?: string; docFile: string; port?: string; open: boolean; includeFiltered: boolean; auto: boolean }) => {
+  .action(async (repo: string, opts: { policyId?: string; out?: string; policyFile?: string; by?: string; docFile: string; port?: string; open: boolean; auto: boolean }) => {
     const store = openStore();
     try {
-      const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, policyFile: opts.policyFile, by: opts.by ?? (opts.auto ? "auto" : defaultReviewer()), docFile: opts.docFile, includeFiltered: opts.includeFiltered, store, log: (line) => console.error(`[review] ${line}`) });
+      const state = await loadReviewState(repo, { policyId: opts.policyId, outDir: opts.out, policyFile: opts.policyFile, by: opts.by ?? (opts.auto ? "auto" : defaultReviewer()), docFile: opts.docFile, store, log: (line) => console.error(`[review] ${line}`) });
       if (opts.auto) {
         if (!opts.by) state.by = autoApprover(state.author);
         const approved = autoApprove(state);
@@ -359,7 +294,6 @@ program
       const result = await server.done;
       console.log(`Review finished: approved ${result.accepted}${result.assigned.length ? ` (${result.assigned.join("; ")})` : ""}${result.merged ? `, ${result.merged} related folded in` : ""}, rejected ${result.rejected}, skipped ${result.skipped}, pending ${result.pending}`);
       if (result.hidden_tests_needing_attention.length) console.log(`  hidden tests to finish by hand: ${result.hidden_tests_needing_attention.join(", ")}`);
-      if (result.feedback) console.log(`  feedback recorded: ${result.feedback.accept_tokens.length} accept / ${result.feedback.reject_tokens.length} reject terms`);
       if (result.index) console.log(`  re-indexed (${result.index.mode}, policy ${result.index.policy_id})${result.index.unresolved_sources.length ? `; unresolved policy sources: ${result.index.unresolved_sources.map((u) => `${u.owner} ${u.path}${u.heading ? `#${u.heading}` : ""}`).join("; ")}` : ""}`);
       if (result.index_error) console.log(`  index failed: ${result.index_error}`);
       console.log("  commit the policy, the hidden tests and any new section in the repository");
@@ -372,7 +306,7 @@ program
 
 program
   .command("mcp")
-  .description("Run IntentOS as an MCP server on stdio (tools: status, onboard, mined, mining_guide, propose, mine, explain, policy, review_start, review_next, review_close; the host onboards, mines and reviews on one sentence from the user)")
+  .description("Run IntentOS as an MCP server on stdio (tools: status, onboard, evidence, mining_guide, propose, mine, explain, policy, review_start, review_next, review_close; the host onboards, mines and reviews on one sentence from the user)")
   .option("--log <file>", "log file for client info and tool calls (default .intentos/mcp.log)")
   .option("--print-codex-config", "print the command that registers this server with Codex and exit", false)
   .action(async (opts: { log?: string; printCodexConfig: boolean }) => {

@@ -7,7 +7,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { setupFixtureEnv, type TestEnv } from "../helpers/fixture.ts";
-import { suggestPolicy } from "../../src/suggest.ts";
+import { seedCandidates } from "../helpers/seed_candidates.ts";
 import { createIntentosMcpServer, REVIEW_RESOURCE_URI, type McpOptions } from "../../src/mcp.ts";
 import { fakeMiner, ROUND_ONE, ROUND_TITLES, ROUND_TWO } from "../helpers/fake_miner.ts";
 import { loadPolicyFile } from "../../src/knowledge/policy.ts";
@@ -44,10 +44,10 @@ const textOf = (r: { content: Array<{ type: string; text?: string }> }) => r.con
 
 beforeAll(async () => {
   env = setupFixtureEnv();
-  await suggestPolicy(env.repo, { writeAdrs: false, withCodex: false, outDir: path.join(env.home, "suggest-out") });
   policyFile = path.join(env.home, "policies", "startup_billing.yaml");
   fs.mkdirSync(path.dirname(policyFile), { recursive: true });
   fs.writeFileSync(policyFile, MINIMAL_POLICY);
+  await seedCandidates(env.repo, path.join(env.home, "suggest-out"), policyFile);
 });
 afterAll(() => env.cleanup());
 
@@ -57,7 +57,7 @@ describe("intentos mcp", () => {
     try {
       const tools = (await client.listTools()).tools;
       const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-      expect(Object.keys(byName).sort()).toEqual(["explain", "guard", "merge", "mine", "mined", "mining_guide", "onboard", "policy", "precedents", "propose", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "run", "runs", "status"]);
+      expect(Object.keys(byName).sort()).toEqual(["evidence", "explain", "guard", "merge", "mine", "mining_guide", "onboard", "policy", "precedents", "propose", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "run", "runs", "status"]);
       expect((byName.review_start!._meta as any).ui.resourceUri).toBe(REVIEW_RESOURCE_URI);
       for (const name of ["review_session", "review_state", "review_decide", "review_finish"]) expect((byName[name]!._meta as any).ui.visibility, name).toEqual(["app"]);
       for (const name of ["explain", "policy", "precedents", "review_start", "review_next", "review_close"]) expect((byName[name]!._meta as any)?.ui?.visibility, name).toBeUndefined();
@@ -194,7 +194,7 @@ describe("intentos mcp — elicitation (the host asks the reviewer, not the mode
       expect(prompts[0]!.message).toMatch(/Evidence:/);
       expect(prompts[0]!.schema.properties.decision.oneOf.map((o: { const: string }) => o.const)).toEqual(["approve", "reject", "skip"]);
       expect(prompts[0]!.schema.properties.decision.default).toBe("skip");
-      expect(prompts[0]!.schema.properties.statement.default).toBe(first.classification?.rule ?? first.statement);
+      expect(prompts[0]!.schema.properties.statement.default).toBe(first.statement);
       expect(textOf(approved as never)).toMatch(new RegExp(`${first.id} approved as INV-001`));
       const policy = loadPolicyFile(policyFile);
       expect(policy.invariants.length).toBe(1);
@@ -222,7 +222,7 @@ describe("intentos mcp — elicitation (the host asks the reviewer, not the mode
       const closed = await client.callTool({ name: "review_close", arguments: {} });
       expect(textOf(closed as never)).toMatch(/Review finished: approved 1/);
       expect(structured(closed).finished.rejected).toBe(1);
-      expect(fs.existsSync(path.join(env.home, "suggest-out", "feedback.json"))).toBe(true);
+      expect(fs.existsSync(path.join(env.home, "suggest-out", "review-decisions.json"))).toBe(true);
       const log = fs.readFileSync(path.join(env.home, "mcp-elicit.log"), "utf8");
       expect(log).toMatch(/initialized: .*protocol=\d{4}-\d{2}-\d{2}/);
       expect(log).toMatch(/review_next CAND-\d+ accept -> INV-001 \(elicitation, (modern|legacy)\)/);
@@ -274,13 +274,13 @@ describe("intentos mcp — onboarding from the host (status → onboard → stat
     }
   });
 
-  it("onboard runs the CLI in the background, status reports progress, and the review starts from its output", async () => {
+  it("onboard runs the CLI in the background, status reports progress, and the evidence digest is ready for the miner", async () => {
     const { client, built } = await connect();
     try {
-      const started = await client.callTool({ name: "onboard", arguments: { repo: env.repo, policy_file: policyFile, install: false, classify: false, force: true } });
+      const started = await client.callTool({ name: "onboard", arguments: { repo: env.repo, policy_file: policyFile, install: false, force: true } });
       expect(started.isError, textOf(started as never)).toBeFalsy();
       expect(textOf(started as never)).toMatch(/Onboarding started.*Call status/s);
-      const again = await client.callTool({ name: "onboard", arguments: { repo: env.repo, policy_file: policyFile, install: false, classify: false, force: true } });
+      const again = await client.callTool({ name: "onboard", arguments: { repo: env.repo, policy_file: policyFile, install: false, force: true } });
       expect(textOf(again as never)).toMatch(/already running/);
       const early = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile } });
       expect(early.isError).toBe(true);
@@ -296,14 +296,22 @@ describe("intentos mcp — onboarding from the host (status → onboard → stat
       expect(s.job.log_tail.length).toBeGreaterThan(0);
       expect(fs.readFileSync(policyFile, "utf8")).toMatch(/DRAFT generated by `intentos onboard`/);
       expect(s.indexed).toBe(true);
-      expect(s.suggestions.total).toBeGreaterThan(0);
-      expect(s.suggestions.classified).toBe(0);
-      expect(s.pending).toBe(s.suggestions.total);
-      expect(s.next).toMatch(/review_start/);
+      expect(s.job.result.language).toBe("python");
+      expect(s.job.result.evidence).toMatchObject({ tests: expect.any(Number), commits: expect.any(Number) });
+      expect(s.job.result.evidence.tests).toBeGreaterThan(10);
+      // onboarding mines nothing: the review list is empty until the host (or mine) proposes candidates
+      expect(s.suggestions).toBeNull();
+      expect(s.next).toMatch(/mine the business rules/);
       const review = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile, hidden_tests_root: path.join(env.home, "hidden-onboard"), by: "tester" } });
-      expect(review.isError, textOf(review as never)).toBeFalsy();
-      expect(structured(review as never).candidates.length).toBe(Math.min(40, s.suggestions.total));
-      expect(textOf(review as never)).toMatch(/not classified/);
+      expect(review.isError).toBe(true);
+      expect(textOf(review as never)).toMatch(/no candidates/i);
+      // the digest is served by the evidence tool, whole or by section
+      const digest = structured((await client.callTool({ name: "evidence", arguments: { repo: env.repo } })) as never);
+      expect(digest.language).toBe("python");
+      expect(digest.tests.some((t: { ref: string }) => t.ref === "tests/test_locked_contract.py::test_cancelled_contract_gets_no_discount")).toBe(true);
+      const commits = await client.callTool({ name: "evidence", arguments: { repo: env.repo, section: "commits" } });
+      expect(structured(commits as never).commits.length).toBeGreaterThan(0);
+      expect(textOf(commits as never)).toMatch(/^commits \(\d+\) at [0-9a-f]{7}:/);
     } finally {
       fs.writeFileSync(policyFile, MINIMAL_POLICY);
       await client.close();
@@ -313,17 +321,18 @@ describe("intentos mcp — onboarding from the host (status → onboard → stat
 });
 
 describe("intentos mcp — mining by the host (the intentos-policy-mining skill)", () => {
-  it("serves the guide and the raw list, turns a proposal into the review list, and status reports it as host-authored", async () => {
+  it("serves the guide and the evidence digest, turns a proposal into the review list, and status reports it as host-authored", async () => {
     const outDir = path.join(env.home, "propose-out");
     fs.writeFileSync(policyFile, MINIMAL_POLICY);
     const { client, built } = await connect();
     try {
-      expect(client.getInstructions()).toMatch(/intentos-policy-mining.*propose.*review_start/s);
+      expect(client.getInstructions()).toMatch(/intentos-policy-mining.*evidence.*propose.*review_start/s);
       const guide = await client.callTool({ name: "mining_guide", arguments: {} });
       expect(textOf(guide as never)).toMatch(/^---\nname: intentos-policy-mining/);
-      const mined = structured((await client.callTool({ name: "mined", arguments: { repo: env.repo, out_dir: outDir } })) as never);
-      expect(mined.count).toBeGreaterThan(10);
-      const withTest = mined.candidates.find((c: { test: string | null }) => c.test) as { id: string; test: string };
+      const digest = structured((await client.callTool({ name: "evidence", arguments: { repo: env.repo, out_dir: outDir } })) as never);
+      expect(digest.counts.tests).toBeGreaterThan(10);
+      const withTest = digest.tests.find((t: { rule_like: boolean }) => t.rule_like) as { ref: string };
+      expect(withTest).toBeTruthy();
       const proposed = await client.callTool({
         name: "propose",
         arguments: {
@@ -331,8 +340,8 @@ describe("intentos mcp — mining by the host (the intentos-policy-mining skill)
           policy_file: policyFile,
           out_dir: outDir,
           candidates: [
-            { title: "Rule from the mined list", statement: "The behaviour proven by the cited test must be preserved as it is.", from_mined: withTest.id, rationale: "picked from the raw list" },
-            { title: "Made up", statement: "A rule citing a document that is not in the repository.", evidence: [{ type: "doc", ref: "docs/missing.md:1", excerpt: "x" }], test: { existing: withTest.test } },
+            { title: "Rule from the evidence", statement: "The behaviour proven by the cited test must be preserved as it is.", test: { existing: withTest.ref }, rationale: "picked from the digest" },
+            { title: "Made up", statement: "A rule citing a document that is not in the repository.", evidence: [{ type: "doc", ref: "docs/missing.md:1", excerpt: "x" }], test: { existing: withTest.ref } },
           ],
         },
       });
@@ -347,8 +356,7 @@ describe("intentos mcp — mining by the host (the intentos-policy-mining skill)
       expect(s.next).toMatch(/review_start/);
       const review = await client.callTool({ name: "review_start", arguments: { repo: env.repo, policy_file: policyFile, out_dir: outDir, hidden_tests_root: path.join(env.home, "hidden-propose"), by: "tester" } });
       expect(review.isError, textOf(review as never)).toBeFalsy();
-      expect(structured(review as never).candidates.map((c: { title: string }) => c.title)).toEqual(["Rule from the mined list"]);
-      expect(textOf(review as never)).not.toMatch(/not classified/);
+      expect(structured(review as never).candidates.map((c: { title: string }) => c.title)).toEqual(["Rule from the evidence"]);
     } finally {
       await client.close();
       await built.close();
