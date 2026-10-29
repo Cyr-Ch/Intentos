@@ -91,13 +91,13 @@
           <span class="num bad">21</span>
           <h3>Passes the tests, breaks the business</h3>
           <p>On one ticket, plain Codex passed the project suite while breaking 21 hidden business-invariant tests. Under IntentOS the first attempt broke none.</p>
-          <span class="src">demandlib run 1, ticket T09</span>
+          <span class="src">demandlib run 1, ticket <a href="https://github.com/Cyr-Ch/oemof-demand/issues/52" target="_blank" rel="noopener">T09</a></span>
         </div>
         <div class="card">
           <span class="num bad">7 files</span>
           <h3>Builds what nobody asked for</h3>
           <p>Given a vague ticket, plain Codex shipped a seven-file feature. Given an already-fixed bug, it "fixed" it again. IntentOS declined all three control tickets with cited reasons.</p>
-          <span class="src">demandlib run 1, tickets T05, T06, T15</span>
+          <span class="src">demandlib run 1, tickets <a href="https://github.com/Cyr-Ch/oemof-demand/issues/48" target="_blank" rel="noopener">T05</a>, <a href="https://github.com/Cyr-Ch/oemof-demand/issues/49" target="_blank" rel="noopener">T06</a>, <a href="https://github.com/Cyr-Ch/oemof-demand/issues/58" target="_blank" rel="noopener">T15</a></span>
         </div>
         <div class="card">
           <span class="num bad">3 of 3</span>
@@ -603,7 +603,7 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
         <div class="evidence-head">
           <div>
             <h3>Does repository context change what an agent does?</h3>
-            <p>Fifteen fresh tickets on <code>oemof/demandlib</code>, one run per ticket per arm, same Codex implementer, same verifier and repair budget. The IntentOS arm added the evidence pack, planner, contract and coordination hooks.</p>
+            <p><a href="https://github.com/Cyr-Ch/oemof-demand/issues?q=is%3Aissue+state%3Aopen" target="_blank" rel="noopener">Fifteen fresh tickets</a> on <code>oemof/demandlib</code>, one run per ticket per arm, same Codex implementer, same verifier and repair budget. The IntentOS arm added the evidence pack, planner, contract and coordination hooks.</p>
           </div>
           <a class="btn" href="case-studies/demandlib.html">Read the case study</a>
         </div>
@@ -612,7 +612,7 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
           <div class="metric"><strong>4 vs 8</strong><span>Repair rounds across the batch, IntentOS versus comparison arm.</span></div>
           <div class="metric"><strong>21% fewer</strong><span>Total tokens (5.28M vs 6.68M), at the same wall time.</span></div>
         </div>
-        <p class="footnote">The comparison arm's attempt on T09 broke 21 hidden invariant tests; IntentOS broke none.</p>
+        <p class="footnote">The comparison arm's attempt on <a href="https://github.com/Cyr-Ch/oemof-demand/issues/52" target="_blank" rel="noopener">T09</a> broke 21 hidden invariant tests; IntentOS broke none.</p>
       </div>
 
       <div class="evidence-block">
