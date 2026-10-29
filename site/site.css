@@ -193,6 +193,18 @@ section.soft { background: var(--paper); }
 @media (prefers-reduced-motion: no-preference) { .scene-panel img { animation: scene-in .35s ease-out; } }
 @keyframes scene-in { from { opacity: 0; } to { opacity: 1; } }
 
+/* ---------- testimonials ---------- */
+.quotes-head, .who-head { margin: 56px 0 22px; padding-top: 40px; border-top: 1px solid var(--line-soft); }
+.quotes-head h3, .who-head h3 { font-size: 24px; max-width: 720px; }
+.quote { margin: 0; display: grid; grid-template-rows: 1fr auto; gap: 18px; padding: 26px 24px 22px; position: relative; }
+.quote blockquote { margin: 0; }
+.quote blockquote p { font-size: 15px; line-height: 1.6; color: var(--ink); margin: 0; }
+.quote blockquote p::before { content: "“"; color: var(--accent); font-size: 30px; line-height: 0; vertical-align: -10px; margin-right: 2px; font-family: Georgia, serif; }
+.quote figcaption { display: flex; align-items: center; gap: 12px; padding-top: 16px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--muted); line-height: 1.4; }
+.quote figcaption > span:last-child { display: grid; gap: 1px; }
+.quote figcaption strong { color: var(--ink); font-weight: 650; font-size: 14px; }
+.quote .avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; font-size: 12.5px; letter-spacing: .02em; }
+
 /* ---------- personas ---------- */
 .persona { display: grid; grid-template-rows: auto 1fr auto; }
 .persona .role { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }

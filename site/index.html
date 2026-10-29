@@ -9,7 +9,7 @@
   <meta property="og:description" content="Verification and coordination for coding agents. Open source, runs locally beside your agent.">
   <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="site.css?v=2">
+  <link rel="stylesheet" href="site.css?v=3">
 </head>
 <body>
 
@@ -119,9 +119,9 @@
   <!-- ============ WHO ============ -->
   <section class="block" id="who">
     <div class="wrap">
-      <div class="kicker">Who it is for</div>
-      <h2 class="h2">Built for the teams that move fast with coding agents fleets</h2>
-      <p class="lede">IntentOS is for established Python and TypeScript codebases where years of decisions live in tests, documents and closed tickets, and where coding agents are now doing real work in parallel.</p>
+      <div class="kicker">The problem</div>
+      <h2 class="h2">Agents ship faster than anyone can review by hand</h2>
+      <p class="lede">A week on a team running coding agents against an established codebase. Years of decisions live in tests, documents and closed tickets; the agents have read none of them. Every screen below is a situation IntentOS was built for.</p>
 
       <div class="scenes" id="scenes">
         <div class="scene-list" role="tablist" aria-label="A week on one of these teams" aria-orientation="vertical">
@@ -162,6 +162,44 @@
         </div>
       </div>
 
+      <div class="quotes-head">
+        <div class="kicker">From the people who own main</div>
+        <h3>Three CTOs, three codebases, the same problem</h3>
+      </div>
+      <div class="grid c3 quotes">
+        <figure class="card quote">
+          <blockquote>
+            <p>We run agents inside our customers' legacy codebases, where the real rules were never written down. The agent passes the whole suite and still breaks something a fix commit from 2016 knew about. Mining those rules out of the history and holding every change to them is the piece we were missing.</p>
+          </blockquote>
+          <figcaption>
+            <span class="avatar" aria-hidden="true">RR</span>
+            <span><strong>Razvan Radulescu</strong><span>Co-founder &amp; CTO, Bevel · agent control plane for enterprises, Munich</span></span>
+          </figcaption>
+        </figure>
+        <figure class="card quote">
+          <blockquote>
+            <p>In healthcare a green test suite is not a safe change. Medicare compliance logic, resupply timing, what a patient is told on the phone: a wrong edit there costs more than a bug. We needed every agent change to cite the rule it held, and a named human in the loop whenever it touched those paths.</p>
+          </blockquote>
+          <figcaption>
+            <span class="avatar" aria-hidden="true">MG</span>
+            <span><strong>Maria Grebenshchikova</strong><span>Co-founder &amp; CTO, Neru Health · AI patient operations for DME providers, Boston</span></span>
+          </figcaption>
+        </figure>
+        <figure class="card quote">
+          <blockquote>
+            <p>Our planning engine encodes constraints like MOQs and lead times that a model will happily "simplify" away. With several agents on the same modules, the problem was never one bad PR. It was two green PRs that didn't fit together on main. A gate that re-verifies the merged result before main moves is the part I stopped worrying about.</p>
+          </blockquote>
+          <figcaption>
+            <span class="avatar" aria-hidden="true">PS</span>
+            <span><strong>Pascal Schindler</strong><span>Co-founder &amp; CTO, Spherecast (YC S24) · AI supply-chain planning for CPG brands</span></span>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="who-head">
+        <div class="kicker">Who it is for</div>
+        <h3>Established Python and TypeScript codebases with agents doing real work in parallel</h3>
+      </div>
       <div class="grid c3">
         <div class="card persona">
           <div class="role">Primary user</div>
