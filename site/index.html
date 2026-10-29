@@ -9,7 +9,7 @@
   <meta property="og:description" content="Verification and coordination for coding agents. Open source, runs locally beside your agent.">
   <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="site.css?v=6">
+  <link rel="stylesheet" href="site.css?v=7">
 </head>
 <body>
 
@@ -287,89 +287,65 @@
           <rect x="132" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
           <text x="196" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">“Set up IntentOS</text>
           <text x="196" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">for this repository”</text>
-          <text x="196" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">one sentence to Codex</text>
           <rect x="416" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1" stroke-dasharray="4 3"/>
           <text x="480" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Optional review</text>
-          <text x="480" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">edit · drop · fold</text>
-          <text x="480" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">dashboard or widget</text>
+          <text x="480" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">in the dashboard</text>
           <rect x="558" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
           <text x="622" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Ticket</text>
-          <text x="622" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">the task to implement</text>
-          <text x="622" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">unfinished → planned</text>
+          <text x="622" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">unfinished → planned</text>
           <rect x="984" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
           <text x="1048" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Approvers</text>
-          <text x="1048" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">named by a person,</text>
-          <text x="1048" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">bound to the PR head</text>
+          <text x="1048" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">named, head-bound</text>
           <rect x="1126" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
           <text x="1190" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Undo PR</text>
           <text x="1190" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">to review, validated</text>
           <rect x="132" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="196" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">onboard</text>
-          <text x="196" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">probe the repository</text>
-          <text x="196" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">venv / node_modules</text>
-          <text x="196" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">draft policy · suite run</text>
-          <text x="196" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">index → repository model</text>
+          <text x="196" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">index the repository</text>
+          <text x="196" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">draft policy · run suite</text>
           <rect x="274" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="338" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">mine</text>
-          <text x="338" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">evidence digest: tests,</text>
-          <text x="338" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">commits, docs, tickets</text>
-          <text x="338" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">checks: refs exist,</text>
-          <text x="338" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">tests pass at HEAD</text>
+          <text x="338" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">tests, commits, docs</text>
+          <text x="338" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">refs exist · tests pass</text>
           <rect x="416" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="480" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">policy</text>
-          <text x="480" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">checked candidates become</text>
-          <text x="480" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">rules; unreviewed ones</text>
-          <text x="480" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">labelled auto:&lt;model&gt;</text>
-          <text x="480" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">→ policy YAML + hidden test</text>
+          <text x="480" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">checked rules → YAML</text>
+          <text x="480" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">review optional</text>
           <rect x="558" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="622" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">contract</text>
-          <text x="622" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">triage: fill · ask · flag</text>
-          <text x="622" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">evidence → planner</text>
-          <text x="622" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">compiler validates:</text>
-          <text x="622" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">cites · paths · checks</text>
+          <text x="622" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">triage: fill · ask · flag</text>
+          <text x="622" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">validated plan</text>
           <rect x="700" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="764" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">implement</text>
-          <text x="764" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">detached git worktree</text>
-          <text x="764" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">implementer thread</text>
-          <text x="764" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">hooks: scope, sync</text>
-          <text x="764" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">notes, Stop gate</text>
+          <text x="764" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">detached worktree</text>
+          <text x="764" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">scope · sync hooks</text>
           <rect x="842" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
           <text x="906" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">verify</text>
-          <text x="906" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">worktree snapshot</text>
-          <text x="906" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">hidden tests · invariants</text>
-          <text x="906" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">AST rules · scope</text>
-          <text x="906" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">≤ 2 repairs → ready</text>
+          <text x="906" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">hidden tests · AST rules</text>
+          <text x="906" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">scope · ≤ 2 repairs</text>
           <rect x="984" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
           <text x="1048" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">merge gate</text>
-          <text x="1048" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">PR · tier · approvals</text>
-          <text x="1048" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">branch CI · sync check</text>
-          <text x="1048" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">merged-result verify</text>
-          <text x="1048" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">fast-forward · ledger</text>
+          <text x="1048" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">tier · approvals · sync</text>
+          <text x="1048" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">merged-result verify</text>
           <rect x="1126" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
           <text x="1190" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">guard</text>
-          <text x="1190" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">main red? rerun</text>
-          <text x="1190" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">bisect to the merge</text>
-          <text x="1190" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">find its partner</text>
-          <text x="1190" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">validated undo PR</text>
+          <text x="1190" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">bisect a red main</text>
+          <text x="1190" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">validated undo PR</text>
           <rect x="274" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="338" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">mining model</text>
-          <text x="338" y="432" font-size="10.5" fill="#686c66" text-anchor="middle">a model other than</text>
-          <text x="338" y="446" font-size="10.5" fill="#686c66" text-anchor="middle">the host's reads digest</text>
-          <text x="338" y="460" font-size="10.5" fill="#686c66" text-anchor="middle">+ code, proposes rules</text>
+          <text x="338" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">a second model</text>
+          <text x="338" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">proposes rules</text>
           <rect x="558" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="622" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">triage · planner</text>
-          <text x="622" y="432" font-size="10.5" fill="#686c66" text-anchor="middle">read-only threads</text>
-          <text x="622" y="446" font-size="10.5" fill="#686c66" text-anchor="middle">gaps + questions, then</text>
-          <text x="622" y="460" font-size="10.5" fill="#686c66" text-anchor="middle">requirements citing ids</text>
+          <text x="622" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">read-only threads</text>
+          <text x="622" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">questions, then a plan</text>
           <rect x="700" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="764" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">implementer</text>
-          <text x="764" y="432" font-size="10.5" fill="#686c66" text-anchor="middle">workspace-write thread</text>
-          <text x="764" y="446" font-size="10.5" fill="#686c66" text-anchor="middle">edits in the worktree</text>
-          <text x="764" y="460" font-size="10.5" fill="#686c66" text-anchor="middle">“tests pass” is ignored</text>
+          <text x="764" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">edits in the worktree</text>
+          <text x="764" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">“tests pass” is ignored</text>
           <rect x="842" y="396" width="412" height="76" rx="8" fill="none" stroke="#686c66" stroke-dasharray="4 3"/>
           <text x="1048" y="422" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">No model from here on</text>
-          <text x="1048" y="441" font-size="10.5" fill="#686c66" text-anchor="middle">verification, the gate and the guardian are deterministic code;</text>
-          <text x="1048" y="456" font-size="10.5" fill="#686c66" text-anchor="middle">what an agent claims about its own work is stored and ignored</text>
+          <text x="1048" y="448" font-size="10.5" fill="#686c66" text-anchor="middle">verification, the gate and the guardian are deterministic code</text>
           <line x1="260" y1="276" x2="274" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
           <line x1="402" y1="276" x2="416" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
           <line x1="544" y1="276" x2="558" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
@@ -413,7 +389,7 @@
           <path d="M835,494 V310 H844" fill="none" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
           <text x="831" y="486" font-size="9.5" fill="#315e50" text-anchor="end" font-weight="600">reads policy + hidden tests</text>
           <text x="138" y="512" font-size="11" fill="#173b31" text-anchor="start" font-weight="700">Trusted state</text>
-          <text x="228" y="512" font-size="10.5" fill="#173b31" text-anchor="start">versioned, outside the target repository, written only by IntentOS after its checks</text>
+          <text x="228" y="512" font-size="10.5" fill="#173b31" text-anchor="start">outside the repository · written only by IntentOS after its checks</text>
           <rect x="138" y="522" width="176" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
           <text x="226" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">repository model @ commit</text>
           <rect x="322" y="522" width="359" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
