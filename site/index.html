@@ -9,7 +9,7 @@
   <meta property="og:description" content="Verification and coordination for coding agents. Open source, runs locally beside your agent.">
   <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="site.css?v=4">
+  <link rel="stylesheet" href="site.css?v=5">
 </head>
 <body>
 
@@ -251,13 +251,13 @@
         <div class="diagram-scroll">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 604" role="img" aria-labelledby="diag-title diag-desc" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Inter, Roboto, sans-serif">
           <title id="diag-title">How IntentOS works, from onboarding to the merge gate and the guardian</title>
-          <desc id="diag-desc">Three lanes: people, the IntentOS plugin, and model threads, over a band of trusted state. Onboard indexes the repository; a mining model proposes rules from an evidence digest and IntentOS checks them; a reviewer approves them into the policy. For each ticket a QA thread fills the gaps the repository can answer, flags contradictions with the policy and sends the remaining questions back to the team; once the ticket is ready, a planner proposes a contract the compiler validates, an implementer works in a git worktree, verification runs hidden tests and deterministic checks from a snapshot with bounded repairs, the merge gate requires approvals, CI, a sync check and merged-result verification before fast-forwarding main, and the guardian bisects a red main and opens a validated undo PR.</desc>
+          <desc id="diag-desc">Three lanes: people, the IntentOS plugin, and model threads, over a band of trusted state. Onboard indexes the repository; a mining model proposes rules from an evidence digest, IntentOS checks each reference and runs each test, and the ones that pass are written into the policy; a person can review and edit them, but does not have to. For each ticket a QA thread fills the gaps the repository can answer, flags contradictions with the policy and sends the remaining questions back to the team; once the ticket is ready, a planner proposes a contract the compiler validates, an implementer works in a git worktree, verification runs hidden tests and deterministic checks from a snapshot with bounded repairs, the merge gate requires approvals, CI, a sync check and merged-result verification before fast-forwarding main, and the guardian bisects a red main and opens a validated undo PR.</desc>
           <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#686c66"/></marker><marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#315e50"/></marker></defs>
           <rect width="1280" height="604" fill="#fff"/>
           <rect x="124" y="172" width="1148" height="204" rx="10" fill="#f5f6f2"/>
           <rect x="124" y="494" width="1148" height="58" rx="10" fill="#e8f0ec" stroke="#315e50" stroke-opacity="0.35"/>
           <text x="12" y="108" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">People</text>
-          <text x="12" y="123" font-size="10" fill="#686c66" text-anchor="start">owner, reviewer</text>
+          <text x="12" y="123" font-size="10" fill="#686c66" text-anchor="start">owner; review optional</text>
           <text x="12" y="274" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">IntentOS</text>
           <text x="12" y="289" font-size="10" fill="#686c66" text-anchor="start">the plugin</text>
           <text x="12" y="432" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">Models</text>
@@ -275,7 +275,7 @@
           <text x="274" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">02</text>
           <text x="296" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Mine</text>
           <text x="416" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">03</text>
-          <text x="438" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Review</text>
+          <text x="438" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Policy</text>
           <text x="558" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">04</text>
           <text x="580" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Contract</text>
           <text x="700" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">05</text>
@@ -290,10 +290,10 @@
           <text x="196" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">“Set up IntentOS</text>
           <text x="196" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">for this repository”</text>
           <text x="196" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">one sentence to Codex</text>
-          <rect x="416" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
-          <text x="480" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Reviewer</text>
-          <text x="480" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">approve · reject · fold</text>
-          <text x="480" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">widget, form or link</text>
+          <rect x="416" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="480" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Optional review</text>
+          <text x="480" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">edit · drop · fold</text>
+          <text x="480" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">dashboard or widget</text>
           <rect x="558" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
           <text x="622" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Ticket</text>
           <text x="622" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">the task to implement</text>
@@ -318,11 +318,11 @@
           <text x="338" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">checks: refs exist,</text>
           <text x="338" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">tests pass at HEAD</text>
           <rect x="416" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="480" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">review</text>
-          <text x="480" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">one candidate at a time</text>
-          <text x="480" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">nothing approves itself</text>
-          <text x="480" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">approve → policy YAML</text>
-          <text x="480" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">+ hidden test file</text>
+          <text x="480" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">policy</text>
+          <text x="480" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">checked candidates become</text>
+          <text x="480" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">rules; unreviewed ones</text>
+          <text x="480" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">labelled auto:&lt;model&gt;</text>
+          <text x="480" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">→ policy YAML + hidden test</text>
           <rect x="558" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="622" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">contract</text>
           <text x="622" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">triage: fill · ask · flag</text>
@@ -382,16 +382,16 @@
           <path d="M870,226 v-20 H800 v20" fill="none" stroke="#315e50" stroke-width="1.2" marker-end="url(#arrA)"/>
           <text x="835" y="201" font-size="10" fill="#315e50" text-anchor="middle" font-weight="600">repair, at most twice</text>
           <line x1="196" y1="142" x2="196" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="466" y1="226" x2="466" y2="142" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="460" y="190" font-size="9.5" fill="#686c66" text-anchor="end">candidates</text>
-          <line x1="494" y1="142" x2="494" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="500" y="190" font-size="9.5" fill="#686c66" text-anchor="start">decision</text>
+          <line x1="466" y1="226" x2="466" y2="142" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+          <text x="460" y="190" font-size="9.5" fill="#686c66" text-anchor="end">rules</text>
+          <line x1="494" y1="142" x2="494" y2="226" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+          <text x="500" y="190" font-size="9.5" fill="#686c66" text-anchor="start">edits</text>
           <line x1="608" y1="142" x2="608" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
           <text x="602" y="190" font-size="9.5" fill="#686c66" text-anchor="end">ticket</text>
           <line x1="636" y1="226" x2="636" y2="142" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
           <text x="642" y="190" font-size="9.5" fill="#686c66" text-anchor="start">questions</text>
           <line x1="1048" y1="142" x2="1048" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="1054" y="190" font-size="9.5" fill="#686c66" text-anchor="start">approvals</text>
+          <text x="1054" y="190" font-size="9.5" fill="#686c66" text-anchor="start">approvals, if the tier asks</text>
           <line x1="1190" y1="226" x2="1190" y2="142" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
           <text x="1196" y="190" font-size="9.5" fill="#686c66" text-anchor="start">if main is red</text>
           <line x1="324" y1="326" x2="324" y2="396" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
@@ -415,7 +415,7 @@
           <path d="M835,494 V310 H844" fill="none" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
           <text x="831" y="486" font-size="9.5" fill="#315e50" text-anchor="end" font-weight="600">reads policy + hidden tests</text>
           <text x="138" y="512" font-size="11" fill="#173b31" text-anchor="start" font-weight="700">Trusted state</text>
-          <text x="228" y="512" font-size="10.5" fill="#173b31" text-anchor="start">versioned, outside the target repository, never written by a model</text>
+          <text x="228" y="512" font-size="10.5" fill="#173b31" text-anchor="start">versioned, outside the target repository, written only by IntentOS after its checks</text>
           <rect x="138" y="522" width="176" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
           <text x="226" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">repository model @ commit</text>
           <rect x="322" y="522" width="359" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
@@ -436,7 +436,7 @@
           <text x="602" y="586" font-size="10.5" fill="#686c66" text-anchor="start">deterministic, no model</text>
           </svg>
         </div>
-        <figcaption>The whole path, once. Three lanes: the people who own the repository, the IntentOS plugin, and the model threads it starts. Models only ever propose (rules, a plan, a diff); IntentOS checks every proposal against the repository and the trusted state; a person approves rules and merges. From verification onward there is no model in the loop.</figcaption>
+        <figcaption>The whole path, once. Three lanes: the people who own the repository, the IntentOS plugin, and the model threads it starts. Models only ever propose (rules, a plan, a diff); IntentOS checks every proposal against the repository and the trusted state before anything is written or merged. Human review is optional at both ends: rules can be edited in the dashboard, and the review tier of a merge comes from your policy, down to zero. From verification onward there is no model in the loop.</figcaption>
       </figure>
 
       <div class="pipeline" aria-label="Pipeline overview">
@@ -456,7 +456,7 @@
             <p>One <code>onboard</code> indexes symbols, imports, tests, documents and ticket history into a versioned graph bound to the commit. Then a second model mines your business rules from fix commits, rule-like tests and must/never sentences in your docs. Every candidate reference is checked against the repository and its test is run before anyone sees it.</p>
             <ul>
               <li>Closed issues and the PRs that resolved them become <b>precedents</b>, re-linked through renames at every index</li>
-              <li>Approved rules live in a trusted YAML file outside the target repository</li>
+              <li>Rules that pass go straight into a YAML policy outside the target repository; review or edit them in the dashboard if you want to</li>
             </ul>
           </div>
           <div class="mock"><div class="bar"><strong>explain</strong> · evidence pack · demandlib @ 32b6cc5</div><div class="body"><div class="code"><span class="c"># reusable symbols</span>
@@ -593,7 +593,7 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
       <div class="grid c3">
         <div class="card feature">
           <h3><span class="glyph">⚖</span>Rules mined by a second model</h3>
-          <p>The model that writes the rules is never the one that later implements under them. Set <code>INTENTOS_MINING_MODEL</code> or say "mine with gpt-6-astra". Candidates without a passing test are never approved.</p>
+          <p>The model that writes the rules is never the one that later implements under them. Set <code>INTENTOS_MINING_MODEL</code> or say "mine with gpt-6-astra". Candidates without a passing test never reach the policy. Human review is optional; unreviewed rules carry an <code>auto:&lt;model&gt;</code> label.</p>
         </div>
         <div class="card feature">
           <h3><span class="glyph">⌁</span>Precedents from ticket history</h3>
@@ -673,7 +673,7 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
         <li><strong>Ground truth is out of reach</strong>Policies, hidden tests and run artifacts live outside the worktree and outside the target repository. The compiler refuses to make protected globs writable.</li>
         <li><strong>Only trusted commands run</strong>Verification commands are <code>id → argv</code> entries in the policy; model output can only name an ID. No repository text ever reaches a shell.</li>
         <li><strong>Model claims are inert</strong>A fake "all tests pass" does not change the outcome. Forged JUnit reports are caught by a static inventory cross-check and a forbidden-names rule.</li>
-        <li><strong>Approval needs a person</strong>The MCP tools that change policy are app-only and require a widget token the model never receives. Auto-approved rules are labelled <code>auto:&lt;model&gt;</code> so the trade-off is visible.</li>
+        <li><strong>The implementing agent never writes the rules</strong>Rules are mined by a different model and enter the policy only after their references and tests check out. Reviewing them is optional; rules nobody reviewed are labelled <code>auto:&lt;model&gt;</code> so you can see which is which. The tools that edit policy are app-only and need a token the model never receives.</li>
         <li><strong>Fail closed, optionally in a container</strong>With <code>INTENTOS_VERIFIER=docker</code> candidate code runs with no network, a read-only root, dropped capabilities and limits; if Docker is missing nothing falls back to the host.</li>
       </ul>
     </div>
@@ -754,11 +754,11 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
       <div class="faq">
         <details>
           <summary>Does IntentOS replace code review?</summary>
-          <div class="a"><p>No. It decides how much review a change needs (tier 0, 1 or 2) from what the diff actually does, and it hands the reviewer a report of what held: acceptance tests, invariants, architecture rules, scope and precedents. A change that only touches documentation or adds code may merge with no human; a change to a protected path or an existing test always needs two.</p></div>
+          <div class="a"><p>It replaces the part that does not scale. Every change is verified independently, and the review tier (0, 1 or 2 humans) is computed from what the diff actually does under your policy. Set the tiers so that most changes merge with no human at all, or require one or two named approvals for protected paths and edited tests; both are a policy setting. When a human does look, they get a report of what held first: acceptance tests, invariants, architecture rules, scope and precedents.</p></div>
         </details>
         <details>
-          <summary>Does the agent get to approve its own rules?</summary>
-          <div class="a"><p>No. The MCP tools that change policy are visible only to the host's UI and require a session token the model never sees. The rules are mined by a model other than the one implementing, every reference is checked against the repository and every invariant must come with a test that passes at the current revision. If you choose the no-review path, each rule is written with <code>approved_by: auto:&lt;model&gt;</code> and carries blocking authority, which the output tells you plainly.</p></div>
+          <summary>Who writes the rules, and does a human have to approve them?</summary>
+          <div class="a"><p>A model writes them, and no, a human does not have to. The rules are mined by a model other than the one implementing, from your tests, fix commits and documents. Every reference is checked against the repository and every invariant must come with a test that passes at the current revision; only then is it written into the policy, labelled <code>approved_by: auto:&lt;model&gt;</code>. You can review and edit them in the dashboard whenever you like. What the implementing agent can never do is change them: the policy lives outside the repository and the tools that edit it require a token the model never sees.</p></div>
         </details>
         <details>
           <summary>Which languages and hosts does it support?</summary>
