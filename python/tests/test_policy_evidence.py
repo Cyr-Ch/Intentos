@@ -27,7 +27,7 @@ def _repo(tmp_path: pathlib.Path) -> pathlib.Path:
     _write(repo, "app/domain/__init__.py")
     _write(repo, "app/domain/money.py", "class Money:\n    pass\n")
     _write(repo, "app/services/__init__.py")
-    _write(repo, "app/services/pricing.py", "from app.domain.money import Money\n\n\ndef quote():\n    return Money()\n")
+    _write(repo, "app/services/pricing.py", "from app.domain.money import Money\n\n\nclass PricingService:\n    \"\"\"The only component that computes prices. The API layer formats its output.\"\"\"\n\n\ndef quote():\n    # noqa: E501\n    # prices are always computed in cents; never pass floats here\n    return Money()\n")
     _write(repo, "app/services/discounts.py", "from app.domain.money import Money\n\n\ndef eligible(c):\n    return True\n")
     _write(repo, "app/api/__init__.py")
     _write(repo, "app/api/checkout.py", "from app.services.pricing import quote\n\n\ndef checkout():\n    return quote()\n")
@@ -88,6 +88,36 @@ def test_digest_reports_tests_commits_documents_structure_and_changelog_as_facts
     assert out["counts"]["tests"] == 3 and out["counts"]["fix_commits"] == 1
     # the module never ranks or classifies: no scores, no candidates
     assert "candidates" not in out and all("score" not in t for t in out["tests"])
+
+
+def test_digest_reads_docstrings_comments_and_synced_tickets(tmp_path: pathlib.Path):
+    repo = _repo(tmp_path)
+    precedents = tmp_path / "precedents.json"
+    precedents.write_text(json.dumps({"version": 1, "repo_id": "r", "source": {"issues": "o/r", "pulls": None, "synced_at": "2026-10-01T00:00:00Z", "tool": "gh"}, "precedents": [
+        {"id": "o/r#7", "number": 7, "url": "https://example/7", "title": "Cancelled contracts still get discounts", "body": "A cancelled contract must never receive a volume discount.\nSeen on invoice 42.", "labels": ["bug"], "author": None, "created_at": None, "closed_at": "2026-05-01T10:00:00Z",
+         "pull": {"number": 8, "url": "https://example/pr/8", "title": "Fix discount eligibility", "body": None, "author": None, "merged_at": None, "merge_sha": "abc1234", "diff": {"base_sha": "x", "files": [{"path": "app/services/discounts.py", "status": "modified"}], "symbols": ["app.services.discounts.eligible"], "tests_added": [{"path": "tests/test_discounts.py", "name": "test_cancelled_contract_gets_no_discount"}]}}},
+        {"id": "o/r#9", "number": 9, "url": "https://example/9", "title": "Typo in README", "body": "", "labels": [], "author": None, "created_at": None, "closed_at": None, "pull": None},
+    ]}))
+    out = pe.Digest(str(repo), 100).run("billing", str(precedents))
+    notes = {n["ref"]: n for n in out["code_notes"]}
+    assert notes["app/services/pricing.py:5"] == {"ref": "app/services/pricing.py:5", "path": "app/services/pricing.py", "line": 5, "kind": "docstring", "symbol": "PricingService", "sentence": "The only component that computes prices."}
+    assert notes["app/services/pricing.py:10"]["kind"] == "comment" and notes["app/services/pricing.py:10"]["sentence"].startswith("prices are always computed in cents")
+    assert not any(n["line"] == 9 for n in out["code_notes"])  # pragmas are not notes
+    assert all(not n["path"].startswith("tests/") for n in out["code_notes"])  # production code only: tests are their own section
+    tickets = {t["ref"]: t for t in out["tickets"]}
+    assert tickets["#7"]["rule_like"] is True and tickets["#7"]["excerpt"] == "A cancelled contract must never receive a volume discount." and tickets["#7"]["pull"]["merge_sha"] == "abc1234"
+    assert tickets["#7"]["tests_added"] == ["tests/test_discounts.py::test_cancelled_contract_gets_no_discount"] and tickets["#7"]["files"] == ["app/services/discounts.py"]
+    assert tickets["#9"]["pull"] is None and tickets["#9"]["rule_like"] is False
+    assert out["counts"]["code_notes"] == len(out["code_notes"]) and out["counts"]["tickets"] == 2
+    assert pe.Digest(str(repo), 100).run("billing", None)["tickets"] == []  # nothing synced: nothing invented
+
+    # code and ticket evidence are checked like the rest: the line must exist, the ticket must be synced
+    ing = pe.Ingestor(str(repo), str(precedents))
+    assert ing.check_evidence({"type": "code", "ref": "app/services/pricing.py:5", "excerpt": "The only component"}) is None
+    assert "no line 99" in ing.check_evidence({"type": "code", "ref": "app/services/pricing.py:99", "excerpt": "x"})
+    assert ing.check_evidence({"type": "ticket", "ref": "7", "excerpt": "must never receive"}) is None
+    assert "not among the synced" in ing.check_evidence({"type": "ticket", "ref": "#77", "excerpt": "x"})
+    assert "no resolved tickets are synced" in pe.Ingestor(str(repo)).check_evidence({"type": "ticket", "ref": "#7", "excerpt": "x"})
 
 
 def test_digest_reads_typescript_tests_imports_and_aliases(tmp_path: pathlib.Path):

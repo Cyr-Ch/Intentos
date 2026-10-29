@@ -191,8 +191,10 @@ MCP `propose` tool, or `mine` runs the same skill with a model other than the ho
 2. Run `intentos evidence <repo>` to start from facts instead of a blank page. It prints the digest a model reads
    before stating rules: every test with its first assertion and the production files it exercises, every commit
    that touched code with the tests it added, must/never/only sentences in documents with their heading and line,
-   ADRs with their lineage, import edges between directories, directories nobody has touched in a long time, and
-   changelog deprecations. Nothing in it is ranked or classified: a rule is a judgement, and IntentOS leaves it to a
+   ADRs with their lineage, import edges between directories, directories nobody has touched in a long time,
+   changelog deprecations, the must/never sentences authors left in docstrings and comments, and (after
+   `intentos precedents sync`) the resolved tickets with the pull request and tests that settled each. Nothing in it
+   is ranked or classified: a rule is a judgement, and IntentOS leaves it to a
    model (`intentos mine <repo> --model <slug>`, or Codex itself with the skill) or to you. What the model proposes
    goes through `propose`: every reference is checked against the repository, an invariant must come with a test
    (an existing one, lifted, or one the model wrote) and that test is run at the current revision; a failing test,

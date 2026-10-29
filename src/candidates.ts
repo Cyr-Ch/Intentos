@@ -135,6 +135,30 @@ export interface DigestChangelogEntry {
   text: string;
 }
 
+/** A modal sentence from a docstring or comment in production code: what the author said must hold, at that line. */
+export interface DigestCodeNote {
+  ref: string;
+  path: string;
+  line: number;
+  kind: "docstring" | "comment";
+  symbol: string | null;
+  sentence: string;
+}
+/** A resolved ticket from the synced precedents: what a user reported and the pull request that settled it. */
+export interface DigestTicket {
+  ref: string;
+  number: number;
+  title: string;
+  excerpt: string;
+  labels: string[];
+  closed_at: string | null;
+  pull: { number: number | null; title: string; merge_sha: string | null } | null;
+  files: string[];
+  symbols: string[];
+  tests_added: string[];
+  rule_like: boolean;
+}
+
 /** The evidence digest: raw facts, no selection. */
 export interface EvidenceDigest {
   repo: string;
@@ -149,15 +173,20 @@ export interface EvidenceDigest {
   imports: DigestImportEdge[];
   stale_dirs: DigestStaleDir[];
   changelog: DigestChangelogEntry[];
+  code_notes: DigestCodeNote[];
+  tickets: DigestTicket[];
+  /** `synced_at` of the precedents file the tickets came from (null when none was synced); part of the cache key. */
+  precedents_synced_at?: string | null;
   counts: Record<string, number>;
   warnings: string[];
 }
 
 export const EVIDENCE_SCRIPT = "policy_evidence.py";
 
-export function runDigest(repoPath: string, policyId: string, maxCommits = 300): EvidenceDigest {
+export function runDigest(repoPath: string, policyId: string, maxCommits = 300, precedentsFile?: string | null): EvidenceDigest {
   const script = path.join(resolvePaths().python, EVIDENCE_SCRIPT);
   const args = ["-I", script, repoPath, "--policy-id", policyId, "--max-commits", String(maxCommits)];
+  if (precedentsFile) args.push("--precedents", precedentsFile);
   const res = spawnSync(resolvePython(), args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024, timeout: 300_000 });
   if (res.error) throw new Error(`evidence digest failed to start: ${res.error.message}`);
   if (res.status !== 0) throw new Error(`evidence digest exited ${res.status}: ${(res.stderr ?? "").trim()}`);
@@ -165,10 +194,11 @@ export function runDigest(repoPath: string, policyId: string, maxCommits = 300):
 }
 
 /** The digest as the model reads it: compact text, every fact with the reference the model must cite back. */
-export function renderDigest(d: EvidenceDigest, opts: { maxTests?: number; maxCommits?: number; maxStatements?: number } = {}): string {
+export function renderDigest(d: EvidenceDigest, opts: { maxTests?: number; maxCommits?: number; maxStatements?: number; maxTickets?: number } = {}): string {
   const maxTests = opts.maxTests ?? 250;
   const maxCommits = opts.maxCommits ?? 120;
   const maxStatements = opts.maxStatements ?? 150;
+  const maxTickets = opts.maxTickets ?? 80;
   const L: string[] = [];
   L.push(`Repository ${d.repo} at ${d.head.slice(0, 7)} (${d.language}); source directories: ${d.source_dirs.join(", ") || "(none)"}.`);
   L.push(`Counts: ${Object.entries(d.counts).map(([k, v]) => `${k} ${v}`).join(", ")}.`);
@@ -199,6 +229,16 @@ export function renderDigest(d: EvidenceDigest, opts: { maxTests?: number; maxCo
 
   L.push("", `## Changelog entries announcing change (${d.changelog.length}; cite as changelog <path>:<line>)`);
   for (const c of d.changelog) L.push(`- ${c.path}:${c.line}${c.version ? ` [${c.version}]` : ""}: ${c.text}`);
+
+  const notes = d.code_notes ?? [];
+  L.push("", `## Code notes (${notes.length} must/never sentences in docstrings and comments of production code; cite as code <path>:<line>)`);
+  for (const n of notes.slice(0, maxStatements)) L.push(`- ${n.ref}${n.symbol ? ` (${n.symbol})` : ""} [${n.kind}]: ${n.sentence}`);
+  if (notes.length > maxStatements) L.push(`- … ${notes.length - maxStatements} more`);
+
+  const tickets = [...(d.tickets ?? [])].sort((a, b) => Number(b.rule_like) - Number(a.rule_like));
+  L.push("", `## Resolved tickets (${tickets.length}${tickets.length ? "" : "; run intentos precedents sync to add them"}; cite as ticket #<number>; * marks a rule-like title or body)`);
+  for (const t of tickets.slice(0, maxTickets)) L.push(`- ${t.rule_like ? "*" : " "} ${t.ref} ${t.title}${t.closed_at ? ` (${t.closed_at})` : ""}${t.pull?.number ? ` → PR #${t.pull.number}${t.pull.merge_sha ? ` ${t.pull.merge_sha.slice(0, 7)}` : ""}` : ""}${t.files.length ? `; files ${t.files.slice(0, 4).join(", ")}${t.files.length > 4 ? "…" : ""}` : ""}${t.tests_added.length ? `; tests added ${t.tests_added.slice(0, 3).join(", ")}` : ""}${t.excerpt ? `: ${t.excerpt.slice(0, 200)}` : ""}`);
+  if (tickets.length > maxTickets) L.push(`- … ${tickets.length - maxTickets} more; the precedents tool lists them`);
   return redact(L.join("\n"));
 }
 

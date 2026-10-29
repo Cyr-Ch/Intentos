@@ -19,9 +19,11 @@ reject or edit a candidate on the reviewer's behalf, and never pad the list with
    production files it exercises (`*` marks rule-like names), every commit that touched code with the tests it added
    (`*` marks fix-like messages), every must/never/always/only sentence from README, docs and CHANGELOG with its
    heading and line, every ADR with its status, the import edges between directories, directories nobody has touched
-   in a long time, and deprecation entries. Nothing in it is ranked or classified; you decide what is a rule. Call it
-   with `section` (`tests`, `commits`, `documents`, `adrs`, `imports`, `stale_dirs`, `changelog`) for the full JSON of
-   one part. Then read the code behind the facts that look like rules before you state anything.
+   in a long time, deprecation entries, every must/never sentence an author left in a docstring or comment of the
+   production code (with the symbol it documents), and the resolved tickets synced from the tracker with the pull
+   request that settled each and the tests it added. Nothing in it is ranked or classified; you decide what is a
+   rule. Call it with `section` (`tests`, `commits`, `documents`, `adrs`, `imports`, `stale_dirs`, `changelog`,
+   `code_notes`, `tickets`) for the full JSON of one part. Then read the code behind the facts that look like rules before you state anything.
 3. If the user asks for an independent, second or unbiased opinion, names a model, or `status` says a mining model is
    configured, call `mine` with that model instead of mining yourself: IntentOS runs this skill in a separate read-only
    thread with that model and checks the result exactly as it checks yours; poll `status` until it is done, then call
@@ -57,7 +59,14 @@ Aim for 8 to 20 candidates. Fewer good ones beat a long list.
    says what broke and therefore what must hold; its diff shows the guard. A rule fixed twice is a strong candidate.
 3. **Documents.** README, docs/, CHANGELOG, ADRs: sentences with must, never, always, only, required, invalid or
    not allowed. Cite the file and the line.
-4. **Structure.** The import graph between top-level packages (which layer imports which), directories untouched for
+4. **Code notes.** Docstrings and comments in the production code that say what must hold ("the only component
+   that computes prices", "a balance never goes below zero"). They are the author's own statement of the rule, next
+   to the code that keeps it: read the function or class they document and find the test that proves it, or write
+   one. Cite as `code <path>:<line>`.
+5. **Resolved tickets.** What users reported, and the pull request that settled it with the tests it added: the
+   clearest statement of a rule somebody noticed when it broke. Cite as `ticket #<number>` and corroborate with the
+   pull request's merge commit (`commit <sha>`) or the test it added. Present only after `intentos precedents sync`.
+6. **Structure.** The import graph between top-level packages (which layer imports which), directories untouched for
    a year, modules everything depends on. These give `architecture_rule` and `frozen_paths` candidates; they need no
    test because the scope check enforces them.
 
@@ -68,8 +77,8 @@ Prefer rules corroborated by two sources: a test and the commit that added it, a
 - `statement`: one sentence, active voice, domain terms: "<subject> must | never <behaviour> [when <condition>]".
   Every identifier you use (function, class, constant) must appear in the evidence you cite.
 - `evidence`: one to eight items, each with `type` (`test`, `commit`, `doc`, `adr`, `changelog`, `import`,
-  `history`), a real `ref` (`tests/test_x.py::TestY::test_z`, `tests/ledger.test.ts::<it title>`, a commit sha,
-  `docs/x.md:12`) and an `excerpt` quoting the source line. IntentOS checks that the file, line and commit exist; a
+  `history`, `code`, `ticket`), a real `ref` (`tests/test_x.py::TestY::test_z`, `tests/ledger.test.ts::<it title>`,
+  a commit sha, `docs/x.md:12`, `app/services/pricing.py:13`, `#43`) and an `excerpt` quoting the source line. IntentOS checks that the file, line and commit exist; a
   proposal with an invented reference is rejected.
 - `applies_to_paths`: globs of the production code the rule governs (`src/pkg/module.py`, `src/domain/**`). Not
   test paths.

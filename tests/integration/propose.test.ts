@@ -5,6 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { setupFixtureEnv, type TestEnv } from "../helpers/fixture.ts";
 import { ingestProposals, installSkill, loadDigest, SKILL_NAME, skillText } from "../../src/propose.ts";
+import { renderDigest } from "../../src/candidates.ts";
 import { acceptCandidate, loadReviewState } from "../../src/review.ts";
 import { PROJECT_ROOT } from "../../src/config.ts";
 
@@ -137,8 +138,18 @@ describe("intentos propose — host-authored candidates are checked, tested and 
     expect(digest.adrs.some((a) => a.status === "superseded")).toBe(true);
     expect(digest.stale_dirs.some((d) => d.dir === "app/legacy")).toBe(true);
     expect(digest.imports.some((e) => e.from_dir === "app/api" && e.to_dir === "app/services")).toBe(true);
+    // docstrings and comments of production code are facts too, with the symbol they document
+    expect(digest.code_notes.find((n) => n.path === "app/services/pricing.py")).toMatchObject({ kind: "docstring", symbol: "PricingService" });
+    expect(digest.code_notes.some((n) => n.path.startsWith("tests/"))).toBe(false);
+    expect(digest.tickets).toEqual([]); // nothing synced: no tickets section content, no invention
+    expect(renderDigest(digest)).toContain("## Code notes (");
+    expect(renderDigest(digest)).toContain("cite as code <path>:<line>");
     const cached = JSON.parse(fs.readFileSync(path.join(outDir, "evidence.json"), "utf8")) as { head: string };
     expect(cached.head).toBe(head);
+    // code evidence is accepted when the line exists; ticket evidence is refused until precedents are synced
+    const codeRef = await ingestProposals(env.repo, [{ title: "Pricing owns prices", statement: "PricingService must be the only component that computes prices.", kind: "architecture_rule", rule: { kind: "forbidden_import", paths: ["app/api/**"], forbidden_modules: ["app.domain.pricing"] }, evidence: [{ type: "code", ref: "app/services/pricing.py:13", excerpt: "The only component that computes prices." }, { type: "ticket", ref: "#1", excerpt: "x" }], rationale: "docstring" }], { policyFile, outDir });
+    expect(codeRef.accepted).toEqual([]);
+    expect(codeRef.rejected[0]!.reasons.join(" ")).toMatch(/no resolved tickets are synced/);
     const withTest = digest.tests.find((t) => t.rule_like)!;
     const r = await ingestProposals(env.repo, [{ title: "From the digest", statement: "The behaviour proven by the cited test must be preserved as it is.", test: { existing: withTest.ref }, rationale: "picked from the digest" }], { policyFile, outDir });
     expect(r.accepted.map((a) => a.verified)).toEqual(["lifted"]);

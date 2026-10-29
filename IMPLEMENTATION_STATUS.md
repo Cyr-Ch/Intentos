@@ -474,3 +474,12 @@ Fixture `fixtures/ts_ledger` + `policies/ts_ledger.yaml` + hidden tests + offlin
 patch → REVIEW_READY, bad patch → FAILED on ARCH-001 and a failing hidden task test). Python tests:
 `python/tests/test_policy_evidence.py` (7). Limits: Docker-mode verification is still Python-only; jest is covered by
 the invocation code but only vitest has a fixture; test titles built from template expressions are skipped.
+
+Addendum (same evening): the digest also hands the miner what the index already knew. `code_notes`: modal sentences
+in docstrings and comments of production code (Python `ast`/`tokenize`, TypeScript JSDoc and line comments; pragmas,
+licences, TODOs and `docs/`/`scripts/` excluded), each with the symbol it documents, citable as `code <path>:<line>`.
+`tickets`: the resolved tickets from the synced precedents file (title, first modal sentence, settling pull request
+with merge sha, files, symbols, tests added), citable as `ticket #n`; `loadDigest` passes the precedents file when one
+exists and a new sync invalidates the cache; the `Ingestor` refuses ticket evidence that is not synced. The MCP
+`evidence` tool and the skill list both sections. Not yet mined: assertions and validators in production code, type
+annotations, database constraints.

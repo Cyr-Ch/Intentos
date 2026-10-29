@@ -31,6 +31,8 @@ import sys
 import textwrap
 from collections import defaultdict
 from typing import Any
+import io
+import tokenize
 
 SKIP_DIRS = {".git", "__pycache__", ".pytest_cache", ".tox", ".venv", "venv", "node_modules", "build", "dist", ".eggs", ".mypy_cache", ".ruff_cache", ".intentos", ".intentos_hidden", "docs/_build", "coverage", ".next", ".turbo"}
 TEST_DIR_NAMES = ("tests", "test", "testing", "__tests__", "spec")
@@ -42,6 +44,8 @@ HIDDEN_DEPTH = 2  # hidden tests run from <root>/.intentos_hidden/<dir>/: two le
 FIX_START_RE = re.compile(r"^\s*(?:\[[^\]]*\]\s*)?(fix(?:es)?|bugfix|hotfix|revert(?:s|ed)?)\b", re.I)
 FIX_RE = re.compile(r"\bfix(?:es|ed)?\b|\b(bug|regression|revert(?:s|ed)?|prevent(?:s|ed)?|forbid(?:s|den)?|never|must|always|only|guard(?:s|ed)?|enforce(?:s|d)?|disallow(?:s|ed)?|reject(?:s|ed)?|validat\w*|ensure\w*|fail[- ]closed)\b", re.I)
 DOC_SKIP_RE = re.compile(r"^(CONTRIBUTING|CODE_OF_CONDUCT|AUTHORS|LICENSE|LICENCE|INSTALL|MANIFEST|NOTICE)(\.|$)", re.I)
+PRAGMA_RE = re.compile(r"^(noqa|type:|pylint:|pragma|eslint|prettier|ts-ignore|ts-expect-error|@ts-|flake8|fmt:|isort:|coding[:=]|!/|-\*-|SPDX|Copyright|\(c\)|TODO|FIXME|XXX|HACK)", re.I)
+TS_COMMENT_RE = re.compile(r"/\*[\s\S]*?\*/|(?:^[ \t]*//[^\n]*\n?)+", re.M)
 MODAL_RE = re.compile(r"\b(must not|must never|must|never|always|only|shall not|shall|cannot|can not|may not|is not allowed|are not allowed|forbidden|required|not permitted)\b", re.I)
 RULE_TOKENS = {"never", "no", "not", "cannot", "cant", "only", "must", "always", "forbid", "forbidden", "reject", "rejects", "rejected", "raise", "raises", "throws", "throw", "invalid", "unchanged", "preserve", "preserves", "preserved", "conserve", "conserves", "conserved", "idempotent", "roundtrip", "monotonic", "sum", "sums", "equal", "equals", "within", "bounded", "nonnegative", "positive", "negative", "requires", "required", "refuse", "refuses", "deny", "denies", "before", "after", "until", "expires", "expired", "without", "exactly", "once", "empty", "zero", "limit", "warns", "warn"}
 FROZEN_NAME_RE = re.compile(r"(legacy|deprecated|obsolete|old|compat|v1)", re.I)
@@ -710,12 +714,100 @@ class Digest:
                     out.append({"path": rel, "line": i, "version": version or None, "text": line.strip().lstrip("-* ")[:300]})
         return out[:200]
 
-    def run(self, policy_id: str) -> dict[str, Any]:
+    def code_notes(self) -> list[dict[str, Any]]:
+        """Modal sentences in production code's docstrings (module, class, function) and comments: what the author said must hold, where."""
+        out: list[dict[str, Any]] = []
+        for rel in [*self.r.py_files, *self.r.ts_files]:
+            if is_test_path(rel) or any(part in SKIP_DIRS for part in rel.split("/")) or rel.split("/")[0] in ("docs", "doc", "scripts", "ci"):
+                continue  # production code only: documentation tooling and scripts are not the product
+            src = self.r.source(rel)
+            if src is None:
+                continue
+            notes: list[tuple[int, str, str | None, str]] = []  # (line, kind, symbol, text)
+            if language_of(rel) == "python":
+                try:
+                    tree = ast.parse(src, filename=rel)
+                except SyntaxError:
+                    continue
+                mod_doc = ast.get_docstring(tree)
+                if mod_doc:
+                    notes.append((tree.body[0].lineno, "docstring", None, mod_doc))
+                for node in ast.walk(tree):
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        doc = ast.get_docstring(node)
+                        if doc and node.body and isinstance(node.body[0], ast.Expr):
+                            notes.append((node.body[0].lineno, "docstring", node.name, doc))
+                try:
+                    for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+                        if tok.type == tokenize.COMMENT:
+                            text = tok.string.lstrip("#").strip()
+                            if text and not PRAGMA_RE.match(text):
+                                notes.append((tok.start[0], "comment", None, text))
+                except (tokenize.TokenError, SyntaxError):
+                    pass
+            else:
+                for m in TS_COMMENT_RE.finditer(src):
+                    raw = m.group(0)
+                    text = " ".join(l.strip().lstrip("/*").rstrip("*/").strip() for l in raw.splitlines() if l.strip())
+                    if not text or PRAGMA_RE.match(text):
+                        continue
+                    line = src.count("\n", 0, m.start()) + 1
+                    # the symbol a JSDoc/leading comment documents: the next declaration
+                    after = src[m.end():m.end() + 200]
+                    sym = re.search(r"(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\*?|class|const|let|interface|type|enum)\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*\(", after.lstrip())
+                    notes.append((line, "comment", (sym.group(1) or sym.group(2)) if sym else None, text))
+            per_file = 0
+            for line, kind, symbol, text in notes:
+                for sent in sentences(text):
+                    if MODAL_RE.search(sent) and 20 <= len(sent) <= 400:
+                        out.append({"ref": f"{rel}:{line}", "path": rel, "line": line, "kind": kind, "symbol": symbol, "sentence": sent})
+                        per_file += 1
+                        break  # one sentence per note: the model reads the rest in the file
+                if per_file >= 25:
+                    break
+        return out[:400]
+
+    def tickets(self, precedents_file: str | None) -> list[dict[str, Any]]:
+        """Resolved tickets synced by `intentos precedents sync`: what users reported and the pull request that settled it, with the tests it added."""
+        if not precedents_file:
+            return []
+        try:
+            with open(precedents_file, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, ValueError) as ex:
+            self.warnings.append(f"precedents file unreadable: {ex}")
+            return []
+        out: list[dict[str, Any]] = []
+        for p in data.get("precedents", []):
+            # ticket bodies are Markdown: drop heading markers and checklist boxes so a sentence reads as prose
+            body = " ".join(re.sub(r"^\s*- \[[ x]\]\s*", "", l) for l in str(p.get("body") or "").splitlines() if not l.lstrip().startswith("#")).strip()
+            body = " ".join(body.split())
+            modal = next((s for s in sentences(body) if MODAL_RE.search(s) and len(s) >= 20), None)
+            pull = p.get("pull") or {}
+            diff = pull.get("diff") or {}
+            out.append({
+                "ref": f"#{p.get('number')}",
+                "number": p.get("number"),
+                "title": str(p.get("title") or "")[:200],
+                "excerpt": (modal or body[:240])[:400],
+                "labels": list(p.get("labels") or [])[:8],
+                "closed_at": (p.get("closed_at") or "")[:10] or None,
+                "pull": {"number": pull.get("number"), "title": str(pull.get("title") or "")[:200], "merge_sha": pull.get("merge_sha")} if pull else None,
+                "files": [f["path"] for f in diff.get("files", [])][:12],
+                "symbols": list(diff.get("symbols", []))[:12],
+                "tests_added": [f"{t['path']}::{t['name']}" for t in diff.get("tests_added", [])][:12],
+                "rule_like": bool(modal) or bool(set(re.findall(r"[a-z]+", str(p.get("title") or "").lower())) & RULE_TOKENS),
+            })
+        return out[:300]
+
+    def run(self, policy_id: str, precedents_file: str | None = None) -> dict[str, Any]:
         tests = self.tests()
         commits = self.commits()
         statements, adrs = self.documents()
         edges, stale = self.structure()
         changelog = self.changelog()
+        code_notes = self.code_notes()
+        tickets = self.tickets(precedents_file)
         head = run_git(self.r.repo, "rev-parse", "HEAD").strip()
         return {
             "repo": self.r.repo,
@@ -730,7 +822,9 @@ class Digest:
             "imports": edges,
             "stale_dirs": stale,
             "changelog": changelog,
-            "counts": {"tests": len(tests), "rule_like_tests": sum(1 for t in tests if t["rule_like"]), "commits": len(commits), "fix_commits": sum(1 for c in commits if c["looks_like_fix"]), "documents": len(statements), "adrs": len(adrs), "imports": len(edges), "stale_dirs": len(stale), "changelog": len(changelog)},
+            "code_notes": code_notes,
+            "tickets": tickets,
+            "counts": {"tests": len(tests), "rule_like_tests": sum(1 for t in tests if t["rule_like"]), "commits": len(commits), "fix_commits": sum(1 for c in commits if c["looks_like_fix"]), "documents": len(statements), "adrs": len(adrs), "imports": len(edges), "stale_dirs": len(stale), "changelog": len(changelog), "code_notes": len(code_notes), "tickets": len(tickets)},
             "warnings": self.warnings,
         }
 
@@ -738,16 +832,24 @@ class Digest:
 # ---------------------------------------------------------------------------------------------------------------------
 # Ingestion of model-authored candidates
 
-EVIDENCE_TYPES = ("test", "commit", "doc", "adr", "changelog", "import", "history")
+EVIDENCE_TYPES = ("test", "commit", "doc", "adr", "changelog", "import", "history", "code", "ticket")
 CANDIDATE_KINDS = ("invariant", "architecture_rule", "frozen_paths", "decision")
 CATEGORIES = ("business_rule", "robustness_rule")
 LEVELS = ("high", "medium", "low")
 
 
 class Ingestor:
-    def __init__(self, repo: str) -> None:
+    def __init__(self, repo: str, precedents_file: str | None = None) -> None:
         self.r = Repo(repo)
         self.tracked = set(self.r.files)
+        self.tickets: dict[str, dict[str, Any]] = {}
+        if precedents_file and os.path.exists(precedents_file):
+            try:
+                with open(precedents_file, "r", encoding="utf-8") as fh:
+                    for p in json.load(fh).get("precedents", []):
+                        self.tickets[str(p.get("number"))] = p
+            except (OSError, ValueError):
+                pass
 
     def path_ok(self, p: str) -> bool:
         if p.endswith("/**"):
@@ -803,6 +905,16 @@ class Ingestor:
                 return f"commit {ref} is not in this repository"
             return None
         if t == "history":
+            return None
+        if t == "ticket":
+            num = ref.lstrip("#").strip()
+            if not num.isdigit():
+                return f"ticket evidence {ref!r} must be the ticket number (#123)"
+            if not self.tickets:
+                return f"ticket {ref}: no resolved tickets are synced for this repository (intentos precedents sync)"
+            if num not in self.tickets:
+                return f"ticket #{num} is not among the synced resolved tickets"
+            e["ref"] = f"#{num}"
             return None
         rel, line = ref.split("::")[0], None
         if "::" not in ref and ":" in rel:
@@ -964,14 +1076,15 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--max-commits", type=int, default=300)
     parser.add_argument("--ingest", help="validate model-authored candidates from this JSON file (a list, or {candidates: [...]}) instead of printing the digest")
     parser.add_argument("--start", type=int, default=1, help="with --ingest: first candidate number (appending to an earlier list)")
+    parser.add_argument("--precedents", help="the repository's synced precedents file (.intentos/precedents/<repo-id>.json): resolved tickets become digest facts and citable ticket evidence")
     args = parser.parse_args(argv)
     if args.ingest:
         with open(args.ingest, "r", encoding="utf-8") as fh:
             loaded = json.load(fh)
         proposals = loaded["candidates"] if isinstance(loaded, dict) else loaded
-        json.dump(Ingestor(args.repo).ingest(list(proposals), args.policy_id, args.start), sys.stdout)
+        json.dump(Ingestor(args.repo, args.precedents).ingest(list(proposals), args.policy_id, args.start), sys.stdout)
         return 0
-    json.dump(Digest(args.repo, args.max_commits).run(args.policy_id), sys.stdout)
+    json.dump(Digest(args.repo, args.max_commits).run(args.policy_id, args.precedents), sys.stdout)
     return 0
 
 

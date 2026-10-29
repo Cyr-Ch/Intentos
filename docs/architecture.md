@@ -106,7 +106,13 @@ the model knows which code each test exercises; `rule_like` marks names with neg
 that touched code with the source and test files it changed and the tests it added (`looks_like_fix` marks fix-shaped
 subjects), every modal sentence (must/never/always/only/required/not allowed) from Markdown/RST documents with its
 heading and line, ADRs with `status` and `supersedes`, import edges between directories, directories nobody has
-touched in a long time, and changelog deprecations. Nothing is scored, clustered or classified: `renderDigest` prints
+touched in a long time, changelog deprecations, **code notes** (modal sentences in docstrings and comments of
+production code, from `ast.get_docstring` and `tokenize` for Python and JSDoc/line comments for TypeScript, with the
+symbol they document; pragmas, licences and TODOs excluded), and **resolved tickets** from the synced precedents file
+(`--precedents`, passed by `loadDigest` when `precedents sync` has run; a new sync invalidates the cache): title, the
+first modal sentence of the body, the pull request that settled it with its merge commit, files, symbols and the tests
+it added. Evidence types `code` (`path:line`, checked like a document line) and `ticket` (`#n`, checked against the
+synced file; refused when nothing is synced) let the model cite them. Nothing is scored, clustered or classified: `renderDigest` prints
 the same facts for a person, the MCP `evidence` tool serves the digest whole or by section, and the skill tells the
 model to read the code behind the facts that look like rules before stating any. What the model decides is checked by
 the `Ingestor` (next sections), never trusted.

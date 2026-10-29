@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { z } from "zod";
 import { PROJECT_ROOT, ensureHome, resolvePaths, resolvePython } from "./config.ts";
 import { repoIdFor } from "./knowledge/indexer.ts";
+import { precedentsFile } from "./knowledge/precedents.ts";
 import { loadPolicyFile, type Policy } from "./knowledge/policy.ts";
 import { repoInterpreter } from "./knowledge/venv.ts";
 import { jsRunner, jsTestInvocation } from "./knowledge/js.ts";
@@ -56,7 +57,7 @@ export function installSkill(opts: { dir?: string; force?: boolean; name?: strin
   return { link, target, created: true, name };
 }
 
-export const EVIDENCE_TYPES = ["test", "commit", "doc", "adr", "changelog", "import", "history"] as const;
+export const EVIDENCE_TYPES = ["test", "commit", "doc", "adr", "changelog", "import", "history", "code", "ticket"] as const;
 const EvidenceSchema = z.object({
   type: z.enum(EVIDENCE_TYPES),
   ref: z.string().min(1).max(300),
@@ -176,15 +177,29 @@ export function loadDigest(repoInput: string, opts: { policyId?: string; outDir?
   const outDir = path.resolve(opts.outDir ?? path.join(paths.home, "onboard", repoIdFor(repoPath)));
   const file = path.join(outDir, "evidence.json");
   const head = spawnSync("git", ["-C", repoPath, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
+  // Resolved tickets come from the synced precedents (never from the network here); a new sync invalidates the cache.
+  const precedents = precedentsFile(paths, repoIdFor(repoPath));
+  const syncedAt = precedentsSyncedAt(precedents);
   if (fs.existsSync(file)) {
     const cached = JSON.parse(fs.readFileSync(file, "utf8")) as EvidenceDigest;
-    if (cached.head === head) return cached;
+    if (cached.head === head && (cached.precedents_synced_at ?? null) === syncedAt && Array.isArray(cached.code_notes)) return cached;
   }
   const policyId = policyIdFor(runProbe(repoPath), repoPath, opts.policyId);
-  const digest = runDigest(repoPath, policyId, opts.maxCommits ?? 300);
+  const digest = runDigest(repoPath, policyId, opts.maxCommits ?? 300, syncedAt ? precedents : null);
+  digest.precedents_synced_at = syncedAt;
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(digest, null, 2));
   return digest;
+}
+
+function precedentsSyncedAt(file: string): string | null {
+  if (!fs.existsSync(file)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as { source?: { synced_at?: string } };
+    return parsed.source?.synced_at ?? "unknown";
+  } catch {
+    return null;
+  }
 }
 
 function loadAuthored(outDir: string): AuthoredSuggestions | null {
@@ -220,7 +235,10 @@ export async function ingestProposals(repoInput: string, proposals: unknown[], o
   const proposalsFile = path.join(outDir, "proposals.json");
   fs.writeFileSync(proposalsFile, JSON.stringify(valid, null, 2));
   const script = path.join(paths.python, EVIDENCE_SCRIPT);
-  const res = spawnSync(resolvePython(), ["-I", script, repoPath, "--policy-id", policyId, "--ingest", proposalsFile, "--start", String(start)], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 120_000 });
+  const precedents = precedentsFile(paths, repoId);
+  const ingestArgs = ["-I", script, repoPath, "--policy-id", policyId, "--ingest", proposalsFile, "--start", String(start)];
+  if (fs.existsSync(precedents)) ingestArgs.push("--precedents", precedents);
+  const res = spawnSync(resolvePython(), ingestArgs, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 120_000 });
   if (res.error) throw new Error(`policy ingest failed to start: ${res.error.message}`);
   if (res.status !== 0) throw new Error(`policy ingest exited ${res.status}: ${(res.stderr ?? "").trim()}`);
   const out = JSON.parse(res.stdout) as IngestOutput;
