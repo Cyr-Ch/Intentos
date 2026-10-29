@@ -120,8 +120,40 @@
   <section class="block" id="who">
     <div class="wrap">
       <div class="kicker">Who it is for</div>
-      <h2 class="h2">Built for the person who owns main</h2>
+      <h2 class="h2">Built for the teams that move fast with coding agents fleets</h2>
       <p class="lede">IntentOS is for established Python and TypeScript codebases where years of decisions live in tests, documents and closed tickets, and where coding agents are now doing real work in parallel.</p>
+
+      <div class="scenes" aria-label="What a week looks like for these teams">
+        <figure class="scene">
+          <img src="img/slack-feature-requests.jpg" width="1024" height="682" loading="lazy" alt="A Slack channel named feature-requests where sales and customer-success keep posting new customer asks while developers reply that they are over capacity and need to prioritise.">
+          <figcaption>
+            <strong>Requests arrive faster than anyone can scope them</strong>
+            <p>Half of these should become tickets, some are already solved, and one or two should never be built. Nobody has time to check which is which before an agent picks one up.</p>
+          </figcaption>
+        </figure>
+        <figure class="scene">
+          <img src="img/github-vague-issue.jpg" width="1024" height="512" loading="lazy" alt="A GitHub issue titled 'Make the dashboard work better' with a vague description, no assignee and a comment asking for clarification that gets the reply 'not sure, just check it'.">
+          <figcaption>
+            <strong>The ticket is vague, and the agent builds something anyway</strong>
+            <p>A person would ask what "better" means. A coding agent ships a seven-file feature, and the review burden lands on whoever opens the PR.</p>
+          </figcaption>
+        </figure>
+        <figure class="scene">
+          <img src="img/github-open-prs.jpg" width="1024" height="512" loading="lazy" alt="A GitHub pull-request list with 527 open PRs, several touching ingestion, forecasting, authentication and billing at the same time, some with failing review checks.">
+          <figcaption>
+            <strong>527 open pull requests, many touching the same modules</strong>
+            <p>Agents work in parallel and each branch is green on its own. Nobody is checking that they still fit together on the main of right now.</p>
+          </figcaption>
+        </figure>
+        <figure class="scene">
+          <img src="img/dashboard-incident.jpg" width="1024" height="576" loading="lazy" alt="A production energy dashboard showing a 'Something went wrong' error from the meter ingestion service, a site in Error status and a negative generation chart.">
+          <figcaption>
+            <strong>CI was green. Production is not.</strong>
+            <p>The change passed the tests it could see and broke a rule nobody wrote down. The tech lead gets paged, and the agent that made the change is long gone.</p>
+          </figcaption>
+        </figure>
+      </div>
+
       <div class="grid c3">
         <div class="card persona">
           <div class="role">Primary user</div>
@@ -172,7 +204,7 @@
         <div class="diagram-scroll">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 604" role="img" aria-labelledby="diag-title diag-desc" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Inter, Roboto, sans-serif">
           <title id="diag-title">How IntentOS works, from onboarding to the merge gate and the guardian</title>
-          <desc id="diag-desc">Three lanes: people, the IntentOS plugin, and model threads, over a band of trusted state. Onboard indexes the repository; a mining model proposes rules from an evidence digest and IntentOS checks them; a reviewer approves them into the policy. For each ticket a planner proposes a contract the compiler validates, an implementer works in a git worktree, verification runs hidden tests and deterministic checks from a snapshot with bounded repairs, the merge gate requires approvals, CI, a sync check and merged-result verification before fast-forwarding main, and the guardian bisects a red main and opens a validated undo PR.</desc>
+          <desc id="diag-desc">Three lanes: people, the IntentOS plugin, and model threads, over a band of trusted state. Onboard indexes the repository; a mining model proposes rules from an evidence digest and IntentOS checks them; a reviewer approves them into the policy. For each ticket a QA thread fills the gaps the repository can answer, flags contradictions with the policy and sends the remaining questions back to the team; once the ticket is ready, a planner proposes a contract the compiler validates, an implementer works in a git worktree, verification runs hidden tests and deterministic checks from a snapshot with bounded repairs, the merge gate requires approvals, CI, a sync check and merged-result verification before fast-forwarding main, and the guardian bisects a red main and opens a validated undo PR.</desc>
           <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#686c66"/></marker><marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#315e50"/></marker></defs>
           <rect width="1280" height="604" fill="#fff"/>
           <rect x="124" y="172" width="1148" height="204" rx="10" fill="#f5f6f2"/>
@@ -218,6 +250,7 @@
           <rect x="558" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
           <text x="622" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Ticket</text>
           <text x="622" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">the task to implement</text>
+          <text x="622" y="128" font-size="10.5" fill="#686c66" text-anchor="middle">unfinished → ready → planned</text>
           <rect x="984" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
           <text x="1048" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Approvers</text>
           <text x="1048" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">named by a person,</text>
@@ -245,8 +278,8 @@
           <text x="480" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">+ hidden test file</text>
           <rect x="558" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="622" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">contract</text>
-          <text x="622" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">evidence pack</text>
-          <text x="622" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">planner proposes</text>
+          <text x="622" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">triage: fill · ask · flag</text>
+          <text x="622" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">evidence pack → planner</text>
           <text x="622" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">compiler validates:</text>
           <text x="622" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">cites · paths · checks</text>
           <rect x="700" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
@@ -279,10 +312,10 @@
           <text x="338" y="446" font-size="10.5" fill="#686c66" text-anchor="middle">the host's reads digest</text>
           <text x="338" y="460" font-size="10.5" fill="#686c66" text-anchor="middle">+ code, proposes rules</text>
           <rect x="558" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="622" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">planner</text>
-          <text x="622" y="432" font-size="10.5" fill="#686c66" text-anchor="middle">read-only thread</text>
-          <text x="622" y="446" font-size="10.5" fill="#686c66" text-anchor="middle">requirements that</text>
-          <text x="622" y="460" font-size="10.5" fill="#686c66" text-anchor="middle">cite evidence ids</text>
+          <text x="622" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">ticket QA · planner</text>
+          <text x="622" y="432" font-size="10.5" fill="#686c66" text-anchor="middle">read-only threads</text>
+          <text x="622" y="446" font-size="10.5" fill="#686c66" text-anchor="middle">gaps and questions, then</text>
+          <text x="622" y="460" font-size="10.5" fill="#686c66" text-anchor="middle">requirements citing ids</text>
           <rect x="700" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="764" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">implementer</text>
           <text x="764" y="432" font-size="10.5" fill="#686c66" text-anchor="middle">workspace-write thread</text>
@@ -309,7 +342,7 @@
           <line x1="608" y1="142" x2="608" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
           <text x="602" y="190" font-size="9.5" fill="#686c66" text-anchor="end">ticket</text>
           <line x1="636" y1="226" x2="636" y2="142" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
-          <text x="642" y="190" font-size="9.5" fill="#686c66" text-anchor="start">clarify</text>
+          <text x="642" y="190" font-size="9.5" fill="#686c66" text-anchor="start">questions</text>
           <line x1="1048" y1="142" x2="1048" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
           <text x="1054" y="190" font-size="9.5" fill="#686c66" text-anchor="start">approvals</text>
           <line x1="1190" y1="226" x2="1190" y2="142" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
@@ -402,8 +435,10 @@
           <div>
             <div class="n">02 · Contract</div>
             <h3>Every ticket becomes a compiled change contract</h3>
-            <p>A read-only planner turns the ticket and the evidence pack into requirements, each citing evidence IDs, plus the symbols to reuse, the paths it may touch and the checks that will run. A deterministic compiler rejects fabricated evidence, catch-all paths, unknown commands and attempts to make protected paths writable.</p>
+            <p>Before anyone plans, a ticket QA thread (<code>triage</code>) checks whether the ticket is underspecified. What the repository already answers it fills in, with references verified at the current commit; what contradicts an approved invariant, decision or precedent it flags; what only the team can answer it turns into questions with options and a suggested default. The ticket moves from <code>unfinished</code> to <code>ready for planning</code> only when nothing blocking is left.</p>
+            <p>Then a read-only planner turns the ticket and the evidence pack into requirements, each citing evidence IDs, plus the symbols to reuse, the paths it may touch and the checks that will run. A deterministic compiler rejects fabricated evidence, catch-all paths, unknown commands and attempts to make protected paths writable.</p>
             <ul>
+              <li>Ticket QA never sets <code>planned</code>: that label belongs to the planner, and a planned ticket is not re-triaged without an explicit override</li>
               <li>Three routes: <b>implement</b>, <b>clarify</b> with a blocking question, or <b>abstain</b> with cited reasons</li>
               <li>Acceptance tests are written by a different model before implementation and must fail at base</li>
             </ul>
@@ -630,7 +665,7 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
           <li><b>Optional</b><span>Docker for the isolated verifier; the <code>gh</code> CLI for ticket precedents.</span></li>
         </ul>
         <h3 style="font-size:17px;margin:28px 0 10px">After setup, inside any Codex session</h3>
-        <p style="font-size:14.5px;color:var(--ink-2)">"What does IntentOS know about this repository?" · "Implement this ticket under IntentOS" · "Merge that run, approvals from Priya and Sam" · "Main is red. Investigate."</p>
+        <p style="font-size:14.5px;color:var(--ink-2)">"What does IntentOS know about this repository?" · "Is issue #42 ready for planning?" · "Implement this ticket under IntentOS" · "Merge that run, approvals from Priya and Sam" · "Main is red. Investigate."</p>
       </div>
     </div>
   </section>

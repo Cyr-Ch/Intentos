@@ -157,6 +157,14 @@ section.soft { background: var(--paper); }
 .problem .card { position: relative; padding-top: 26px; }
 .problem .card .num { font-size: 38px; }
 
+/* ---------- scenes (screenshots of the problem) ---------- */
+.scenes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin: 0 0 40px; }
+.scene { margin: 0; border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 1px 2px #0000000a, 0 18px 50px -28px #1f2a2330; display: grid; grid-template-rows: auto 1fr; }
+.scene img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; object-position: top left; border-bottom: 1px solid var(--line); background: #1d1f1c; }
+.scene figcaption { padding: 16px 20px 18px; }
+.scene figcaption strong { display: block; font-size: 15.5px; font-weight: 650; letter-spacing: -.01em; margin-bottom: 4px; color: var(--ink); }
+.scene figcaption p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+
 /* ---------- personas ---------- */
 .persona { display: grid; grid-template-rows: auto 1fr auto; }
 .persona .role { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
@@ -283,7 +291,7 @@ footer .tag { max-width: 320px; }
   .nav a { padding: 12px clamp(20px, 5vw, 48px); }
   .btn.menu-toggle { display: inline-flex; }
   .topbar .actions .btn.hide-sm { display: none; }
-  .grid.c2, .grid.c3, .grid.c4, .metrics { grid-template-columns: 1fr; }
+  .grid.c2, .grid.c3, .grid.c4, .metrics, .scenes { grid-template-columns: 1fr; }
   .pipeline { grid-template-columns: 1fr 1fr; }
   .hero h1 { font-size: 38px; }
   .card .num { font-size: 30px; }
