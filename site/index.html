@@ -456,12 +456,11 @@
           <div>
             <div class="n">02 · Contract</div>
             <h3>Every ticket becomes a compiled change contract</h3>
-            <p>Before anyone plans, a ticket QA thread (<code>triage</code>) checks whether the ticket is underspecified. What the repository already answers it fills in, with references verified at the current commit; what contradicts an approved invariant, decision or precedent it flags; what only the team can answer it turns into questions with options and a suggested default. The ticket moves from <code>unfinished</code> to <code>ready for planning</code> only when nothing blocking is left.</p>
-            <p>Then a read-only planner turns the ticket and the evidence pack into requirements, each citing evidence IDs, plus the symbols to reuse, the paths it may touch and the checks that will run. A deterministic compiler rejects fabricated evidence, catch-all paths, unknown commands and attempts to make protected paths writable.</p>
+            <p>A QA agent first checks whether the ticket can be built from. IntentOS hands it measured facts rather than a hunch: does the ticket contain anything that reads like an acceptance criterion or an example; which names in it exist in the repository and which do not; how many symbols and tests match its terms (zero means too vague, or something new); which approved rules apply; which solved tickets are closest.</p>
+            <p>Every gap then lands in one of three bins. <b>Filled</b>: the repository answers it, and the answer must cite code, a test, a document or a commit that IntentOS verifies at the current revision. <b>Question</b>: only the team can answer, so it comes with options and a default. <b>Contradiction</b>: the ticket conflicts with an approved rule, flagged first. Ready means no blocking question is left.</p>
             <ul>
-              <li>Ticket QA never sets <code>planned</code>: that label belongs to the planner, and a planned ticket is not re-triaged without an explicit override</li>
-              <li>Three routes: <b>implement</b>, <b>clarify</b> with a blocking question, or <b>abstain</b> with cited reasons</li>
-              <li>Acceptance tests are written by a different model before implementation and must fail at base</li>
+              <li>A planner turns a ready ticket into a contract: requirements citing evidence, symbols to reuse, paths it may touch, checks that will run. A compiler rejects fabricated evidence and protected paths</li>
+              <li>Three routes: <b>implement</b>, <b>clarify</b>, or <b>abstain</b> with cited reasons</li>
             </ul>
           </div>
           <div class="mock"><div class="bar"><strong>contract.json</strong> · validated · 0 compiler errors</div><div class="body"><div class="code">{
