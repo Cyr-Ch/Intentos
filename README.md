@@ -3,7 +3,7 @@
 *The code works. But does it belong?*
 
 IntentOS is an engineering-intent intelligence and verification layer for Codex coding agents. It indexes a
-repository into a versioned Engineering World Model (symbols, imports, tests, docs, trusted policy), turns a
+repository into a versioned repository model (symbols, imports, tests, docs, trusted policy), turns a
 task into an evidence-grounded **Engineering Change Contract**, runs Codex inside an isolated Git worktree
 under that contract, and then verifies the result **independently** (hidden acceptance tests, business
 invariant tests, deterministic architecture rules, scope checks) before producing a semantic review report.

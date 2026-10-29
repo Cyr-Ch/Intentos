@@ -26,7 +26,7 @@ Orchestrator (src/orchestrator)  ── durable state machine (SQLite runs/run_e
    └── REPORT      src/reports    ── report.md / report.json from persisted artifacts only
 ```
 
-## Engineering World Model
+## Versioned repository model
 
 SQLite (`node:sqlite`, WAL) with the spec's tables (`repositories`, `nodes`, `edges`, `evidence`, `decisions`,
 `runs`, `run_events`) plus `schema_migrations`. Graph rows are keyed by `(id, repo_id, revision)`, so several
@@ -211,7 +211,7 @@ counts, and `review_start`, `publicState` and the widget header carry `author`. 
 The same pipeline runs on a TypeScript repository (`policy.language: typescript`). The probe reads `package.json`
 (name, scripts, vitest or jest, package manager), `tsconfig.json` and the source/test directories, and the draft
 policy's commands use `{node}` and `{node_modules}` placeholders with `env` (`CI=1`). `src/knowledge/ts_extract.ts`
-(TypeScript compiler API) adds modules, functions, classes, imports and `it`/`test` titles to the same world model
+(TypeScript compiler API) adds modules, functions, classes, imports and `it`/`test` titles to the same repository model
 the Python indexer fills. The verifier copies hidden tests as `.test.ts` files beside the snapshot and runs them
 through the repository's own vitest/jest with a wrapper config (`writeVitestWrapperConfig`) that includes only the
 hidden directory and allows `.only`; the snapshot links the repository's `node_modules`, and `isToolingPath` keeps

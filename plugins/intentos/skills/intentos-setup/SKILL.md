@@ -12,7 +12,7 @@ Say what each step changes before you run it. Never edit `~/.codex/config.toml` 
 
 ## What IntentOS is, in one paragraph
 
-IntentOS is a verification and coordination layer for Codex. It indexes a repository into a world model (symbols,
+IntentOS is a verification and coordination layer for Codex. It indexes a repository into a versioned repository model (symbols,
 tests, documents, approved business rules), turns a ticket into a compiled change contract, runs the implementer in
 an isolated worktree with coordination hooks, verifies the result independently with hidden tests and invariants, and
 merges it through a gate that re-verifies the branch against the main of right now. After setup, the MCP tools

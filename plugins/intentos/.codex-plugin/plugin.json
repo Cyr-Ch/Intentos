@@ -1,7 +1,7 @@
 {
   "name": "intentos",
   "version": "0.1.0",
-  "description": "Verification and coordination for Codex coding agents: index a repository into a world model with approved business rules, compile each ticket into a contract, implement in an isolated worktree with coordination hooks, verify independently with hidden tests, and merge through a gate that re-verifies against the main of right now.",
+  "description": "Verification and coordination for Codex coding agents: index a repository into a versioned repository model with approved business rules, compile each ticket into a contract, implement in an isolated worktree with coordination hooks, verify independently with hidden tests, and merge through a gate that re-verifies against the main of right now.",
   "author": {
     "name": "Cyr-Ch",
     "url": "https://github.com/Cyr-Ch"
@@ -15,7 +15,7 @@
   "interface": {
     "displayName": "IntentOS",
     "shortDescription": "Does the code belong, and is it safe to merge?",
-    "longDescription": "IntentOS wraps Codex with an engineering world model and an independent verifier. Onboard a repository, mine its business rules with a second model, and every ticket becomes a compiled change contract, an isolated implementation with coordination hooks, and a verification against hidden acceptance tests and invariants. Merges go through a gate with a review tier, head-bound approvals and a merged-result verification; a guardian bisects a red main to the culprit merge and opens a validated undo PR. Tools: status, onboard, mine, explain, policy, run, runs, merge, guard.",
+    "longDescription": "IntentOS wraps Codex with a versioned repository model and an independent verifier. Onboard a repository, mine its business rules with a second model, and every ticket becomes a compiled change contract, an isolated implementation with coordination hooks, and a verification against hidden acceptance tests and invariants. Merges go through a gate with a review tier, head-bound approvals and a merged-result verification; a guardian bisects a red main to the culprit merge and opens a validated undo PR. Tools: status, onboard, mine, explain, policy, run, runs, merge, guard.",
     "developerName": "Cyr-Ch",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],

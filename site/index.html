@@ -230,7 +230,7 @@
           <text x="196" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">probe the repository</text>
           <text x="196" y="276" font-size="10.5" fill="#686c66" text-anchor="middle">venv / node_modules</text>
           <text x="196" y="290" font-size="10.5" fill="#686c66" text-anchor="middle">draft policy · suite run</text>
-          <text x="196" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">index → world model</text>
+          <text x="196" y="304" font-size="10.5" fill="#686c66" text-anchor="middle">index → repository model</text>
           <rect x="274" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
           <text x="338" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">mine</text>
           <text x="338" y="262" font-size="10.5" fill="#686c66" text-anchor="middle">evidence digest: tests,</text>
@@ -337,7 +337,7 @@
           <text x="138" y="512" font-size="11" fill="#173b31" text-anchor="start" font-weight="700">Trusted state</text>
           <text x="228" y="512" font-size="10.5" fill="#173b31" text-anchor="start">versioned, outside the target repository, never written by a model</text>
           <rect x="138" y="522" width="176" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
-          <text x="226" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">world model index @ commit</text>
+          <text x="226" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">repository model @ commit</text>
           <rect x="322" y="522" width="359" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
           <text x="502" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">policy YAML: invariants · architecture rules · decisions</text>
           <rect x="689" y="522" width="91" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
@@ -372,7 +372,7 @@
         <div class="stage" id="s1">
           <div>
             <div class="n">01 · Learn</div>
-            <h3>A world model of your repository</h3>
+            <h3>A versioned model of your repository</h3>
             <p>One <code>onboard</code> indexes symbols, imports, tests, documents and ticket history into a versioned graph bound to the commit. Then a second model mines your business rules from fix commits, rule-like tests and must/never sentences in your docs. Every candidate reference is checked against the repository and its test is run before anyone sees it.</p>
             <ul>
               <li>Closed issues and the PRs that resolved them become <b>precedents</b>, re-linked through renames at every index</li>
