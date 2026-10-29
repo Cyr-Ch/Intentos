@@ -483,3 +483,32 @@ with merge sha, files, symbols, tests added), citable as `ticket #n`; `loadDiges
 exists and a new sync invalidates the cache; the `Ingestor` refuses ticket evidence that is not synced. The MCP
 `evidence` tool and the skill list both sections. Not yet mined: assertions and validators in production code, type
 annotations, database constraints.
+
+## Ticket QA before planning: `triage` (2026-10-29)
+`src/triage.ts` / `intentos triage` / MCP `triage`: the gate between the `unfinished` and `ready for planning` labels
+(`planned` belongs to the planner and is never set, cleared or re-triaged without `--force`). A side thread (new agent
+role `triage`; model from `--model`, the dashboard role, `INTENTOS_TRIAGE_MODEL`, `INTENTOS_MINING_MODEL`, then the
+session's model, since it judges the ticket and not the implementer's work) reads the ticket with labels and comments,
+the evidence pack, and deterministic facts IntentOS computed first (`ticketSignals`: names the ticket uses checked
+against symbols, files and tests of the index, matched symbols/tests, invariants in scope, conflicts, closest
+precedents, workflow stage), and answers with findings as strict structured output: `filled` (the repository answers
+the gap; detail + references), `ask` (question, options, default, blocking), `contradiction` (always a question, with
+the contradicting invariant/decision/document/test/precedent), `already_done`, `unknown_reference`. Nothing is taken on
+the model's word: `checkEvidence` verifies every reference at the current revision (tracked file or `path:line`,
+qualified or partial symbol name, `path::test` from the index, `INV-`/`ARCH-`/`DEC-` ids from the policy, synced
+precedent numbers, commits in the local history); invalid references are dropped with a note; a filled detail or a
+contradiction left without a repository-backed reference is sent back once and, if still unbacked, is downgraded to a
+question for the team (`downgradeToQuestion`); `already_done` needs the proving test or code. `reconcileVerdict`
+recomputes the verdict from the surviving findings (blocking question → `needs_input`; verified already-done → `already_done`;
+else `ready`) and records when it disagrees with the model. Output under `.intentos/triage/<repo-id>/<ticket-id>/`
+(ticket, evidence, prompts, answers, `result.json`, `report.md` with contradictions, blocking questions, open points,
+filled details with references, the completed ticket text with `[TEAM: Fn]` placeholders and an HTML marker). GitHub
+through `gh api`: `--issue owner/name#N` reads title, body, labels and comments (earlier IntentOS reports excluded);
+`--post` comments the report and moves the labels per `labelPlan` (`ready`: +ready for planning −unfinished; otherwise
++unfinished −ready for planning). `--tickets <yaml>` triages a ticket list. The MCP tool runs it as a background job
+(`job.result.triage`: verdict, questions with options and defaults, filled details, labels, posted), `status` says what
+to report next, and the server instructions tell the host when to call it and not to answer the team's questions or
+plan a `needs_input` ticket. `tests/integration/triage.test.ts` (8): reference checks per kind, send-back and
+downgrade, verdict reconciliation, label plan, planned refusal, GitHub read/post with a fake `gh`, the MCP job.
+Limits: the facts about the ticket are lexical heuristics and are labelled as such in the prompt; `--post` needs the
+GitHub CLI authenticated for the repository; no live Codex run of the triage thread is recorded here.

@@ -14,6 +14,7 @@ import { onboardRepository } from "./onboard.ts";
 import { renderDigest } from "./candidates.ts";
 import { autoApprove, autoApprover, defaultReviewer, loadReviewState, startReviewServer, type AutoApproveResult } from "./review.ts";
 import { expectationFor, loadTicketFile, writeAcceptanceTests, type AcceptanceResult } from "./acceptance.ts";
+import { ghCli, loadTicketsYaml, parseIssueRef, postTriage, readGithubIssue, triageTicket, VERDICT_LABEL, type TicketInput, type TriageResult } from "./triage.ts";
 import { codexRegistrationCommand, defaultMcpLogFile, serveStdio } from "./mcp.ts";
 import { ingestProposals, installSkill, loadDigest, SETUP_SKILL_NAME, SKILL_NAME, SKILL_NAMES, skillText } from "./propose.ts";
 import { mineWithModel, ReplayEngine } from "./mine.ts";
@@ -37,6 +38,19 @@ function printAcceptance(r: AcceptanceResult): void {
   for (const round of r.rounds) if (round.rejected.length) console.log(`  round ${round.round} rejected: ${round.rejected.map((x) => `${x.path} (${x.reasons.join("; ")})`).join(" | ")}`);
   if (r.notes) console.log(`  notes: ${r.notes}`);
   console.log(`  bound as task ${r.task_id} in ${path.relative(PROJECT_ROOT, r.tasks_file)}; the implementer never sees ${path.relative(PROJECT_ROOT, r.dir)}`);
+}
+
+function printTriage(r: TriageResult): void {
+  const asks = r.findings.filter((f) => f.resolution === "ask");
+  const filled = r.findings.filter((f) => f.resolution === "filled");
+  console.log(`Ticket QA for ${r.ticket.id}${r.ticket.title ? ` "${r.ticket.title}"` : ""} by ${r.model ?? r.engine} at ${r.head.slice(0, 10)}: ${VERDICT_LABEL[r.verdict].toUpperCase()}${r.verdict !== r.model_verdict ? ` (the model said ${r.model_verdict})` : ""}`);
+  if (r.summary) console.log(`  ${r.summary}`);
+  for (const f of r.findings.filter((x) => x.kind === "contradiction")) console.log(`  CONTRADICTION ${f.id} ${f.title}\n    ${f.question}${f.evidence.length ? `\n    ${f.evidence.map((e) => `${e.type} ${e.ref}`).join("; ")}` : ""}`);
+  for (const f of asks.filter((x) => x.kind !== "contradiction")) console.log(`  ${f.blocking ? "ASK     " : "open    "} ${f.id} ${f.title}\n    ${f.question}${f.options.length ? `\n    options: ${f.options.join(" | ")}` : ""}${f.suggested_default ? `\n    default: ${f.suggested_default}` : ""}`);
+  for (const f of filled) console.log(`  filled   ${f.id} ${f.title}: ${f.filled}\n    ${f.evidence.map((e) => `${e.type} ${e.ref}`).join("; ")}`);
+  for (const n of r.notes) console.log(`  note: ${n}`);
+  console.log(`  labels: ${r.labels.current.join(", ") || "none"}${r.labels.add.length || r.labels.remove.length ? ` → ${r.labels.add.map((l) => `+${l}`).concat(r.labels.remove.map((l) => `−${l}`)).join(" ")}` : " (unchanged)"}${r.posted ? ` (posted${r.posted.comment_url ? `: ${r.posted.comment_url}` : ""})` : ""}`);
+  console.log(`  report: ${r.report_file}`);
 }
 
 const program = new Command();
@@ -306,7 +320,7 @@ program
 
 program
   .command("mcp")
-  .description("Run IntentOS as an MCP server on stdio (tools: status, onboard, evidence, mining_guide, propose, mine, explain, policy, review_start, review_next, review_close; the host onboards, mines and reviews on one sentence from the user)")
+  .description("Run IntentOS as an MCP server on stdio (tools: status, onboard, evidence, mining_guide, propose, mine, explain, policy, triage, run, runs, merge, guard, review_start, review_next, review_close; the host onboards, mines, triages tickets, runs and reviews on one sentence from the user)")
   .option("--log <file>", "log file for client info and tool calls (default .intentos/mcp.log)")
   .option("--print-codex-config", "print the command that registers this server with Codex and exit", false)
   .action(async (opts: { log?: string; printCodexConfig: boolean }) => {
@@ -502,6 +516,68 @@ program
       }
       if (json) console.log(JSON.stringify({ results, failures }, null, 2));
       else if (jobs.length > 1) console.log(`${results.length} of ${jobs.length} ticket(s) have acceptance tests${failures.length ? `; failed: ${failures.map((f) => f.id).join(", ")}` : ""}`);
+      if (failures.length) process.exitCode = 1;
+    } catch (err) {
+      fail((err as Error).message);
+    } finally {
+      store.close();
+    }
+  });
+
+program
+  .command("triage")
+  .description("Ticket QA before planning: a side model checks whether a ticket is specified well enough to plan and implement without guessing, fills what the repository already answers (code, tests, docs, approved policy, decisions, precedents; every reference verified at the current revision) and prepares the questions only the team can answer, contradictions with approved knowledge first. Verdict: ready for planning, needs input, or already done. With --issue the ticket comes from GitHub; --post comments the report and moves the unfinished / ready-for-planning labels (never planned)")
+  .argument("<repo>", "path of the indexed repository root")
+  .argument("[ticket]", "the ticket text (or use --issue / --tickets)")
+  .option("--task-id <id>", "ticket id for the output directory (required with a ticket text)")
+  .option("--issue <ref>", "a GitHub issue: owner/name#N, an issue URL, or N with --issues")
+  .option("--issues <owner/name>", "GitHub repository for a bare issue number")
+  .option("--tickets <yaml>", "a ticket list (benchmarks/demandlib/tickets.yaml shape: id, title, issue, labels)")
+  .option("--only <ids>", "with --tickets: comma-separated ticket ids")
+  .option("--model <slug>", "Codex model for the side thread (default INTENTOS_TRIAGE_MODEL, then INTENTOS_MINING_MODEL, then INTENTOS_CODEX_MODEL)")
+  .option("--reasoning <level>", "reasoning effort for the side thread")
+  .option("--rounds <n>", "rounds at most, the first included (rejected findings go back once)", "2")
+  .option("--post", "comment the report on the GitHub issue and move its workflow labels", false)
+  .option("--label-unfinished <name>", "label of a ticket that needs input", "unfinished")
+  .option("--label-ready <name>", "label of a ticket the planner may take", "ready for planning")
+  .option("--label-planned <name>", "label the planner sets; such tickets are refused without --force", "planned")
+  .option("--force", "triage a ticket that is already planned", false)
+  .option("--out <dir>", "output directory (default .intentos/triage/<repo-id>/<ticket-id>)")
+  .option("--gh <path>", "GitHub CLI binary", "gh")
+  .action(async (repo: string, ticketText: string | undefined, opts: { taskId?: string; issue?: string; issues?: string; tickets?: string; only?: string; model?: string; reasoning?: string; rounds: string; post: boolean; labelUnfinished: string; labelReady: string; labelPlanned: string; force: boolean; out?: string; gh: string }) => {
+    const json = program.opts().json as boolean;
+    const store = openStore();
+    try {
+      const gh = ghCli(opts.gh);
+      const tickets: TicketInput[] = [];
+      if (opts.issue) {
+        tickets.push(readGithubIssue(parseIssueRef(opts.issue, opts.issues ?? null), gh));
+      } else if (opts.tickets) {
+        const wanted = opts.only ? new Set(opts.only.split(",").map((s) => s.trim())) : null;
+        for (const t of loadTicketsYaml(path.resolve(opts.tickets))) if (!wanted || wanted.has(t.id)) tickets.push(t);
+      } else {
+        if (!ticketText) fail("give the ticket text, --issue <ref>, or --tickets <yaml>");
+        if (!opts.taskId) fail("--task-id is required with a ticket text");
+        const lines = ticketText!.trim().split("\n");
+        tickets.push({ id: opts.taskId!, title: lines.length > 1 ? lines[0]!.trim() : null, body: lines.length > 1 ? lines.slice(1).join("\n").trim() : ticketText!.trim(), labels: [], comments: [], url: null, source: { kind: "text" } });
+      }
+      if (opts.post && !opts.issue) fail("--post needs the ticket to come from GitHub (--issue)");
+      const labels = { unfinished: opts.labelUnfinished, ready: opts.labelReady, planned: opts.labelPlanned };
+      const results: TriageResult[] = [];
+      const failures: Array<{ id: string; error: string }> = [];
+      for (const ticket of tickets) {
+        try {
+          const r = await triageTicket(repo, ticket, { model: opts.model, reasoningEffort: opts.reasoning, rounds: Number(opts.rounds), store, outDir: opts.out, labels, force: opts.force }, (line) => console.error(`[triage ${ticket.id}] ${line}`));
+          if (opts.post) r.posted = postTriage(r, gh, (line) => console.error(`[triage ${ticket.id}] ${line}`));
+          results.push(r);
+          if (!json) printTriage(r);
+        } catch (err) {
+          failures.push({ id: ticket.id, error: (err as Error).message });
+          console.error(`[triage ${ticket.id}] failed: ${(err as Error).message}`);
+        }
+      }
+      if (json) console.log(JSON.stringify({ results, failures }, null, 2));
+      else if (tickets.length > 1) console.log(`${results.length} of ${tickets.length} ticket(s) triaged: ${results.filter((r) => r.verdict === "ready").length} ready for planning, ${results.filter((r) => r.verdict === "needs_input").length} need input, ${results.filter((r) => r.verdict === "already_done").length} already done${failures.length ? `; failed: ${failures.map((f) => f.id).join(", ")}` : ""}`);
       if (failures.length) process.exitCode = 1;
     } catch (err) {
       fail((err as Error).message);

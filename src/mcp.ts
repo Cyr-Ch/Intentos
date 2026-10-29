@@ -19,6 +19,7 @@ import { autoApprove, autoApprover, decide, defaultReviewer, finishReview, loadR
 import { renderDigest, type Candidate } from "./candidates.ts";
 import { describeAuthor, ingestProposals, loadDigest, SKILL_NAME, skillText, type Author } from "./propose.ts";
 import { mineWithModel, resolveMiningModel } from "./mine.ts";
+import { DEFAULT_LABELS, ghCli, parseIssueRef, postTriage, readGithubIssue, resolveTriageModel, triageTicket, VERDICT_LABEL, type TicketInput, type TriageLabels } from "./triage.ts";
 import { createRun, executeRun, type RunOptions } from "./orchestrator/runner.ts";
 import { RunStore } from "./orchestrator/store.ts";
 import type { VerificationResult } from "./verification/results.ts";
@@ -57,6 +58,7 @@ import crypto from "node:crypto";
 const SERVER_INSTRUCTIONS = [
   "IntentOS keeps a repository's business rules as an approved policy (invariants, architecture rules, decisions) backed by hidden tests, and gives you an evidence pack before you plan a change. Always pass absolute repository paths.",
   `Working order for a repository: (1) status: where it stands and which tool to call next. (2) onboard when it is not onboarded; it runs in the background for a few minutes, so poll status about every 20 seconds until phase is "done". (3) Mine the business rules, one of two ways. (a) The independent miner: call mine with a model other than yourself, when the user asks for an independent, second or unbiased opinion, names a model, or when status says INTENTOS_MINING_MODEL is set; it runs the ${SKILL_NAME} skill in a separate read-only Codex thread with that model, checks and tests the result like propose, sends rejections back once, and writes the review list in the background: poll status until phase is "done". The review list then records that model as its author; do not resubmit its candidates with propose (that would record you as the author) and do not rewrite its tests: IntentOS already ran them. (b) Yourself: follow the skill (call mining_guide if it is not installed in this host): call evidence for the digest (tests, commits, must/never sentences in documents, docstrings and comments, ADRs, import edges, stale directories, resolved tickets), read the code behind the facts that look like rules; state each rule with evidence; pick an existing test or write one that proves it; submit the list with propose. IntentOS checks every reference and runs every test; fix the rejected ones and call propose again with append=true. (4) After mine, IntentOS has already written the accepted rules into the policy file and the hidden tests (approved_by auto:<model>); status reports how many and the file. Tell the user that the rules were created, where the file is, and that any rule can be edited or removed there; do not review them yourself. Only when the user asks to review candidates one by one (or called mine with review=true): review_start. If its result says ui=widget, the reviewer works inside the inline widget: do not call review_next (it would show the same candidate again as a form); wait for the reviewer to say they are done. If it says ui=link, give the reviewer the link. Otherwise call review_next repeatedly: each call shows the reviewer one candidate through this host's own prompt and the reviewer decides. Never approve, reject or edit candidates on their behalf, and never submit a candidate without evidence from the repository. (5) review_close when no candidates remain, or when the reviewer says they are done and the widget did not finish. (6) Implementing a ticket under IntentOS: call run with the ticket text (and task_id when the user names a benchmark ticket id) on an indexed repository; it starts the pipeline in the background (evidence pack, planner, compiled contract, a separate implementer thread in a git worktree with coordination hooks, independent verification with hidden tests, bounded repairs): poll status about every 20 seconds until phase is "done", then report job.result.run to the user: the state, the verification (acceptance tests, invariants, architecture, scope, coordination, findings) and the report path. Never claim success the verifier did not record. (7) Merging: only when the user asks, call merge with the run_id (or pr for a PR the guardian opened) and the approver names the user gives you; never invent approvers, never approve on their behalf. It opens a PR with a review tier, runs the branch's CI and the sync check against main, verifies the branch merged onto current main with the hidden tests, and fast-forwards main only when everything holds; poll status until done and report job.result.merge, including why a merge was refused. (8) When main is red, call guard: it reruns, bisects to the culprit merge, finds its partner and opens a validated undo PR; report job.result.guard. runs lists this repository's runs.`,
+  `Ticket QA before planning: when the user asks whether a ticket is ready, complete, clear or well specified, asks what is missing from it, or wants a ticket checked, reviewed or triaged before it is planned or implemented, call triage with the ticket text and a ticket_id (or issue=owner/name#N for a GitHub issue; post=true only when the user wants the questions commented on the issue and the labels moved). Poll status until done and report job.result.triage: the verdict, every question for the team with its options and default, every contradiction with the repository's approved knowledge, and what the repository itself answered (filled, with verified references). Do not answer the team's questions yourself, and do not plan or implement a ticket whose QA says needs input until the user answers or overrides; a ticket labelled ${DEFAULT_LABELS.planned} already has a plan and is not re-triaged without force=true.`,
   "Before planning or implementing a change: explain for the evidence pack, policy for the approved rules. explain also lists precedents, resolved tickets and the pull requests that solved them, linked to the code they changed; when the task is of the same kind and the precedent is current, follow its location and pattern. Load them once per repository with precedents (owner/name of the issue tracker; pulls=owner/name when the pull requests live upstream).",
 ].join("\n");
 
@@ -69,6 +71,8 @@ export interface McpOptions {
   log?: (line: string) => void;
   /** Tests: a stand-in for the Codex SDK thread the independent miner runs with the named model. */
   mineEngine?: (model: string) => CodingEngine;
+  /** Tests: a stand-in for the ticket QA side thread. */
+  triageEngine?: (model: string) => CodingEngine;
 }
 
 interface Session {
@@ -182,18 +186,18 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
   // ---- Background jobs: onboarding (the CLI in a child process) and the independent miner (a Codex side thread); the model polls status.
   interface Job {
     id: string;
-    kind: "onboard" | "mine" | "run" | "merge" | "guard";
+    kind: "onboard" | "mine" | "run" | "merge" | "guard" | "triage";
     repo: string;
-    phase: "onboarding" | "mining" | "checking" | "running" | "merging" | "guarding" | "done" | "failed";
+    phase: "onboarding" | "mining" | "checking" | "running" | "merging" | "guarding" | "triaging" | "done" | "failed";
     started_at: string;
     finished_at: string | null;
     log: string[];
-    result: { policy_id: string | null; policy_file: string | null; suite: string | null; index: string | null; candidates: number | null; kept: number | null; filtered: number | null; note: string | null; language: string | null; evidence: Record<string, number> | null; model: string | null; accepted: number | null; rejected: number | null; rounds: number | null; approved?: number | null; without_test?: number | null; run?: Record<string, unknown>; merge?: Record<string, unknown>; guard?: Record<string, unknown> };
+    result: { policy_id: string | null; policy_file: string | null; suite: string | null; index: string | null; candidates: number | null; kept: number | null; filtered: number | null; note: string | null; language: string | null; evidence: Record<string, number> | null; model: string | null; accepted: number | null; rejected: number | null; rounds: number | null; approved?: number | null; without_test?: number | null; run?: Record<string, unknown>; merge?: Record<string, unknown>; guard?: Record<string, unknown>; triage?: Record<string, unknown> };
     error: string | null;
   }
   const jobs = new Map<string, Job>();
   const running = (j: Job | undefined): j is Job => !!j && j.phase !== "done" && j.phase !== "failed";
-  const kindOf = (j: Job): string => ({ mine: "mining", onboard: "onboarding", run: "a run", merge: "a merge", guard: "the guardian" })[j.kind];
+  const kindOf = (j: Job): string => ({ mine: "mining", onboard: "onboarding", run: "a run", merge: "a merge", guard: "the guardian", triage: "ticket QA" })[j.kind];
   const newJob = (kind: Job["kind"], repo: string, phase: Job["phase"]): Job => ({ id: crypto.randomBytes(4).toString("hex"), kind, repo, phase, started_at: nowIso(), finished_at: null, log: [], result: { policy_id: null, policy_file: null, suite: null, index: null, candidates: null, kept: null, filtered: null, note: null, language: null, evidence: null, model: null, accepted: null, rejected: null, rounds: null }, error: null });
   const push = (job: Job, line: string) => {
     job.log.push(line);
@@ -306,6 +310,36 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
       job.finished_at = nowIso();
     }
   };
+  /** Ticket QA: the side thread judges the ticket, IntentOS checks its references and recomputes the verdict; optionally posted to the issue. */
+  const runTriageJob = async (job: Job, a: { ticket?: string; ticket_id?: string; issue?: string; issues?: string; model?: string; reasoning?: string; rounds?: number; post?: boolean; force?: boolean; labels?: Partial<TriageLabels> }): Promise<void> => {
+    try {
+      job.phase = "triaging";
+      const gh = ghCli();
+      let ticket: TicketInput;
+      if (a.issue) ticket = readGithubIssue(parseIssueRef(a.issue, a.issues ?? null), gh);
+      else {
+        const lines = (a.ticket ?? "").trim().split("\n");
+        ticket = { id: a.ticket_id!, title: lines.length > 1 ? lines[0]!.trim() : null, body: lines.length > 1 ? lines.slice(1).join("\n").trim() : (a.ticket ?? "").trim(), labels: [], comments: [], url: null, source: { kind: "text" } };
+      }
+      const r = await triageTicket(job.repo, ticket, { model: a.model, reasoningEffort: a.reasoning, rounds: a.rounds, store: opts.store, labels: a.labels, force: a.force, engine: opts.triageEngine?.(a.model ?? resolveTriageModel() ?? "") }, (l) => {
+        push(job, l);
+        if (/^round \d+:/.test(l)) job.phase = "checking";
+      });
+      if (a.post) r.posted = postTriage(r, gh, (l) => push(job, l));
+      const asks = r.findings.filter((f) => f.resolution === "ask");
+      job.result.model = r.model;
+      job.result.rounds = r.rounds.length;
+      job.result.triage = { ticket_id: r.ticket.id, title: r.ticket.title, url: r.ticket.url, verdict: r.verdict, verdict_label: VERDICT_LABEL[r.verdict], model_verdict: r.model_verdict, summary: r.summary, questions: asks.map((f) => ({ id: f.id, kind: f.kind, title: f.title, blocking: f.blocking, question: f.question, options: f.options, suggested_default: f.suggested_default, evidence: f.evidence })), filled: r.findings.filter((f) => f.resolution === "filled").map((f) => ({ id: f.id, title: f.title, filled: f.filled, evidence: f.evidence })), completed_ticket: r.completed_ticket, labels: r.labels, posted: r.posted, notes: r.notes, report: r.report_file, dir: r.dir };
+      job.phase = "done";
+      log(`triage ${job.repo}: job ${job.id} done (${r.ticket.id}: ${r.verdict}, ${asks.length} question(s), ${r.findings.length - asks.length} filled${r.posted ? ", posted" : ""})`);
+    } catch (e) {
+      job.phase = "failed";
+      job.error = (e as Error).message;
+      log(`triage ${job.repo}: job ${job.id} failed: ${job.error}`);
+    } finally {
+      job.finished_at = nowIso();
+    }
+  };
   const inspect = (repoInput: string, policyIdOverride?: string, policyFileOverride?: string, outDirOverride?: string) => {
     const repo = path.resolve(repoInput);
     if (!fs.existsSync(repo) || !isGitRepo(repo)) throw new Error(`${repo} is not a Git repository`);
@@ -338,7 +372,7 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
     const failed = job && job.phase === "failed" ? job : null;
     const miningModel = resolveMiningModel();
     const mineHint = miningModel ? `call mine (INTENTOS_MINING_MODEL=${miningModel} is set: a model other than you does the mining)` : "call mine with model=<slug> for the independent miner (a model other than you)";
-    const finishedWork = job && job.phase === "done" && (job.kind === "run" || job.kind === "merge" || job.kind === "guard") ? job : null;
+    const finishedWork = job && job.phase === "done" && (job.kind === "run" || job.kind === "merge" || job.kind === "guard" || job.kind === "triage") ? job : null;
     const next = running(job)
       ? `${kindOf(job)} in progress (${job.phase}); call status again in about 20 seconds`
       : finishedWork
@@ -346,7 +380,9 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
           ? `run ${String((finishedWork.result.run as { run_id?: string })?.run_id ?? "")} ended ${String((finishedWork.result.run as { state?: string })?.state ?? "")}: report the verification to the user (job.result.run.verification); if it is REVIEW_READY or HUMAN_REVIEW and the user wants it merged, call merge with run_id and the approver names the user gives you`
           : finishedWork.kind === "merge"
             ? `merge finished: ${(finishedWork.result.merge as { merged?: boolean })?.merged ? "merged; the repository's main moved and was re-indexed" : "refused; report job.result.merge.blocked_by to the user; a new head needs new approvals"}`
-            : `guardian finished: ${String((finishedWork.result.guard as { status?: string })?.status ?? "")}; report job.result.guard; an undo PR merges with merge(pr=<n>) and the approver names the user gives`
+            : finishedWork.kind === "triage"
+              ? `ticket QA finished: ${String((finishedWork.result.triage as { verdict_label?: string })?.verdict_label ?? "")}; report job.result.triage to the user: the questions for the team (with options and defaults), the contradictions, what was filled from the repository, and the label move; when it is ready for planning and the user wants it implemented, call run with the completed ticket text`
+              : `guardian finished: ${String((finishedWork.result.guard as { status?: string })?.status ?? "")}; report job.result.guard; an undo PR merges with merge(pr=<n>) and the approver names the user gives`
       : failed
         ? `${kindOf(failed)} failed: ${failed.error}; fix the cause and call ${failed.kind} again${failed.kind === "onboard" ? " (force=true if the draft policy was already written)" : ""}`
         : !policyExists
@@ -517,6 +553,51 @@ export function createIntentosMcpServer(opts: McpOptions): { server: McpServer; 
         log(`guard ${repo}: job ${job.id} started`);
         void runGuardJob(job, { good: a.good, undo: a.undo });
         return text(`Guardian started for ${repo} (job ${job.id}). Call status every 20 seconds until phase is "done" and report job.result.guard.`, { job_id: job.id, phase: job.phase, repo });
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    },
+  );
+
+  server.registerTool(
+    "triage",
+    {
+      description: `Ticket QA before planning, in the background: a side model checks whether a ticket is specified well enough to plan and implement without guessing. It reads the code, tests, documents, approved policy, decisions and precedents; what the repository answers is filled in with references IntentOS verifies at the current revision; what only the team can answer becomes a question with options and a default; a contradiction with an approved invariant, decision, document, test or precedent is flagged first. Verdict: ready for planning, needs input, or already done. The ticket is text (ticket + ticket_id) or a GitHub issue (issue); with post=true the report is commented on the issue and the labels move (${DEFAULT_LABELS.unfinished} ↔ ${DEFAULT_LABELS.ready}; ${DEFAULT_LABELS.planned} is never set or cleared, and a planned ticket is refused unless force=true). Poll status until phase is "done" and report job.result.triage.`,
+      inputSchema: z.object({
+        repo: z.string().describe("absolute path of the indexed repository root"),
+        ticket: z.string().min(8).optional().describe("the ticket text (first line is the title when there are several); or use issue"),
+        ticket_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/).optional().describe("id for the ticket's output directory (required with ticket)"),
+        issue: z.string().optional().describe("a GitHub issue: owner/name#N, an issue URL, or N with issues"),
+        issues: z.string().optional().describe("GitHub repository owner/name for a bare issue number"),
+        model: z.string().optional().describe("Codex model for the side thread (default INTENTOS_TRIAGE_MODEL, then INTENTOS_MINING_MODEL, then the session's model)"),
+        reasoning: z.enum(["low", "medium", "high", "xhigh"]).optional(),
+        rounds: z.number().int().min(1).max(3).optional().describe("rounds at most, the first included (default 2: unverifiable findings go back once)"),
+        post: z.boolean().optional().describe("comment the report on the GitHub issue and move its workflow labels (needs issue; default false)"),
+        force: z.boolean().optional().describe("triage a ticket already labelled planned (default false)"),
+        labels: z.object({ unfinished: z.string().optional(), ready: z.string().optional(), planned: z.string().optional() }).optional().describe("the workflow label names when they differ from unfinished / ready for planning / planned"),
+      }),
+    },
+    async (a) => {
+      try {
+        const repo = path.resolve(a.repo);
+        if (!fs.existsSync(repo) || !isGitRepo(repo)) return fail(`${repo} is not a Git repository`);
+        if (!a.issue && !a.ticket) return fail("give the ticket text (ticket, with ticket_id) or a GitHub issue (issue)");
+        if (a.ticket && !a.issue && !a.ticket_id) return fail("ticket_id is required with a ticket text");
+        if (a.post && !a.issue) return fail("post=true needs the ticket to come from GitHub (issue)");
+        const current = jobs.get(repo);
+        if (running(current)) return text(`${kindOf(current)} of ${repo} is already running (job ${current.id}, phase ${current.phase}); call status until it is done`, { job_id: current.id, phase: current.phase, repo });
+        try {
+          loadIndexedRepo(opts.store, repo);
+        } catch (e) {
+          return fail((e as Error).message);
+        }
+        const model = resolveTriageModel(a.model);
+        if (!model && !opts.triageEngine) return fail("name the model: pass model=<slug> or set INTENTOS_TRIAGE_MODEL (INTENTOS_MINING_MODEL and INTENTOS_CODEX_MODEL are taken as fallbacks)");
+        const job = newJob("triage", repo, "triaging");
+        jobs.set(repo, job);
+        log(`triage ${repo}: job ${job.id} started (${a.issue ? `issue ${a.issue}` : `ticket ${a.ticket_id}`}, model=${model ?? "stand-in"}, post=${a.post ?? false})`);
+        void runTriageJob(job, { ...a, model: model ?? undefined });
+        return text(`Ticket QA started for ${a.issue ?? a.ticket_id} (job ${job.id}) with ${model ?? "a stand-in engine"}: the side thread reads the ticket against the code, tests, documents, policy and precedents; IntentOS verifies every reference it cites. Call status with repo=${repo} about every 20 seconds until phase is "done", then report job.result.triage: the verdict, the questions for the team with their options and defaults, the contradictions, what was filled from the repository${a.post ? ", and the comment and labels posted to the issue" : ""}.`, { job_id: job.id, phase: job.phase, repo, model });
       } catch (e) {
         return fail((e as Error).message);
       }

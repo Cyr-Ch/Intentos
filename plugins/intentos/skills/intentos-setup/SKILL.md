@@ -16,7 +16,7 @@ IntentOS is a verification and coordination layer for Codex. It indexes a reposi
 tests, documents, approved business rules), turns a ticket into a compiled change contract, runs the implementer in
 an isolated worktree with coordination hooks, verifies the result independently with hidden tests and invariants, and
 merges it through a gate that re-verifies the branch against the main of right now. After setup, the MCP tools
-`explain`, `run`, `merge`, `guard`, `status` and `policy` are available in every Codex session.
+`explain`, `triage`, `run`, `merge`, `guard`, `status` and `policy` are available in every Codex session.
 
 ## What you need from the user
 

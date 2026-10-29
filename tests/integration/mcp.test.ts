@@ -57,7 +57,7 @@ describe("intentos mcp", () => {
     try {
       const tools = (await client.listTools()).tools;
       const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-      expect(Object.keys(byName).sort()).toEqual(["evidence", "explain", "guard", "merge", "mine", "mining_guide", "onboard", "policy", "precedents", "propose", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "run", "runs", "status"]);
+      expect(Object.keys(byName).sort()).toEqual(["evidence", "explain", "guard", "merge", "mine", "mining_guide", "onboard", "policy", "precedents", "propose", "review_close", "review_decide", "review_finish", "review_next", "review_session", "review_start", "review_state", "run", "runs", "status", "triage"]);
       expect((byName.review_start!._meta as any).ui.resourceUri).toBe(REVIEW_RESOURCE_URI);
       for (const name of ["review_session", "review_state", "review_decide", "review_finish"]) expect((byName[name]!._meta as any).ui.visibility, name).toEqual(["app"]);
       for (const name of ["explain", "policy", "precedents", "review_start", "review_next", "review_close"]) expect((byName[name]!._meta as any)?.ui?.visibility, name).toBeUndefined();

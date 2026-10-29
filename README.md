@@ -62,6 +62,7 @@ machine-readable output; every command exits non-zero on critical failure.
 | `skill install` / `skill show` | symlinks the two skills, `plugins/intentos/skills/intentos-policy-mining` and `plugins/intentos/skills/intentos-setup` (connect the MCP server, onboard a repository, mine and write its rules, load precedents, confirm a first run), into `~/.agents/skills` (`--dir` for another skills directory; `--name` for one) / prints a skill's text |
 | `index <repo>` (`--full` to skip the incremental path) | `.intentos/intentos.db`: `repositories`, `nodes`, `edges`, `evidence`, `decisions` rows bound to the HEAD SHA; `.intentos/index-cache/<repo-id>/<sha>.json` (raw extraction + blob ids, reused by the next incremental index) |
 | `explain <repo> "<task>"` | nothing (prints the evidence pack; `--out file` saves JSON) |
+| `triage <repo> "<ticket>" --task-id <id>` / `triage <repo> --issue owner/name#N [--post]` / `triage <repo> --tickets <yaml>` | `.intentos/triage/<repo-id>/<ticket-id>/`: `ticket.json`, `evidence.json`, `prompt-N.txt`, `round-N.json`, `result.json` and `report.md`, the **ticket QA**: verdict (ready for planning, needs input, already done), the findings (gaps the repository filled with verified references; questions only the team can answer, with options and a default; contradictions with approved invariants, decisions, documents, tests or precedents), and the completed ticket text with `[TEAM: Fn]` placeholders. `--post` comments the report on the GitHub issue and moves `unfinished` ↔ `ready for planning` (`planned` is never touched; a planned ticket is refused without `--force`). `--label-*` rename the workflow labels; `--model`, `--reasoning`, `--rounds`, `--only` |
 | `plan <repo> "<task>"` | a run dir with `task.json`, `evidence.json`, `planner_prompt.txt`, `planner_output.json`, `contract.json`, `contract_validation.json`; run row in state `CONTRACT_VALIDATED` / `CLARIFICATION_REQUIRED` / `ABSTAINED` |
 | `run <repo> "<task>"` | the above plus a worktree in `.intentos/worktrees/<run-id>`, `implementation_prompt.txt`, `codex_events.jsonl`, `implementer_result.json`, `diff.patch`, `verification/attempt-N/*` (snapshot, logs, JUnit), `verification.json`, `metrics.json`, `report.md`, `report.json` |
 | `verify <run-id>` | a new `verification/attempt-N/` and refreshed `verification.json` + report |
@@ -238,6 +239,34 @@ the approver names the user gives, never invented by the model; `guard` investig
 `runs` lists the repository's runs. The server's instructions tell the host to report what the verifier recorded and
 to merge only on the user's request. `tests/integration/mcp_run.test.ts` walks run → status → merge → guard offline.
 
+## Ticket QA before planning
+
+A ticket moves through three labels: `unfinished` → `ready for planning` → `planned` (the planner wrote the contract;
+the coding agent may pick it up). `intentos triage` is the gate between the first two. A side thread (read-only, in the
+repository) gets the ticket with its labels and comments, the evidence pack from the index, and a few facts IntentOS
+computed about the ticket (names it uses that the index does not know, how many symbols and tests matched, which
+approved invariants are in scope, deterministic conflicts, the closest precedents), and answers with findings:
+
+- a gap the **repository fills** (`filled`): the detail that completes the ticket, with references to code, tests,
+  documents, policy ids, decisions, precedents or commits. IntentOS checks every reference at the current revision; a
+  detail with none that checks out goes back to the thread once and, if still unbacked, becomes a question for the
+  team instead of a fact in the ticket;
+- a gap only the **team** can close (`ask`): the question written so that one answer closes it, the options the model
+  sees, the default it would take, and whether the planner is blocked without it;
+- a **contradiction** between the ticket and what the repository knows (an approved invariant or decision, a document
+  with authority, a test asserting the opposite, how a precedent settled the same point): always a question, listed
+  first, with the contradicting source; the policy wins unless the team changes it;
+- **already done**: the test or code that proves the behaviour exists.
+
+The verdict is recomputed from the findings that survive the checks, not taken from the model: `ready` when no blocking
+question remains (open points travel with the ticket for the planner), `needs_input`, or `already_done`. The report
+(`report.md`) carries the questions, the contradictions, what was filled and from where, and the completed ticket text
+with `[TEAM: Fn]` placeholders. From GitHub (`--issue owner/name#N`, `--post`) the report is commented on the issue and
+the labels move: `ready` adds `ready for planning` and removes `unfinished`; anything else keeps or adds `unfinished`.
+`planned` is never set or cleared by this agent, and a planned ticket is not re-triaged without `--force`. The MCP tool
+`triage` runs the same thing as a background job; the server's instructions tell the host to report the questions to
+the user rather than answer them, and not to plan a ticket whose QA says needs input.
+
 ## Acceptance tests by another model, before implementation
 
 A ticket's acceptance tests are the oracle for "was it solved"; the implementer's own contract cannot be that oracle.
@@ -282,9 +311,9 @@ its state (PR registry, ledger, trusted policy rendered from the IntentOS policy
 
 ## Local dashboard and agent skills
 
-Run `intentos dashboard <repo>` to open the localhost dashboard. Its **Skills** page configures the Codex SDK threads IntentOS starts: planner, implementer, independent policy miner and acceptance-test author. The page lets you create local text skills, assign them to roles, and choose each role's model and reasoning effort. The two shipped host Codex skills are listed separately; they are not automatically loaded by the implementer.
+Run `intentos dashboard <repo>` to open the localhost dashboard. Its **Skills** page configures the Codex SDK threads IntentOS starts: planner, implementer, independent policy miner, acceptance-test author and ticket QA. The page lets you create local text skills, assign them to roles, and choose each role's model and reasoning effort. The two shipped host Codex skills are listed separately; they are not automatically loaded by the implementer.
 
-Configuration lives under `INTENTOS_HOME/agent-config.json` and `INTENTOS_HOME/agent-skills/`. Edits affect new jobs. Each run saves an `agent_config.json` snapshot, including skill text and hashes, so resume uses the same instructions. Explicit model options on `mine` and `acceptance` take precedence over dashboard settings. Skills guide agents; they cannot alter the sandbox, verifier, protected paths, or merge policy.
+Configuration lives under `INTENTOS_HOME/agent-config.json` and `INTENTOS_HOME/agent-skills/`. Edits affect new jobs. Each run saves an `agent_config.json` snapshot, including skill text and hashes, so resume uses the same instructions. Explicit model options on `mine`, `acceptance` and `triage` take precedence over dashboard settings. Skills guide agents; they cannot alter the sandbox, verifier, protected paths, or merge policy.
 
 ## Environment variables
 
@@ -298,6 +327,8 @@ Configuration lives under `INTENTOS_HOME/agent-config.json` and `INTENTOS_HOME/a
 | `INTENTOS_CODEX_MODEL` | Codex model (default: the CLI's configured default; may be unsupported for ChatGPT accounts) |
 | `INTENTOS_CODEX_REASONING` | reasoning effort passed to Codex |
 | `INTENTOS_MINING_MODEL` | model for the independent miner (`mine`); with it set, `status` steers the host to `mine` instead of mining itself |
+| `INTENTOS_ACCEPTANCE_MODEL` | model for the acceptance-test author (`acceptance`; default `INTENTOS_MINING_MODEL`); must differ from the implementer's |
+| `INTENTOS_TRIAGE_MODEL` | model for ticket QA (`triage`; default `INTENTOS_MINING_MODEL`, then `INTENTOS_CODEX_MODEL`) |
 | `INTENTOS_CODEX_PATH` | override the Codex binary used by the SDK |
 | `INTENTOS_CODEX_TIMEOUT_MS` | per-turn timeout (default 20 min) |
 | `INTENTOS_RUN_TIMEOUT_MS` | whole-run wall budget (default 60 min) |

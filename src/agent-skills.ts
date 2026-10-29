@@ -5,14 +5,15 @@ import YAML from "yaml";
 import { z } from "zod";
 import { PROJECT_ROOT, codexSettings, resolvePaths } from "./config.ts";
 
-export const AGENT_ROLES = ["planner", "implementer", "miner", "acceptance"] as const;
+export const AGENT_ROLES = ["planner", "implementer", "miner", "acceptance", "triage"] as const;
 export type AgentRole = (typeof AGENT_ROLES)[number];
 const Role = z.enum(AGENT_ROLES);
 const Slug = z.string().regex(/^[a-z][a-z0-9-]{1,47}$/, "use a lowercase slug (2–48 letters, digits or hyphens)");
 const Model = z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/).nullable();
 const Reasoning = z.enum(["low", "medium", "high", "xhigh", "max", "ultra"]).nullable();
 const RoleSettings = z.object({ model: Model, reasoning: Reasoning, skills: z.array(Slug).max(20).refine((ids) => new Set(ids).size === ids.length, "duplicate skill assignment") }).strict();
-const Config = z.object({ version: z.literal(1), roles: z.object({ planner: RoleSettings, implementer: RoleSettings, miner: RoleSettings, acceptance: RoleSettings }).strict() }).strict();
+// `triage` arrived after the first config files were written: absent in an older file, it takes the empty settings.
+const Config = z.object({ version: z.literal(1), roles: z.object({ planner: RoleSettings, implementer: RoleSettings, miner: RoleSettings, acceptance: RoleSettings, triage: RoleSettings.default({ model: null, reasoning: null, skills: [] }) }).strict() }).strict();
 const SkillInput = z.object({ id: Slug, title: z.string().trim().min(2).max(100), description: z.string().trim().min(4).max(500), instructions: z.string().trim().min(10).max(20_000) }).strict();
 
 export type AgentConfig = z.infer<typeof Config>;
@@ -21,7 +22,7 @@ export interface EffectiveRole { model: string | null; reasoning: string | null;
 export interface AgentSnapshot { version: 1; captured_at: string; roles: Record<AgentRole, EffectiveRole> }
 
 const emptyRole = () => ({ model: null, reasoning: null, skills: [] as string[] });
-export const defaultAgentConfig = (): AgentConfig => ({ version: 1, roles: { planner: emptyRole(), implementer: emptyRole(), miner: emptyRole(), acceptance: emptyRole() } });
+export const defaultAgentConfig = (): AgentConfig => ({ version: 1, roles: { planner: emptyRole(), implementer: emptyRole(), miner: emptyRole(), acceptance: emptyRole(), triage: emptyRole() } });
 const configFile = () => path.join(resolvePaths().home, "agent-config.json");
 const skillsDir = () => path.join(resolvePaths().home, "agent-skills");
 const skillFile = (id: string) => path.join(skillsDir(), `${Slug.parse(id)}.md`);
@@ -83,6 +84,8 @@ export function updateRoleSettings(roleInput: string, value: unknown): AgentConf
 function inheritedModel(role: AgentRole): string | null {
   if (role === "miner") return process.env.INTENTOS_MINING_MODEL ?? null;
   if (role === "acceptance") return process.env.INTENTOS_ACCEPTANCE_MODEL ?? process.env.INTENTOS_MINING_MODEL ?? null;
+  // Ticket QA judges the ticket, not the implementer's work, so it may share the session's model when no side model is named.
+  if (role === "triage") return process.env.INTENTOS_TRIAGE_MODEL ?? process.env.INTENTOS_MINING_MODEL ?? codexSettings().model;
   return codexSettings().model;
 }
 
