@@ -212,9 +212,16 @@ section.soft { background: var(--paper); }
 .persona ul { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
 .persona li { font-size: 14px; color: var(--ink-2); padding-left: 20px; position: relative; }
 .persona li::before { content: "→"; position: absolute; left: 0; color: var(--accent); }
-.notfit { margin-top: 22px; border: 1px dashed var(--line); border-radius: var(--radius); padding: 18px 22px; display: flex; gap: 14px; align-items: flex-start; background: #fff; }
-.notfit strong { white-space: nowrap; font-size: 14px; }
-.notfit p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.who-head .sub { font-size: 16px; line-height: 1.6; color: var(--ink-2); max-width: 720px; margin: 12px 0 0; }
+.personas .persona h3 { font-size: 20px; }
+.personas .persona > p { font-size: 15px; }
+.notfit { margin-top: 22px; border: 1px dashed var(--line); border-radius: var(--radius); padding: 22px 24px; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 20px 32px; align-items: start; background: #fff; }
+.notfit-head strong { display: block; font-size: 15px; margin-bottom: 6px; }
+.notfit-head p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.55; }
+.notfit ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.notfit li { font-size: 14px; color: var(--ink-2); line-height: 1.55; padding-left: 18px; position: relative; }
+.notfit li::before { content: "–"; position: absolute; left: 0; color: var(--muted); }
+.notfit li b { color: var(--ink); font-weight: 600; }
 
 /* ---------- how it works ---------- */
 .stages { display: grid; gap: 14px; counter-reset: stage; }
@@ -338,6 +345,6 @@ footer .tag { max-width: 320px; }
   .hero h1 { font-size: 38px; }
   .card .num { font-size: 30px; }
   footer .wrap { grid-template-columns: 1fr; }
-  .notfit { flex-direction: column; gap: 6px; }
+  .notfit { grid-template-columns: 1fr; gap: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

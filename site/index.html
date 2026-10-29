@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>IntentOS · Does the code belong, and is it safe to merge?</title>
-  <meta name="description" content="IntentOS gives coding agents a model of your repository's rules, history and architecture, verifies every change independently and guards the merge. Failures feed back: findings drive repairs, incidents raise the review bar, past fixes become rules. For teams running agent fleets on Python or TypeScript codebases.">
+  <meta name="description" content="IntentOS gives coding agents a model of your repository's rules, history and architecture, verifies every change independently and guards the merge. Failures feed back: findings drive repairs, incidents raise the review bar, past fixes become rules. For teams running agent fleets faster than anyone can review by hand.">
   <meta property="og:title" content="IntentOS · The code works. But does it belong?">
   <meta property="og:description" content="Verification and coordination for coding agents. Open source, runs locally beside your agent.">
   <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="site.css?v=3">
+  <link rel="stylesheet" href="site.css?v=4">
 </head>
 <body>
 
@@ -198,27 +198,41 @@
 
       <div class="who-head">
         <div class="kicker">Who it is for</div>
-        <h3>Established Python and TypeScript codebases with agents doing real work in parallel</h3>
+        <h3>Everyone between a ticket and main</h3>
+        <p class="sub">A change passes through several hands before it lands: whoever files the ticket, the agent that builds it, whoever reviews it, and the person who answers for main afterwards. IntentOS gives each of them a different piece.</p>
       </div>
-      <div class="grid c3">
+      <div class="grid c2 personas">
         <div class="card persona">
-          <div class="role">Primary user</div>
-          <h3>The tech lead of an established Python or TypeScript codebase</h3>
-          <p>You know the rules. The agents do not. You are the one paged when a green PR breaks billing.</p>
+          <div class="role">Writing the tickets</div>
+          <h3>Product managers, founders and leads who file the work</h3>
+          <p>Your ticket is now an agent's spec. "Make the dashboard work better" becomes a seven-file surprise.</p>
           <ul>
-            <li>Rules mined from your own tests, fix commits and docs, each backed by a hidden test</li>
-            <li>Every run cites the evidence it used and the invariants it held</li>
-            <li>Vague and already-solved tickets end in a clarification or an abstention, not a diff</li>
+            <li>Ticket QA before anything is planned: gaps the repository can fill are filled, with references checked against the code</li>
+            <li>The questions only your team can answer, each written so one answer closes it, with the default the agent would take</li>
+            <li>Contradictions with approved rules are flagged first; a ticket that is already solved is told so</li>
+            <li>On GitHub, the report lands as a comment and the issue moves from <code>unfinished</code> to <code>ready for planning</code></li>
+          </ul>
+        </div>
+        <div class="card persona">
+          <div class="role">Owning main</div>
+          <h3>The tech lead who gets paged</h3>
+          <p>You know the rules. The agents do not. You are the one woken when a green PR breaks billing.</p>
+          <ul>
+            <li>Rules mined from your own tests, fix commits and docs, each backed by a hidden test the agent never sees</li>
+            <li>Every run cites the evidence it used and the invariants it held; the agent's own "tests pass" is ignored</li>
+            <li>When main goes red anyway, a guardian bisects to the culprit merge, names its partner and opens a validated undo PR</li>
+            <li>Two incidents in a folder within a week raise its review floor to two humans until a person lowers it</li>
           </ul>
         </div>
         <div class="card persona">
           <div class="role">Rolling out agents</div>
-          <h3>Platform and developer-experience teams</h3>
+          <h3>Platform, developer-experience and CTO-office teams</h3>
           <p>You need one place per repository to say what is protected, what blocks, and who approves what.</p>
           <ul>
-            <li>A trusted <code>policies/&lt;repo&gt;.yaml</code> in version control, never inside the target repo</li>
-            <li>Review tiers 0, 1 or 2 computed from the diff, with head-bound named approvals</li>
-            <li>Optional container-isolated verifier that fails closed</li>
+            <li>A trusted <code>policies/&lt;repo&gt;.yaml</code> in version control, never inside the target repo and never written by a model</li>
+            <li>Review tiers 0, 1 or 2 computed from the diff, with approvals bound to a named person and a specific commit</li>
+            <li>Optional container-isolated verifier that fails closed; a local dashboard for runs, policy and the knowledge base</li>
+            <li>Per-role model and skill settings, so the model that mines rules is never the one implementing under them</li>
           </ul>
         </div>
         <div class="card persona">
@@ -227,14 +241,22 @@
           <p>You want to know why a change was accepted before you open the diff.</p>
           <ul>
             <li>A report per run: acceptance tests, invariants, architecture rules, scope, precedents followed</li>
-            <li>A merge gate that re-verifies the branch on the main of right now</li>
-            <li>A guardian that bisects a red main to the culprit merge and opens a validated undo PR</li>
+            <li>A merge gate that re-verifies the branch on the main of right now, with the hidden tests, before main moves</li>
+            <li>Tier 0 changes merge without you; a change to a protected path or an existing test always needs two named people</li>
+            <li>Vague and already-solved tickets end in a question or an abstention, not a PR in your queue</li>
           </ul>
         </div>
       </div>
       <div class="notfit">
-        <strong>Not a fit today:</strong>
-        <p>Greenfield projects with no history to learn from. Repositories that are not Python with pytest or TypeScript with vitest/jest (the indexer and verifier know those two). Teams that want the agent to approve its own rules.</p>
+        <div class="notfit-head">
+          <strong>Where it is not a fit</strong>
+          <p>IntentOS earns its keep when there is history to learn from, checks it can run, and more than one party landing on main. Without those, it is ceremony.</p>
+        </div>
+        <ul>
+          <li><b>A codebase whose tests cannot run from a fresh checkout.</b> Verification executes checks; if nothing runs, there is nothing independent to judge. Get the suite running first, then onboard.</li>
+          <li><b>A prototype you expect to throw away.</b> No history to mine, no rules worth protecting, nobody paged. Come back when it has become the thing people depend on.</li>
+          <li><b>A team that wants no human anywhere in the loop.</b> You can let rules be auto-approved, and the output will say so. But a change to a protected path or an existing test always needs two named people. That is deliberate.</li>
+        </ul>
       </div>
     </div>
   </section>
