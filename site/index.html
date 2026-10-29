@@ -9,7 +9,7 @@
   <meta property="og:description" content="Verification and coordination for Codex coding agents. Open source, runs locally beside Codex.">
   <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="site.css">
+  <link rel="stylesheet" href="site.css?v=2">
 </head>
 <body>
 
@@ -123,35 +123,43 @@
       <h2 class="h2">Built for the teams that move fast with coding agents fleets</h2>
       <p class="lede">IntentOS is for established Python and TypeScript codebases where years of decisions live in tests, documents and closed tickets, and where coding agents are now doing real work in parallel.</p>
 
-      <div class="scenes" aria-label="What a week looks like for these teams">
-        <figure class="scene">
-          <img src="img/slack-feature-requests.jpg" width="1024" height="682" loading="lazy" alt="A Slack channel named feature-requests where sales and customer-success keep posting new customer asks while developers reply that they are over capacity and need to prioritise.">
-          <figcaption>
-            <strong>Requests arrive faster than anyone can scope them</strong>
-            <p>Half of these should become tickets, some are already solved, and one or two should never be built. Nobody has time to check which is which before an agent picks one up.</p>
-          </figcaption>
-        </figure>
-        <figure class="scene">
-          <img src="img/github-vague-issue.jpg" width="1024" height="512" loading="lazy" alt="A GitHub issue titled 'Make the dashboard work better' with a vague description, no assignee and a comment asking for clarification that gets the reply 'not sure, just check it'.">
-          <figcaption>
-            <strong>The ticket is vague, and the agent builds something anyway</strong>
-            <p>A person would ask what "better" means. A coding agent ships a seven-file feature, and the review burden lands on whoever opens the PR.</p>
-          </figcaption>
-        </figure>
-        <figure class="scene">
-          <img src="img/github-open-prs.jpg" width="1024" height="512" loading="lazy" alt="A GitHub pull-request list with 527 open PRs, several touching ingestion, forecasting, authentication and billing at the same time, some with failing review checks.">
-          <figcaption>
-            <strong>527 open pull requests, many touching the same modules</strong>
-            <p>Agents work in parallel and each branch is green on its own. Nobody is checking that they still fit together on the main of right now.</p>
-          </figcaption>
-        </figure>
-        <figure class="scene">
-          <img src="img/dashboard-incident.jpg" width="1024" height="576" loading="lazy" alt="A production energy dashboard showing a 'Something went wrong' error from the meter ingestion service, a site in Error status and a negative generation chart.">
-          <figcaption>
-            <strong>CI was green. Production is not.</strong>
-            <p>The change passed the tests it could see and broke a rule nobody wrote down. The tech lead gets paged, and the agent that made the change is long gone.</p>
-          </figcaption>
-        </figure>
+      <div class="scenes" id="scenes">
+        <div class="scene-list" role="tablist" aria-label="A week on one of these teams" aria-orientation="vertical">
+          <button class="scene-tab" role="tab" type="button" id="scene-tab-1" aria-controls="scene-1" aria-selected="true">
+            <span class="step">01</span>
+            <span class="txt"><strong>Requests arrive faster than anyone can scope them</strong><span>Half should become tickets, some are already solved, one or two should never be built. Nobody checks which is which before an agent picks one up.</span></span>
+          </button>
+          <button class="scene-tab" role="tab" type="button" id="scene-tab-2" aria-controls="scene-2" aria-selected="false" tabindex="-1">
+            <span class="step">02</span>
+            <span class="txt"><strong>The ticket is vague. The agent builds something anyway</strong><span>A person would ask what "better" means. A coding agent ships a seven-file feature and the review lands on whoever opens the PR.</span></span>
+          </button>
+          <button class="scene-tab" role="tab" type="button" id="scene-tab-3" aria-controls="scene-3" aria-selected="false" tabindex="-1">
+            <span class="step">03</span>
+            <span class="txt"><strong>527 open pull requests, many touching the same modules</strong><span>Agents work in parallel and each branch is green on its own. Nobody checks that they still fit together on the main of right now.</span></span>
+          </button>
+          <button class="scene-tab" role="tab" type="button" id="scene-tab-4" aria-controls="scene-4" aria-selected="false" tabindex="-1">
+            <span class="step">04</span>
+            <span class="txt"><strong>CI was green. Production is not</strong><span>The change passed the tests it could see and broke a rule nobody wrote down. The tech lead gets paged; the agent is long gone.</span></span>
+          </button>
+        </div>
+        <div class="scene-stage">
+          <figure class="scene-panel" role="tabpanel" id="scene-1" aria-labelledby="scene-tab-1">
+            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>Slack</strong> · #feature-requests</div>
+            <img src="img/slack-feature-requests.jpg" width="1024" height="682" alt="A Slack channel named feature-requests where sales and customer-success keep posting new customer asks while developers reply that they are over capacity and need to prioritise.">
+          </figure>
+          <figure class="scene-panel" role="tabpanel" id="scene-2" aria-labelledby="scene-tab-2" hidden>
+            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>GitHub</strong> · issue #3487</div>
+            <img src="img/github-vague-issue.jpg" width="1024" height="512" loading="lazy" alt="A GitHub issue titled 'Make the dashboard work better' with a vague description, no assignee and a comment asking for clarification that gets the reply 'not sure, just check it'.">
+          </figure>
+          <figure class="scene-panel" role="tabpanel" id="scene-3" aria-labelledby="scene-tab-3" hidden>
+            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>GitHub</strong> · pull requests</div>
+            <img src="img/github-open-prs.jpg" width="1024" height="512" loading="lazy" alt="A GitHub pull-request list with 527 open PRs, several touching ingestion, forecasting, authentication and billing at the same time, some with failing review checks.">
+          </figure>
+          <figure class="scene-panel" role="tabpanel" id="scene-4" aria-labelledby="scene-tab-4" hidden>
+            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>Production</strong> · the dashboard customers see</div>
+            <img src="img/dashboard-incident.jpg" width="1024" height="576" loading="lazy" alt="A production energy dashboard showing a 'Something went wrong' error from the meter ingestion service, a site in Error status and a negative generation chart.">
+          </figure>
+        </div>
       </div>
 
       <div class="grid c3">
@@ -797,6 +805,47 @@ main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 �
     nav.addEventListener('click', function (e) {
       if (e.target.tagName === 'A') { nav.classList.remove('open'); toggle.setAttribute('aria-expanded', 'false'); }
     });
+    var scenes = document.getElementById('scenes');
+    if (scenes) {
+      var tabs = Array.prototype.slice.call(scenes.querySelectorAll('.scene-tab'));
+      var panels = Array.prototype.slice.call(scenes.querySelectorAll('.scene-panel'));
+      var current = 0, timer = null;
+      var show = function (i, focus) {
+        current = (i + tabs.length) % tabs.length;
+        tabs.forEach(function (t, k) {
+          var on = k === current;
+          t.setAttribute('aria-selected', String(on));
+          t.setAttribute('tabindex', on ? '0' : '-1');
+          t.classList.toggle('is-active', on);
+          panels[k].hidden = !on;
+        });
+        if (focus) tabs[current].focus();
+      };
+      var stop = function () { if (timer) { clearInterval(timer); timer = null; scenes.classList.remove('auto'); } };
+      var settle = function () { stop(); scenes.classList.add('done'); };
+      tabs.forEach(function (t, k) {
+        t.addEventListener('click', function () { settle(); show(k); });
+        t.addEventListener('keydown', function (e) {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); settle(); show(k + 1, true); }
+          if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); settle(); show(k - 1, true); }
+        });
+      });
+      show(0);
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduce && 'IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          if (entries[0].isIntersecting && !timer && !scenes.classList.contains('done')) {
+            scenes.classList.add('auto');
+            timer = setInterval(function () {
+              if (current === tabs.length - 1) { stop(); scenes.classList.add('done'); return; }
+              show(current + 1);
+            }, 5000);
+          } else if (!entries[0].isIntersecting) { stop(); }
+        }, { threshold: 0.5 });
+        io.observe(scenes);
+        scenes.addEventListener('pointerenter', settle);
+      }
+    }
     document.querySelectorAll('[data-copy]').forEach(function (button) {
       button.addEventListener('click', function () {
         var pre = document.getElementById(button.getAttribute('data-copy'));
