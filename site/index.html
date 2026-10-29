@@ -226,11 +226,12 @@
       <div class="notfit">
         <div class="notfit-head">
           <strong>Where it is not a fit</strong>
-          <p>IntentOS earns its keep when there is history to learn from, checks it can run, and more PRs a day than a person can read. Without those, it is ceremony.</p>
+          <p>IntentOS earns its keep when there is history to learn from, domain rules worth protecting, checks it can run, and more PRs a day than a person can read. Without those, it is ceremony.</p>
         </div>
         <ul>
           <li><b>A codebase whose tests cannot run from a fresh checkout.</b> Verification executes checks; if nothing runs, there is nothing independent to judge. Get the suite running first, then onboard.</li>
           <li><b>A prototype you expect to throw away.</b> No history to mine, no rules worth protecting, nobody paged. Come back when it has become the thing people depend on.</li>
+          <li><b>A codebase with little business logic or domain knowledge of its own.</b> A CRUD app or a thin wrapper around a vendor API has few rules an agent could break without a test noticing. IntentOS pays off where the rules are specific to your domain: billing, compliance, planning constraints, safety limits.</li>
           <li><b>A team that ships a handful of PRs a day and can still review each one by hand.</b> Human-led review is the better tool at that volume. IntentOS is for the point where the agents open more than the people can read.</li>
         </ul>
       </div>
