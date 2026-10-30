@@ -225,9 +225,11 @@
                 <td><span class="mobile-label" aria-hidden="true">How we track it</span><p>Check changes against explicit business rules, beyond the project’s own tests.</p></td>
                 <td>
                   <span class="mobile-label" aria-hidden="true">Result</span>
-                  <span class="evidence-scope">Existing rules only</span>
-                  <strong class="evidence-number">21 <span>→</span> 0</strong>
-                  <p>failed invariant test cases on first attempts, total<br><span class="evidence-comparison">Comparison → IntentOS · all 15 demandlib tickets</span></p>
+                  <span class="evidence-scope">Observed examples · demandlib</span>
+                  <p><strong>Energy factors · T11</strong><br>Assumed region 1 → asked which region applies.</p>
+                  <p><strong>Regional holidays · T05</strong><br>Built an unspecified feature → declined the underspecified change.</p>
+                  <p><strong>In-domain error wording · T09</strong><br>Changed the expected wording → preserved it.</p>
+                  <span class="evidence-comparison">Comparison → IntentOS</span>
                   <a class="evidence-detail-link" href="case-studies/demandlib.html#outcomes" data-evaluation="rules" aria-label="How we tested business rule checks">How we tested this <span aria-hidden="true">→</span></a>
                 </td>
               </tr>
@@ -318,23 +320,23 @@
     <section class="evaluation-section" aria-labelledby="rules-results">
       <h3 id="rules-results">What happened</h3>
       <table class="evaluation-results">
-        <thead><tr><th scope="col">Check</th><th scope="col">Comparison</th><th scope="col">IntentOS</th></tr></thead>
+        <thead><tr><th scope="col">Example</th><th scope="col">Comparison</th><th scope="col">IntentOS</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Tickets evaluated</th><td>15</td><td>15</td></tr>
-          <tr><th scope="row">Failed invariant test cases on first attempts, total</th><td>21</td><td>0</td></tr>
-          <tr><th scope="row">Runs with failed invariant checks</th><td>1</td><td>0</td></tr>
-          <tr><th scope="row">Repair rounds across the batch</th><td>8</td><td>4</td></tr>
+          <tr><th scope="row">T11 · Energy factors for custom weather files</th><td>Chose region-1 factors when none were supplied.</td><td>Asked which region’s factors should apply.</td></tr>
+          <tr><th scope="row">T05 · Regional holiday behavior</th><td>Built a seven-file feature from an underspecified request.</td><td>Declined to invent the unspecified behavior.</td></tr>
+          <tr><th scope="row">T09 · In-domain error wording</th><td>Changed the expected in-domain error wording.</td><td>Preserved the expected in-domain error wording on the first attempt.</td></tr>
         </tbody>
       </table>
     </section>
     <section class="evaluation-implication" aria-labelledby="rules-meaning">
       <h3 id="rules-meaning">What this tells us</h3>
-      <p>The 21 versus 0 result is the total across the 15-ticket comparison. All 21 failures came from T09: the comparison changed the error-message wording expected by two overlapping invariant test modules. Both implementations still rejected invalid non-residential building classes. IntentOS preserved the expected wording on its first attempt; this is compatibility evidence, not evidence of 21 distinct business-rule violations.</p>
+      <p>T11 and T05 show IntentOS leaving unspecified business decisions for the team. T09 shows it preserving established in-domain error wording: “Building class must be 0”. Keeping that vocabulary and phrasing stable matters to consumers and tests that expect it. Both implementations still rejected invalid non-residential building classes; the observed difference was wording compatibility, not the underlying validation rule.</p>
     </section>
     <details class="evaluation-more">
       <summary>Scope, comparison setup, and the full record</summary>
+      <p>Across all 15 tickets, first implementation attempts produced 21 failed invariant test cases in the comparison and zero with IntentOS. All 21 were wording checks from two overlapping T09 test modules; they are not 21 distinct business-rule violations. Total repair rounds were eight versus four.</p>
       <p>There was one run per ticket per setup, using gpt-6-astra at the same base revision. Totals count failed test cases from recorded first implementation attempts; clarified or declined tickets produced no implementation test result.</p>
-      <p>On T09, both setups passed the project suite. The comparison then received the independent verifier’s findings and repaired its error message; both ultimately passed the invariant checks. The headline counts failures before repair feedback.</p>
+      <p>On T09, both setups passed the project suite. The comparison then received the independent verifier’s findings and repaired its error message; both ultimately passed the invariant checks. The first-attempt totals count failures before repair feedback.</p>
       <p>A separate business-decision example is T11: for a custom weather file, the comparison chose region-1 energy factors when none were supplied. IntentOS asked which region’s factors should apply. That avoided inventing an unspecified calculation assumption, but left implementation waiting for an answer. Deciding which approved rules should change after a business pivot was not tested.</p>
       <a href="case-studies/demandlib.html" target="_blank" rel="noopener">Full evaluation record ↗</a>
     </details>
