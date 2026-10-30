@@ -25,7 +25,7 @@
     },
     {
       id: 'approvers', title: 'Approve this exact change', group: 'People · Merge review', rect: [984, 78, 128, 64],
-      what: 'Human review decisions recorded against an exact Git commit. The prototype stores these locally; it does not authenticate GitHub reviews.',
+      what: 'Human review decisions recorded against an exact Git commit.',
       does: 'Requires zero, one, or two independent reviewers according to policy. Any new commit invalidates the previous approvals.',
       why: 'A reviewer’s approval should apply to the code they actually saw. This prevents an older approval from covering later, unreviewed edits.'
     },
@@ -116,7 +116,7 @@
     {
       id: 'repository-model', title: 'Repository model at a commit', group: 'Trusted state · Repository knowledge', rect: [138, 522, 176, 20],
       what: 'A SQLite index of code, tests, documents, and their relationships, tied to a specific Git commit.',
-      does: 'Finds relevant components, rules, and past decisions for a ticket, with references back to their sources. Older indexed revisions remain available.',
+      does: 'Finds relevant components, rules, and past decisions for a ticket, with references back to their sources.',
       why: 'Agents and reviewers need to find relevant context without rediscovering the whole codebase. Tying it to a commit makes clear which version the evidence describes.'
     },
     {
