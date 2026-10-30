@@ -3,873 +3,342 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IntentOS · Does the code belong, and is it safe to merge?</title>
-  <meta name="description" content="IntentOS gives coding agents a model of your repository's rules, history and architecture, verifies every change independently and guards the merge. Failures feed back: findings drive repairs, incidents raise the review bar, past fixes become rules. For teams running agent fleets faster than anyone can review by hand.">
-  <meta property="og:title" content="IntentOS · The code works. But does it belong?">
-  <meta property="og:description" content="Verification and coordination for coding agents. Open source, runs locally beside your agent.">
+  <title>IntentOS · Make intent explicit. Make review easier.</title>
+  <meta name="description" content="IntentOS makes repository intent explicit for coding agents and human reviewers, from the ticket through independent verification and integration.">
+  <meta property="og:title" content="IntentOS · Make intent explicit. Make review easier.">
+  <meta property="og:description" content="Repository context for agents. Purpose, checks, and open questions for reviewers.">
   <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="site.css?v=7">
+  <link rel="stylesheet" href="site.css?v=22">
+  <script src="diagram.js?v=2" defer></script>
+  <script src="evidence.js?v=1" defer></script>
+  <script src="screenshots.js?v=1" defer></script>
 </head>
 <body>
-
-<header class="topbar">
-  <div class="wrap">
-    <a class="brand" href="#top"><span class="mark">◈</span>IntentOS</a>
-    <nav class="nav" id="nav" aria-label="Primary">
-      <a href="#problem">Why</a>
-      <a href="#who">Who it's for</a>
-      <a href="#how">How it works</a>
-      <a href="#evidence">Evidence</a>
-      <a href="#trust">Security</a>
-      <a href="#faq">FAQ</a>
-      <a href="case-studies/demandlib.html">Case studies</a>
-    </nav>
-    <div class="actions">
-      <a class="btn hide-sm" href="https://github.com/Cyr-Ch/Intentos" target="_blank" rel="noopener">GitHub</a>
-      <a class="btn primary" href="#install">Install the plugin</a>
-      <button class="btn menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="nav">Menu</button>
-    </div>
-  </div>
-</header>
-
-<main id="top">
-
-  <!-- ============ HERO ============ -->
-  <section class="hero">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
     <div class="wrap">
-      <div>
-        <div class="kicker">For engineering teams shipping agent-written code</div>
-        <h1>The code works.<br>But does it <em>belong?</em></h1>
-        <p class="dek">IntentOS gives coding agents a model of your repository's rules, history and architecture, verifies every change independently and guards the merge. Failures feed back: findings drive repairs, incidents raise the review bar, past fixes become rules. For teams running agent fleets faster than anyone can review by hand.</p>
-        <div class="cta">
-          <a class="btn accent lg" href="#install">Install the plugin</a>
-          <a class="btn lg" href="#evidence">Read the evidence</a>
-        </div>
-        <div class="facts">
-          <span>Open source, MIT</span>
-          <span>Free</span>
-          <span>Runs locally beside Codex</span>
-          <span>One sentence to set up</span>
+      <a class="brand" href="#people"><span class="mark" aria-hidden="true">◈</span>IntentOS</a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#problem">Problem</a>
+        <a href="#how">How it works</a>
+        <a href="#demo">Example</a>
+        <a href="#evidence">Evidence</a>
+      </nav>
+      <a class="btn" href="https://github.com/Cyr-Ch/Intentos" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="intro" id="people" aria-labelledby="people-title">
+      <div class="wrap">
+        <p class="kicker">Where this started</p>
+        <h1 id="people-title">I interviewed <em>3 CTOs.</em></h1>
+        <p class="intro-context">All three work at VC-backed startups with fewer than 10 engineers, trying to move fast.</p>
+        <div class="grid c3 people-grid">
+          <figure class="card person">
+            <a class="person-company" href="https://www.bevel.software/" target="_blank" rel="noopener" aria-label="Bevel website"><img class="company-mark" src="img/people/bevel.svg" alt="" width="30" height="30"><span>Bevel</span></a>
+            <p class="quote-label">Paraphrased</p>
+            <blockquote class="person-quote"><p>“We have agents working in parallel, with over 50 PRs open at any given time. Reviewing them and keeping our understanding of the codebase up to date takes a lot of time.”</p></blockquote>
+            <figcaption class="person-heading"><img class="person-photo" src="img/people/razvan-radulescu.jpg" alt="Razvan Radulescu" width="56" height="56"><div><h2>Razvan</h2><p>CTO · Bevel</p></div></figcaption>
+          </figure>
+          <figure class="card person">
+            <a class="person-company" href="https://www.neruhealth.com/" target="_blank" rel="noopener" aria-label="Neru Health website"><img class="company-wordmark" src="img/people/neru-health.png" alt="Neru Health" width="120" height="29"></a>
+            <p class="quote-label">Paraphrased</p>
+            <blockquote class="person-quote"><p>“A green test suite isn’t enough for us. We still need to know whether a change follows the healthcare rules our patients depend on.”</p></blockquote>
+            <figcaption class="person-heading"><img class="person-photo" src="img/people/maria-grebenshchikova.jpg" alt="Maria Grebenshchikova" width="56" height="56"><div><h2>Maria</h2><p>CTO · Neru Health</p></div></figcaption>
+          </figure>
+          <figure class="card person">
+            <a class="person-company" href="https://www.spherecast.ai/" target="_blank" rel="noopener" aria-label="Spherecast website"><img class="company-mark" src="img/people/spherecast.svg" alt="" width="30" height="30"><span>Spherecast</span></a>
+            <p class="quote-label">Paraphrased</p>
+            <blockquote class="person-quote"><p>“With several agents working in parallel, the review work piles up. We spend a lot of time understanding and checking what they’ve changed.”</p></blockquote>
+            <figcaption class="person-heading"><img class="person-photo" src="img/people/pascal-schindler.jpg" alt="Pascal Schindler" width="56" height="56"><div><h2>Pascal</h2><p>CTO · Spherecast</p></div></figcaption>
+          </figure>
         </div>
       </div>
+    </section>
 
-      <div>
-        <div class="mock" aria-label="A Codex session using IntentOS">
-          <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>Codex</strong> · demandlib · IntentOS connected</div>
-          <div class="body">
-            <div class="chat">
-              <div class="msg user"><div class="who">You</div><div class="text"><p>Implement T12: overlapping day categories in <code>particular_profiles</code>.</p></div></div>
-              <div class="msg agent"><div class="who">◈</div><div class="text">
-                <div class="tool">run · status</div>
-                <p>Run started in an isolated worktree. Contract cites INV-001, INV-007 and precedent #43. Implementing…</p>
-                <div class="note">Main changed while the agent worked: <code>add_weekdays2df</code> was renamed to <code>annotate_weekdays</code> in commit <code>4f1a2c9</code>. Your code uses it at <code>particular_profiles.py:88</code>. First bring main into your branch.</div>
-                <p style="margin-top:8px">The implementer synced and re-ran. Verification against the current main:</p>
-                <div class="ok">Project suite 50/50 · acceptance 3/3 · invariants 39/39 · architecture clean · scope clean · coordination up to date. <b>Human review: one reviewer.</b></div>
-              </div></div>
-              <div class="msg user"><div class="who">You</div><div class="text"><p>Merge that run, approval from Priya.</p></div></div>
-              <div class="msg agent"><div class="who">◈</div><div class="text">
-                <div class="tool">merge</div>
-                <p>PR #2 · tier 1 · approved by Priya · merged result re-verified with the hidden tests · main fast-forwarded to <code>9b7d13e</code>.</p>
-              </div></div>
+    <section class="block soft" id="problem" aria-labelledby="problem-title">
+      <div class="wrap">
+        <p class="kicker">The shared problem</p>
+        <h2 class="h2 problem-title" id="problem-title">Coding agents produce changes faster than teams can review them and keep their understanding of the codebase current.</h2>
+        <h3 class="causes-title">Two causes widen this gap</h3>
+        <div class="grid c2">
+          <article class="card cause" id="parallel">
+            <h4>Parallel development</h4>
+            <p>Agents and engineers duplicate work, miss each other’s decisions, and produce changes that no longer fit together.</p>
+          </article>
+          <article class="card cause" id="business-rules">
+            <h4>Changing business requirements</h4>
+            <p>The business pivots. Old assumptions remain in code and tests, so green tests can still confirm outdated behavior.</p>
+          </article>
+        </div>
+        <div class="screenshot-gallery" id="screenshots">
+          <div class="screenshot-heading"><h3>The problem in practice</h3><span>Illustrative scenarios</span></div>
+          <div class="screenshots" id="screenshotGallery">
+            <div class="screenshot-tabs" data-screenshot-tabs role="tablist" aria-label="Explore the original screenshots" aria-orientation="vertical" hidden>
+              <button class="screenshot-tab" type="button" role="tab" id="requests-tab" aria-controls="requests-screen" aria-selected="false" tabindex="-1"><span class="screenshot-number">01</span><span>Piling customer requests</span></button>
+              <button class="screenshot-tab" type="button" role="tab" id="ticket-tab" aria-controls="ticket-screen" aria-selected="false" tabindex="-1"><span class="screenshot-number">02</span><span>Unclear tickets</span></button>
+              <button class="screenshot-tab" type="button" role="tab" id="backlog-tab" aria-controls="backlog-screen" aria-selected="true"><span class="screenshot-number">03</span><span>PR backlog</span></button>
+              <button class="screenshot-tab" type="button" role="tab" id="incident-tab" aria-controls="incident-screen" aria-selected="false" tabindex="-1"><span class="screenshot-number">04</span><span>Production failure</span></button>
+            </div>
+            <div class="screenshot-stage">
+              <figure class="screenshot-panel" id="requests-screen">
+                <a class="screenshot-image" href="img/slack-feature-requests.jpg" target="_blank" rel="noopener" aria-label="Open the customer requests screenshot at full size"><img src="img/slack-feature-requests.jpg" width="1024" height="682" loading="lazy" alt="Slack feature-requests channel with new customer requests and developers discussing capacity and priorities."></a>
+                <figcaption><p>New requests arrive before the team has agreed what should change.</p><a href="img/slack-feature-requests.jpg" target="_blank" rel="noopener" aria-label="Open the customer requests screenshot at full size">Full size ↗</a></figcaption>
+              </figure>
+              <figure class="screenshot-panel" id="ticket-screen">
+                <a class="screenshot-image" href="img/github-vague-issue.jpg" target="_blank" rel="noopener" aria-label="Open the unclear ticket screenshot at full size"><img src="img/github-vague-issue.jpg" width="1024" height="512" loading="lazy" alt="GitHub issue titled Make the dashboard work better, with vague requirements and an unanswered request for clarification."></a>
+                <figcaption><p>An unclear ticket leaves the agent, then the reviewer, to fill in the gaps.</p><a href="img/github-vague-issue.jpg" target="_blank" rel="noopener" aria-label="Open the unclear ticket screenshot at full size">Full size ↗</a></figcaption>
+              </figure>
+              <figure class="screenshot-panel" id="backlog-screen">
+                <a class="screenshot-image" href="img/github-open-prs.jpg" target="_blank" rel="noopener" aria-label="Open the PR backlog screenshot at full size"><img src="img/github-open-prs.jpg" width="1024" height="512" loading="lazy" alt="GitHub list showing 527 open pull requests, with parallel changes across ingestion, forecasting, authentication, and billing."></a>
+                <figcaption><p>Parallel changes leave reviewers catching up on what changed and how it fits together.</p><a href="img/github-open-prs.jpg" target="_blank" rel="noopener" aria-label="Open the PR backlog screenshot at full size">Full size ↗</a></figcaption>
+              </figure>
+              <figure class="screenshot-panel" id="incident-screen">
+                <a class="screenshot-image" href="img/dashboard-incident.jpg" target="_blank" rel="noopener" aria-label="Open the production failure screenshot at full size"><img src="img/dashboard-incident.jpg" width="1024" height="576" loading="lazy" alt="Energy dashboard with a Something went wrong error from meter ingestion, a site in Error status, and a negative generation chart."></a>
+                <figcaption><p>A missed problem can turn review work into recovery work.</p><a href="img/dashboard-incident.jpg" target="_blank" rel="noopener" aria-label="Open the production failure screenshot at full size">Full size ↗</a></figcaption>
+              </figure>
             </div>
           </div>
         </div>
-        <p class="caption">The coordination-hook and merge-gate flow on <code>oemof/demandlib</code>: a rename lands on main mid-task, the agent is told exactly what changed, and the merge is re-verified against the main of right now.</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============ PROBLEM ============ -->
-  <section class="block soft problem" id="problem">
-    <div class="wrap">
-      <div class="kicker">Why IntentOS</div>
-      <h2 class="h2">Green CI is not the same as a safe change</h2>
-      <p class="lede">Coding agents are good at making tests pass. They are not good at knowing which rules your team never wrote down, which tickets should not be built, and what landed on main while they were working. Every number below is from our published evaluations.</p>
-      <div class="grid c4">
-        <div class="card">
-          <span class="num bad">21</span>
-          <h3>Passes the tests, breaks the business</h3>
-          <p>On one ticket, plain Codex passed the project suite while breaking 21 hidden business-invariant tests. Under IntentOS the first attempt broke none.</p>
-          <span class="src">demandlib run 1, ticket <a href="https://github.com/Cyr-Ch/oemof-demand/issues/52" target="_blank" rel="noopener">T09</a></span>
+    <section class="block" id="solution" aria-labelledby="solution-title">
+      <div class="wrap">
+        <div class="solution-heading">
+          <p class="kicker">The solution principle</p>
+          <h2 class="h2" id="solution-title">Make the intent explicit.</h2>
+          <p class="lede">Give agents and reviewers a shared, current understanding of what should change, what must keep working, and how to check both.</p>
         </div>
-        <div class="card">
-          <span class="num bad">7 files</span>
-          <h3>Builds what nobody asked for</h3>
-          <p>Given a vague ticket, plain Codex shipped a seven-file feature. Given an already-fixed bug, it "fixed" it again. IntentOS declined all three control tickets with cited reasons.</p>
-          <span class="src">demandlib run 1, tickets <a href="https://github.com/Cyr-Ch/oemof-demand/issues/48" target="_blank" rel="noopener">T05</a>, <a href="https://github.com/Cyr-Ch/oemof-demand/issues/49" target="_blank" rel="noopener">T06</a>, <a href="https://github.com/Cyr-Ch/oemof-demand/issues/58" target="_blank" rel="noopener">T15</a></span>
-        </div>
-        <div class="card">
-          <span class="num bad">3 of 3</span>
-          <h3>Edits what it should not touch</h3>
-          <p>On the fixture benchmark, vanilla Codex rewrote protected policy and ADR documents on every implementation task. Under a compiled contract: zero protected paths touched.</p>
-          <span class="src">Live benchmark matrix, tasks A–C</span>
-        </div>
-        <div class="card">
-          <span class="num bad">12 of 15</span>
-          <h3>Breaks main when someone else lands first</h3>
-          <p>Two agents, one repository, a rename on main mid-task: 12 of 15 raw-git merges left main broken. With mergeguard's hooks, gate and guardian: 0.</p>
-          <span class="src">mergeguard evaluation, Codex arm</span>
+        <div class="grid c3 solution-points">
+          <article class="card solution-item">
+            <p class="kicker">Parallel development</p>
+            <h3>Keep parallel agents in sync with main.</h3>
+          </article>
+          <article class="card solution-item">
+            <p class="kicker">Changing business requirements</p>
+            <h3>Resolve conflicts between old rules and new requirements.</h3>
+          </article>
+          <article class="card solution-item">
+            <p class="kicker">The review bottleneck</p>
+            <h3>Show reviewers the intent, checks, and open questions.</h3>
+          </article>
         </div>
       </div>
-      <p class="footnote">Sources: <a href="case-studies/demandlib.html">demandlib case study</a>, <a href="case-studies/mergeguard.html">mergeguard case study</a>, and <code>docs/evaluation.md</code> in the repository. Sample sizes are small and stated in each report.</p>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============ WHO ============ -->
-  <section class="block" id="who">
-    <div class="wrap">
-      <div class="kicker">The problem</div>
-      <h2 class="h2">Agents ship faster than anyone can review by hand</h2>
-      <p class="lede">A week on a team running coding agents against an established codebase. Years of decisions live in tests, documents and closed tickets; the agents have read none of them. Every screen below is a situation IntentOS was built for.</p>
-
-      <div class="scenes" id="scenes">
-        <div class="scene-list" role="tablist" aria-label="A week on one of these teams" aria-orientation="vertical">
-          <button class="scene-tab" role="tab" type="button" id="scene-tab-1" aria-controls="scene-1" aria-selected="true">
-            <span class="step">01</span>
-            <span class="txt"><strong>Requests arrive faster than anyone can scope them</strong><span>Half should become tickets, some are already solved, one or two should never be built. Nobody checks which is which before an agent picks one up.</span></span>
-          </button>
-          <button class="scene-tab" role="tab" type="button" id="scene-tab-2" aria-controls="scene-2" aria-selected="false" tabindex="-1">
-            <span class="step">02</span>
-            <span class="txt"><strong>The ticket is vague. The agent builds something anyway</strong><span>A person would ask what "better" means. A coding agent ships a seven-file feature and the review lands on whoever opens the PR.</span></span>
-          </button>
-          <button class="scene-tab" role="tab" type="button" id="scene-tab-3" aria-controls="scene-3" aria-selected="false" tabindex="-1">
-            <span class="step">03</span>
-            <span class="txt"><strong>527 open pull requests, many touching the same modules</strong><span>Agents work in parallel and each branch is green on its own. Nobody checks that they still fit together on the main of right now.</span></span>
-          </button>
-          <button class="scene-tab" role="tab" type="button" id="scene-tab-4" aria-controls="scene-4" aria-selected="false" tabindex="-1">
-            <span class="step">04</span>
-            <span class="txt"><strong>CI was green. Production is not</strong><span>The change passed the tests it could see and broke a rule nobody wrote down. The tech lead gets paged; the agent is long gone.</span></span>
-          </button>
-        </div>
-        <div class="scene-stage">
-          <figure class="scene-panel" role="tabpanel" id="scene-1" aria-labelledby="scene-tab-1">
-            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>Slack</strong> · #feature-requests</div>
-            <img src="img/slack-feature-requests.jpg" width="1024" height="682" alt="A Slack channel named feature-requests where sales and customer-success keep posting new customer asks while developers reply that they are over capacity and need to prioritise.">
-          </figure>
-          <figure class="scene-panel" role="tabpanel" id="scene-2" aria-labelledby="scene-tab-2" hidden>
-            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>GitHub</strong> · issue #3487</div>
-            <img src="img/github-vague-issue.jpg" width="1024" height="512" loading="lazy" alt="A GitHub issue titled 'Make the dashboard work better' with a vague description, no assignee and a comment asking for clarification that gets the reply 'not sure, just check it'.">
-          </figure>
-          <figure class="scene-panel" role="tabpanel" id="scene-3" aria-labelledby="scene-tab-3" hidden>
-            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>GitHub</strong> · pull requests</div>
-            <img src="img/github-open-prs.jpg" width="1024" height="512" loading="lazy" alt="A GitHub pull-request list with 527 open PRs, several touching ingestion, forecasting, authentication and billing at the same time, some with failing review checks.">
-          </figure>
-          <figure class="scene-panel" role="tabpanel" id="scene-4" aria-labelledby="scene-tab-4" hidden>
-            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><strong>Production</strong> · the dashboard customers see</div>
-            <img src="img/dashboard-incident.jpg" width="1024" height="576" loading="lazy" alt="A production energy dashboard showing a 'Something went wrong' error from the meter ingestion service, a site in Error status and a negative generation chart.">
-          </figure>
-        </div>
-      </div>
-
-      <div class="quotes-head">
-        <div class="kicker">From the people who own main</div>
-        <h3>Three CTOs, three codebases, the same problem</h3>
-      </div>
-      <div class="grid c3 quotes">
-        <figure class="card quote">
-          <blockquote>
-            <p>We run agents inside our customers' legacy codebases, where the real rules were never written down. The agent passes the whole suite and still breaks something a fix commit from 2016 knew about. Mining those rules out of the history and holding every change to them is the piece we were missing.</p>
-          </blockquote>
-          <figcaption>
-            <span class="avatar" aria-hidden="true">R</span>
-            <span><strong>Razvan</strong><span>Co-founder &amp; CTO, Bevel · agent control plane for enterprises, Munich</span></span>
-          </figcaption>
-        </figure>
-        <figure class="card quote">
-          <blockquote>
-            <p>In healthcare a green test suite is not a safe change. Medicare compliance logic, resupply timing, what a patient is told on the phone: a wrong edit there costs more than a bug. We needed every agent change to cite the rule it held, and a named human in the loop whenever it touched those paths.</p>
-          </blockquote>
-          <figcaption>
-            <span class="avatar" aria-hidden="true">M</span>
-            <span><strong>Maria</strong><span>Co-founder &amp; CTO, Neru Health · AI patient operations for DME providers, Boston</span></span>
-          </figcaption>
-        </figure>
-        <figure class="card quote">
-          <blockquote>
-            <p>Our planning engine encodes constraints like MOQs and lead times that a model will happily "simplify" away. With several agents on the same modules, the problem was never one bad PR. It was two green PRs that didn't fit together on main. A gate that re-verifies the merged result before main moves is the part I stopped worrying about.</p>
-          </blockquote>
-          <figcaption>
-            <span class="avatar" aria-hidden="true">P</span>
-            <span><strong>Pascal</strong><span>Co-founder &amp; CTO, Spherecast (YC S24) · AI supply-chain planning for CPG brands</span></span>
-          </figcaption>
+    <section class="block soft" id="how" aria-labelledby="how-title">
+      <div class="wrap">
+        <p class="kicker">What we built / How it works</p>
+        <h2 class="h2" id="how-title">IntentOS</h2>
+        <p class="lede">IntentOS gathers rules from history, tests, and docs; clarifies the ticket; keeps agents aligned with main; and independently verifies the implementation and merged result, recording findings for review.</p>
+        <figure class="diagram">
+          <div class="diagram-scroll" tabindex="0" role="region" aria-label="IntentOS architecture; scroll horizontally to explore">
+            <div class="diagram-canvas" id="diagramCanvas">
+              <img class="diagram-image" src="img/architecture-detail.svg" width="1280" height="604" alt="IntentOS architecture across people, plugin, and model lanes: onboard, mine rules, establish policy, clarify the ticket, plan, implement, verify, merge, and recover. People clarify intent and approve changes when required. Independent checks verify implementation and integration.">
+            </div>
+          </div>
+          <figcaption><div class="diagram-caption-hints"><span id="diagramInteractionHint" hidden>Click any tile for details.</span><span class="diagram-hint">Scroll sideways to explore.</span></div><a href="img/architecture-detail.svg" target="_blank" rel="noopener">Open full diagram ↗</a></figcaption>
         </figure>
       </div>
+    </section>
 
-      <div class="who-head">
-        <div class="kicker">Who it is for</div>
-        <h3>The two people who decide whether agents work for a team</h3>
-        <p class="sub">Whoever files the tickets, and whoever sets the rules.</p>
-      </div>
-      <div class="grid c2 personas">
-        <div class="card persona">
-          <div class="role">Writing the tickets</div>
-          <h3>Product managers, founders and leads</h3>
-          <p>Your ticket is now an agent's spec.</p>
-          <ul>
-            <li>Gaps the repository can answer are filled in, with checked references</li>
-            <li>Questions only your team can answer, one answer each</li>
-            <li>Contradictions and already-solved tickets flagged before anything is planned</li>
-          </ul>
+    <section class="block" id="demo" aria-labelledby="demo-title">
+      <div class="wrap">
+        <p class="kicker">One concrete example · Recorded evaluation</p>
+        <h2 class="h2" id="demo-title">The tests passed.<br>A business rule broke.</h2>
+        <div class="example-brief">
+          <p><span class="label">Ticket</span>Validate building inputs at creation.</p>
+          <p><span class="label">Rule to preserve</span>Valid inputs must produce the same heat profile.</p>
         </div>
-        <div class="card persona">
-          <div class="role">Rolling out agents</div>
-          <h3>Platform, developer-experience and CTO-office teams</h3>
-          <p>One policy per repository: what is protected, what blocks, when a human looks.</p>
-          <ul>
-            <li>Rules mined by a model from your tests, commits and docs; review optional</li>
-            <li>Review tiers 0, 1 or 2 per diff, named approvals only when asked</li>
-            <li>A merge gate that re-verifies on current main, and a guardian that undoes what breaks it</li>
-          </ul>
+        <div class="grid c2 comparison">
+          <article class="card comparison-arm">
+            <h3>Comparison</h3>
+            <p>Project tests passed. The shared verifier then required a repair.</p>
+            <div class="result"><strong class="bad">21</strong><span>hidden invariant tests failed<br>on the first attempt</span></div>
+          </article>
+          <article class="card intentos-arm">
+            <h3>IntentOS</h3>
+            <p>Rules supplied before implementation. Project and acceptance tests passed.</p>
+            <div class="result"><strong class="good">0</strong><span>hidden invariant tests failed<br>on the first attempt</span></div>
+          </article>
         </div>
       </div>
-      <div class="notfit">
-        <div class="notfit-head">
-          <strong>Where it is not a fit</strong>
-          <p>IntentOS earns its keep when there is history to learn from, domain rules worth protecting, checks it can run, and more PRs a day than a person can read. Without those, it is ceremony.</p>
+    </section>
+
+    <section class="block soft" id="deployment" aria-labelledby="deployment-title">
+      <div class="wrap">
+        <p class="kicker">Deployment decisions</p>
+        <h2 class="h2" id="deployment-title">The choices and their tradeoffs.</h2>
+        <p class="lede">For a small team already using Codex, with private repositories and no GitHub Enterprise.</p>
+        <div class="table-wrap">
+          <table class="tradeoffs">
+            <thead><tr><th scope="col">Requirement</th><th scope="col">Why it matters to a startup CTO</th><th scope="col">Decision</th><th scope="col">Tradeoff</th></tr></thead>
+            <tbody>
+              <tr>
+                <th scope="row"><span class="mobile-label" aria-hidden="true">Requirement</span><strong>Coordinate without requiring GitHub Enterprise.</strong></th>
+                <td><span class="mobile-label" aria-hidden="true">Why it matters to a startup CTO</span><p>GitHub’s native merge queue for private repositories requires Enterprise Cloud. The target team needs coordination without that upgrade.</p></td>
+                <td><span class="mobile-label" aria-hidden="true">Decision</span><strong>Use local hooks and a local merge gate.</strong><p>Agents use main to discover each other’s merged changes.</p></td>
+                <td><span class="mobile-label" aria-hidden="true">Tradeoff</span><p>Unmerged work is invisible to coordination. The current prototype works across worktrees in one local repository.</p></td>
+              </tr>
+              <tr>
+                <th scope="row"><span class="mobile-label" aria-hidden="true">Requirement</span><strong>Start with one repository in the existing Codex workflow.</strong></th>
+                <td><span class="mobile-label" aria-hidden="true">Why it matters to a startup CTO</span><p>The CTO can pilot it with one engineer before rolling it out to the team.</p></td>
+                <td><span class="mobile-label" aria-hidden="true">Decision</span><strong>Ship a Codex plugin.</strong><p>MCP tools and setup skills connect IntentOS to an existing Codex installation.</p></td>
+                <td><span class="mobile-label" aria-hidden="true">Tradeoff</span><p>Each machine needs a local install. Live implementation and coordination currently use Codex.</p></td>
+              </tr>
+              <tr>
+                <th scope="row"><span class="mobile-label" aria-hidden="true">Requirement</span><strong>Run without provisioning a backend or database service.</strong></th>
+                <td><span class="mobile-label" aria-hidden="true">Why it matters to a startup CTO</span><p>A team without platform support can start the pilot on a developer’s machine.</p></td>
+                <td><span class="mobile-label" aria-hidden="true">Decision</span><strong>Run locally; store state in SQLite and files.</strong><p>IntentOS has no hosted backend; model calls still go through Codex.</p></td>
+                <td><span class="mobile-label" aria-hidden="true">Tradeoff</span><p>Runs use local CPU and disk. The team manages setup, updates, and backups, and the machine must stay available during a run.</p></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <ul>
-          <li><b>A codebase whose tests cannot run from a fresh checkout.</b> Verification executes checks; if nothing runs, there is nothing independent to judge. Get the suite running first, then onboard.</li>
-          <li><b>A prototype you expect to throw away.</b> No history to mine, no rules worth protecting, nobody paged. Come back when it has become the thing people depend on.</li>
-          <li><b>A codebase with little business logic or domain knowledge of its own.</b> A CRUD app or a thin wrapper around a vendor API has few rules an agent could break without a test noticing. IntentOS pays off where the rules are specific to your domain: billing, compliance, planning constraints, safety limits.</li>
-          <li><b>A team that ships a handful of PRs a day and can still review each one by hand.</b> Human-led review is the better tool at that volume. IntentOS is for the point where the agents open more than the people can read.</li>
-        </ul>
       </div>
+    </section>
+
+    <section class="block" id="evidence" aria-labelledby="evidence-title">
+      <div class="wrap">
+        <p class="kicker">Evidence</p>
+        <h2 class="h2" id="evidence-title">What we measured. What we found.</h2>
+        <div class="evidence-table-wrap">
+          <table class="evidence-table">
+            <thead><tr><th scope="col">Cause</th><th scope="col">How we track it</th><th scope="col">Result</th></tr></thead>
+            <tbody>
+              <tr id="coordination">
+                <th scope="row"><span class="evidence-cause">Parallel development</span><span class="evidence-description">Changes pass alone but break when combined.</span></th>
+                <td><span class="mobile-label" aria-hidden="true">How we track it</span><p>Test the merged code. Count runs finishing with main healthy, including recovery.</p></td>
+                <td>
+                  <span class="mobile-label" aria-hidden="true">Result</span>
+                  <strong class="evidence-number">3/15 <span>→</span> 15/15</strong>
+                  <p>runs finished with main healthy<br><span class="evidence-comparison">Without coordination → with coordination</span></p>
+                  <p class="evidence-note">9 clashes caught before merge; 3 failures recovered <em>after</em> main broke.</p>
+                  <a class="evidence-detail-link" href="case-studies/mergeguard.html#codex" data-evaluation="coordination" aria-label="How we tested parallel development">How we tested this <span aria-hidden="true">→</span></a>
+                </td>
+              </tr>
+              <tr>
+                <th scope="row"><span class="evidence-cause">Changing business requirements</span><span class="evidence-description">Old assumptions remain in code and tests.</span></th>
+                <td><span class="mobile-label" aria-hidden="true">How we track it</span><p>Check changes against explicit business rules, beyond the project’s own tests.</p></td>
+                <td>
+                  <span class="mobile-label" aria-hidden="true">Result</span>
+                  <span class="evidence-scope">Existing rules only</span>
+                  <strong class="evidence-number">21 <span>→</span> 0</strong>
+                  <p>failed rule checks on the first attempt<br><span class="evidence-comparison">Comparison → IntentOS · demandlib T09</span></p>
+                  <a class="evidence-detail-link" href="case-studies/demandlib.html#outcomes" data-evaluation="rules" aria-label="How we tested business rule checks">How we tested this <span aria-hidden="true">→</span></a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <aside class="ancillary-benefit" aria-labelledby="ancillary-benefit-title">
+          <div><p class="kicker">Ancillary benefit</p><h3 id="ancillary-benefit-title">21% fewer tokens.</h3></div>
+          <p><strong>6.68M → 5.28M</strong> total input + output tokens across the 15-ticket demandlib comparison.<span class="benefit-detail">Comparison → IntentOS · One run per ticket per setup, including tickets clarified or declined.</span></p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="block takeaway" id="takeaway" aria-labelledby="takeaway-title">
+      <div class="wrap">
+        <p class="kicker">The takeaway</p>
+        <h2 id="takeaway-title">Make intent explicit.<br>Make review easier.</h2>
+        <div class="grid c2 takeaway-grid">
+          <div><h3>Today</h3><p>A change with its purpose, checks, and unresolved questions explicit. The goal: less senior-engineer time spent understanding and correcting it.</p></div>
+          <div><h3>Where this can lead</h3><p>If agents can understand intent and reliably verify changes against it, more of review can be automated. IntentOS is a first step toward that.</p></div>
+        </div>
+        <div class="cta" id="install"><a class="btn primary" href="https://github.com/Cyr-Ch/Intentos#quick-start" target="_blank" rel="noopener">Try IntentOS ↗</a><a href="https://github.com/Cyr-Ch/Intentos" target="_blank" rel="noopener">Explore the repository ↗</a></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="diagram-dialog architecture-dialog" id="diagramDetail" aria-labelledby="diagramDetailTitle" aria-describedby="diagramDetailWhat">
+    <div class="diagram-detail-header">
+      <button class="diagram-close" type="button" aria-label="Close diagram details">×</button>
+      <p class="kicker" id="diagramDetailGroup"></p>
+      <h2 id="diagramDetailTitle"></h2>
     </div>
-  </section>
+    <div class="diagram-detail-boxes" id="diagramDetailBody" tabindex="0" aria-label="What this component is, what it does, and why we need it"></div>
+  </dialog>
 
-  <!-- ============ HOW ============ -->
-  <section class="block soft" id="how">
-    <div class="wrap">
-      <div class="kicker">How it works</div>
-      <h2 class="h2">From a ticket to a change you can defend</h2>
-      <p class="lede">Five stages. The coding agent does the implementing. IntentOS does everything around it: what the agent is told, where it works, how its output is judged, and what reaches main.</p>
-
-      <figure class="diagram">
-        <div class="diagram-scroll">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 604" role="img" aria-labelledby="diag-title diag-desc" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Inter, Roboto, sans-serif">
-          <title id="diag-title">How IntentOS works, from onboarding to the merge gate and the guardian</title>
-          <desc id="diag-desc">Three lanes: people, the IntentOS plugin, and model threads, over a band of trusted state. Onboard indexes the repository; a mining model proposes rules from an evidence digest, IntentOS checks each reference and runs each test, and the ones that pass are written into the policy; a person can review and edit them, but does not have to. For each ticket a QA thread fills the gaps the repository can answer, flags contradictions with the policy and sends the remaining questions back to the team; once the ticket is ready, a planner proposes a contract the compiler validates, an implementer works in a git worktree, verification runs hidden tests and deterministic checks from a snapshot with bounded repairs, the merge gate requires approvals, CI, a sync check and merged-result verification before fast-forwarding main, and the guardian bisects a red main and opens a validated undo PR.</desc>
-          <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#686c66"/></marker><marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#315e50"/></marker></defs>
-          <rect width="1280" height="604" fill="#fff"/>
-          <rect x="124" y="172" width="1148" height="204" rx="10" fill="#f5f6f2"/>
-          <rect x="124" y="494" width="1148" height="58" rx="10" fill="#e8f0ec" stroke="#315e50" stroke-opacity="0.35"/>
-          <text x="12" y="108" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">People</text>
-          <text x="12" y="123" font-size="10" fill="#686c66" text-anchor="start">owner; review optional</text>
-          <text x="12" y="274" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">IntentOS</text>
-          <text x="12" y="289" font-size="10" fill="#686c66" text-anchor="start">the plugin</text>
-          <text x="12" y="432" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">Models</text>
-          <text x="12" y="447" font-size="10" fill="#686c66" text-anchor="start">Codex threads</text>
-          <text x="12" y="521" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">Trusted state</text>
-          <text x="12" y="536" font-size="10" fill="#686c66" text-anchor="start">outside the repo</text>
-          <path d="M132,36 v-6 H544 v6" fill="none" stroke="#dedfd9" stroke-width="1.2"/>
-          <text x="338" y="22" font-size="10.5" fill="#686c66" text-anchor="middle" font-weight="600">Learn the repository · once, then per revision</text>
-          <path d="M558,36 v-6 H970 v6" fill="none" stroke="#dedfd9" stroke-width="1.2"/>
-          <text x="764" y="22" font-size="10.5" fill="#686c66" text-anchor="middle" font-weight="600">Every ticket</text>
-          <path d="M984,36 v-6 H1254 v6" fill="none" stroke="#dedfd9" stroke-width="1.2"/>
-          <text x="1119" y="22" font-size="10.5" fill="#686c66" text-anchor="middle" font-weight="600">Main</text>
-          <text x="132" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">01</text>
-          <text x="154" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Onboard</text>
-          <text x="274" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">02</text>
-          <text x="296" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Mine</text>
-          <text x="416" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">03</text>
-          <text x="438" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Policy</text>
-          <text x="558" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">04</text>
-          <text x="580" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Contract</text>
-          <text x="700" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">05</text>
-          <text x="722" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Implement</text>
-          <text x="842" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">06</text>
-          <text x="864" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Verify</text>
-          <text x="984" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">07</text>
-          <text x="1006" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Merge</text>
-          <text x="1126" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">08</text>
-          <text x="1148" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Guard</text>
-          <rect x="132" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
-          <text x="196" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">“Set up IntentOS</text>
-          <text x="196" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">for this repository”</text>
-          <rect x="416" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1" stroke-dasharray="4 3"/>
-          <text x="480" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Optional review</text>
-          <text x="480" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">in the dashboard</text>
-          <rect x="558" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
-          <text x="622" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Ticket</text>
-          <text x="622" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">unfinished → planned</text>
-          <rect x="984" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
-          <text x="1048" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Approvers</text>
-          <text x="1048" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">named, head-bound</text>
-          <rect x="1126" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
-          <text x="1190" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Undo PR</text>
-          <text x="1190" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">to review, validated</text>
-          <rect x="132" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="196" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">onboard</text>
-          <text x="196" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">index the repository</text>
-          <text x="196" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">draft policy · run suite</text>
-          <rect x="274" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="338" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">mine</text>
-          <text x="338" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">tests, commits, docs</text>
-          <text x="338" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">refs exist · tests pass</text>
-          <rect x="416" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="480" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">policy</text>
-          <text x="480" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">checked rules → YAML</text>
-          <text x="480" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">review optional</text>
-          <rect x="558" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="622" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">contract</text>
-          <text x="622" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">triage: fill · ask · flag</text>
-          <text x="622" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">validated plan</text>
-          <rect x="700" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="764" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">implement</text>
-          <text x="764" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">detached worktree</text>
-          <text x="764" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">scope · sync hooks</text>
-          <rect x="842" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
-          <text x="906" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">verify</text>
-          <text x="906" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">hidden tests · AST rules</text>
-          <text x="906" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">scope · ≤ 2 repairs</text>
-          <rect x="984" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
-          <text x="1048" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">merge gate</text>
-          <text x="1048" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">tier · approvals · sync</text>
-          <text x="1048" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">merged-result verify</text>
-          <rect x="1126" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
-          <text x="1190" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">guard</text>
-          <text x="1190" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">bisect a red main</text>
-          <text x="1190" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">validated undo PR</text>
-          <rect x="274" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="338" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">mining model</text>
-          <text x="338" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">a second model</text>
-          <text x="338" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">proposes rules</text>
-          <rect x="558" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="622" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">triage · planner</text>
-          <text x="622" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">read-only threads</text>
-          <text x="622" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">questions, then a plan</text>
-          <rect x="700" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
-          <text x="764" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">implementer</text>
-          <text x="764" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">edits in the worktree</text>
-          <text x="764" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">“tests pass” is ignored</text>
-          <rect x="842" y="396" width="412" height="76" rx="8" fill="none" stroke="#686c66" stroke-dasharray="4 3"/>
-          <text x="1048" y="422" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">No model from here on</text>
-          <text x="1048" y="448" font-size="10.5" fill="#686c66" text-anchor="middle">verification, the gate and the guardian are deterministic code</text>
-          <line x1="260" y1="276" x2="274" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="402" y1="276" x2="416" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="544" y1="276" x2="558" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="686" y1="276" x2="700" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="828" y1="276" x2="842" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="970" y1="276" x2="984" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="1112" y1="276" x2="1126" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <path d="M870,226 v-20 H800 v20" fill="none" stroke="#315e50" stroke-width="1.2" marker-end="url(#arrA)"/>
-          <text x="835" y="201" font-size="10" fill="#315e50" text-anchor="middle" font-weight="600">repair, at most twice</text>
-          <line x1="196" y1="142" x2="196" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <line x1="466" y1="226" x2="466" y2="142" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
-          <text x="460" y="190" font-size="9.5" fill="#686c66" text-anchor="end">rules</text>
-          <line x1="494" y1="142" x2="494" y2="226" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
-          <text x="500" y="190" font-size="9.5" fill="#686c66" text-anchor="start">edits</text>
-          <line x1="608" y1="142" x2="608" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="602" y="190" font-size="9.5" fill="#686c66" text-anchor="end">ticket</text>
-          <line x1="636" y1="226" x2="636" y2="142" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
-          <text x="642" y="190" font-size="9.5" fill="#686c66" text-anchor="start">questions</text>
-          <line x1="1048" y1="142" x2="1048" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="1054" y="190" font-size="9.5" fill="#686c66" text-anchor="start">approvals, if the tier asks</text>
-          <line x1="1190" y1="226" x2="1190" y2="142" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="1196" y="190" font-size="9.5" fill="#686c66" text-anchor="start">if main is red</text>
-          <line x1="324" y1="326" x2="324" y2="396" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="318" y="360" font-size="9.5" fill="#686c66" text-anchor="end">digest</text>
-          <line x1="352" y1="396" x2="352" y2="326" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="358" y="360" font-size="9.5" fill="#686c66" text-anchor="start">rules + tests</text>
-          <line x1="608" y1="326" x2="608" y2="396" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="602" y="360" font-size="9.5" fill="#686c66" text-anchor="end">evidence</text>
-          <line x1="636" y1="396" x2="636" y2="326" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="642" y="360" font-size="9.5" fill="#686c66" text-anchor="start">plan</text>
-          <line x1="750" y1="326" x2="750" y2="396" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="744" y="360" font-size="9.5" fill="#686c66" text-anchor="end">contract</text>
-          <line x1="778" y1="396" x2="778" y2="326" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="784" y="360" font-size="9.5" fill="#686c66" text-anchor="start">diff</text>
-          <path d="M260,310 H267 V492" fill="none" stroke="#315e50" stroke-width="1.2" marker-end="url(#arrA)"/>
-          <text x="271" y="486" font-size="9.5" fill="#315e50" text-anchor="start" font-weight="600">writes index</text>
-          <path d="M416,310 H409 V492" fill="none" stroke="#315e50" stroke-width="1.2" marker-end="url(#arrA)"/>
-          <text x="413" y="486" font-size="9.5" fill="#315e50" text-anchor="start" font-weight="600">writes policy + hidden test</text>
-          <path d="M551,494 V310 H560" fill="none" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
-          <text x="555" y="486" font-size="9.5" fill="#315e50" text-anchor="start" font-weight="600">reads index + policy</text>
-          <path d="M835,494 V310 H844" fill="none" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
-          <text x="831" y="486" font-size="9.5" fill="#315e50" text-anchor="end" font-weight="600">reads policy + hidden tests</text>
-          <text x="138" y="512" font-size="11" fill="#173b31" text-anchor="start" font-weight="700">Trusted state</text>
-          <text x="228" y="512" font-size="10.5" fill="#173b31" text-anchor="start">outside the repository · written only by IntentOS after its checks</text>
-          <rect x="138" y="522" width="176" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
-          <text x="226" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">repository model @ commit</text>
-          <rect x="322" y="522" width="359" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
-          <text x="502" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">policy YAML: invariants · architecture rules · decisions</text>
-          <rect x="689" y="522" width="91" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
-          <text x="734" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">hidden tests</text>
-          <rect x="788" y="522" width="176" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
-          <text x="876" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">precedents (tickets → PRs)</text>
-          <rect x="972" y="522" width="91" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
-          <text x="1018" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">merge ledger</text>
-          <line x1="132" y1="582" x2="166" y2="582" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
-          <text x="174" y="586" font-size="10.5" fill="#686c66" text-anchor="start">flow</text>
-          <line x1="222" y1="582" x2="256" y2="582" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
-          <text x="264" y="586" font-size="10.5" fill="#686c66" text-anchor="start">reads trusted state</text>
-          <rect x="392" y="574" width="22" height="16" rx="4" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
-          <text x="422" y="586" font-size="10.5" fill="#686c66" text-anchor="start">where a change is judged</text>
-          <rect x="572" y="574" width="22" height="16" rx="4" fill="none" stroke="#686c66" stroke-dasharray="4 3"/>
-          <text x="602" y="586" font-size="10.5" fill="#686c66" text-anchor="start">deterministic, no model</text>
-          </svg>
-        </div>
-        <figcaption>The whole path, once. Three lanes: the people who own the repository, the IntentOS plugin, and the model threads it starts. Models only ever propose (rules, a plan, a diff); IntentOS checks every proposal against the repository and the trusted state before anything is written or merged. Human review is optional at both ends: rules can be edited in the dashboard, and the review tier of a merge comes from your policy, down to zero. From verification onward there is no model in the loop.</figcaption>
-      </figure>
-
-      <div class="pipeline" aria-label="Pipeline overview">
-        <a href="#s1"><small>01</small><b>Learn the repository</b></a>
-        <a href="#s2"><small>02</small><b>Compile the contract</b></a>
-        <a href="#s3"><small>03</small><b>Build in isolation</b></a>
-        <a href="#s4"><small>04</small><b>Verify independently</b></a>
-        <a href="#s5"><small>05</small><b>Merge through the gate</b></a>
-      </div>
-
-      <div class="stages">
-        <!-- 01 -->
-        <div class="stage" id="s1">
-          <div>
-            <div class="n">01 · Learn</div>
-            <h3>A versioned model of your repository</h3>
-            <p>One <code>onboard</code> indexes symbols, imports, tests, documents and ticket history into a versioned graph bound to the commit. Then an agent mines your business rules from fix commits, rule-like tests and must/never sentences in your docs. Every candidate reference is checked against the repository and its test is run before anyone sees it.</p>
-            <ul>
-              <li>Closed issues and the PRs that resolved them become <b>precedents</b></li>
-              <li>Rules that pass go straight into a YAML policy outside the target repository; review or edit them in the dashboard if you want to</li>
-            </ul>
-          </div>
-          <div class="mock"><div class="bar"><strong>explain</strong> · evidence pack · demandlib @ 32b6cc5</div><div class="body"><div class="code"><span class="c"># reusable symbols</span>
-<span class="k">SY</span>  oemof.demand.tools.add_weekdays2df       <span class="n">must_reuse</span>
-    src/oemof/demand/tools.py:50
-<span class="k">SY</span>  oemof.demand.bdew.ElecSlp                consider
-    src/oemof/demand/bdew/elec_slp.py:18
-
-<span class="c"># bound invariants · approved policy, one hidden test each</span>
-<span class="k">INV-001</span>  add_weekdays2df(holidays=[]) emits no warning,
-         no weekday equals 0
-<span class="k">INV-002</span>  negative VDI 4655 factors warn; load curves
-         stay non-empty
-
-<span class="c"># precedents · historical evidence, never policy</span>
-<span class="k">EV-9500bc</span>  #43 "Warn when a profile is created without
-           holidays" ← PR #100 · <span class="n">current</span>
-           changed set_holidays_in_df · added 2 tests</div></div></div>
-        </div>
-
-        <!-- 02 -->
-        <div class="stage" id="s2">
-          <div>
-            <div class="n">02 · Contract</div>
-            <h3>Every ticket becomes a compiled change contract</h3>
-            <p>A QA agent first checks whether the ticket can be built from. IntentOS hands it measured facts rather than a hunch: does the ticket contain anything that reads like an acceptance criterion or an example; which names in it exist in the repository and which do not; how many symbols and tests match its terms (zero means too vague, or something new); which approved rules apply; which solved tickets are closest.</p>
-            <p>Every gap then lands in one of three bins. <b>Filled</b>: the repository answers it, and the answer must cite code, a test, a document or a commit that IntentOS verifies at the current revision. <b>Question</b>: only the team can answer, so it comes with options and a default. <b>Contradiction</b>: the ticket conflicts with an approved rule, flagged first. Ready means no blocking question is left.</p>
-            <ul>
-              <li>A planner turns a ready ticket into a contract: requirements citing evidence, symbols to reuse, paths it may touch, checks that will run. A compiler rejects fabricated evidence and protected paths</li>
-              <li>Three routes: <b>implement</b>, <b>clarify</b>, or <b>abstain</b> with cited reasons</li>
-            </ul>
-          </div>
-          <div class="mock"><div class="bar"><strong>contract.json</strong> · validated · 0 compiler errors</div><div class="body"><div class="code">{
-  <span class="s">"route"</span>: <span class="k">"implement"</span>,
-  <span class="s">"base_revision"</span>: <span class="s">"32b6cc5"</span>,
-  <span class="s">"requirements"</span>: [{
-    <span class="s">"text"</span>: <span class="s">"Overlapping day categories raise a
-             ValueError naming both categories"</span>,
-    <span class="s">"evidence_ids"</span>: [<span class="n">"EV-9500bc"</span>, <span class="n">"EV-1a77f0"</span>]
-  }],
-  <span class="s">"reuse"</span>: [{
-    <span class="s">"symbol_id"</span>: <span class="s">"SY:oemof.demand.tools.add_weekdays2df"</span>,
-    <span class="s">"action"</span>: <span class="k">"must_reuse"</span>
-  }],
-  <span class="s">"invariants"</span>: [<span class="n">"INV-001"</span>, <span class="n">"INV-007"</span>],
-  <span class="s">"allowed_paths"</span>: [
-    <span class="s">"src/oemof/demand/particular_profiles.py"</span>,
-    <span class="s">"tests/**"</span>
-  ],
-  <span class="s">"verification"</span>: [<span class="n">"pytest_project"</span>, <span class="n">"pytest_hidden_task"</span>,
-    <span class="n">"pytest_invariants"</span>, <span class="n">"scope_check"</span>, <span class="n">"architecture_rules"</span>]
-}</div></div></div>
-        </div>
-
-        <!-- 03 -->
-        <div class="stage" id="s3">
-          <div>
-            <div class="n">03 · Build</div>
-            <h3>The agent works alone, but not blind</h3>
-            <p>The implementer is a separate Codex thread in a detached Git worktree with its own <code>CODEX_HOME</code>. Your checkout and your global Codex configuration are never touched. Coordination hooks run after every command: when main renames, moves, removes or re-signs a symbol the agent uses, it is told the commit, the file and line, and the first step.</p>
-            <ul>
-              <li>A stale tree cannot finish: the Stop hook refuses until the branch is synced</li>
-              <li>Hidden tests, policy and run artifacts live outside the worktree</li>
-            </ul>
-          </div>
-          <div class="mock"><div class="bar"><strong>hook · PostToolUse</strong> · worktree run-20261028-7c3e</div><div class="body">
-            <div class="note">While you were working, main changed: <code>oemof.demand.tools.add_weekdays2df</code> was renamed to <code>annotate_weekdays</code> in commit <code>4f1a2c9</code>. Your code uses it at <code>src/oemof/demand/particular_profiles.py:88</code>. Update the import and calls, then bring main into your branch before finishing.</div>
-            <div class="code" style="margin-top:12px"><span class="c">$ git merge --no-edit origin/main</span>
-Auto-merging src/oemof/demand/particular_profiles.py
-<span class="c">$ sed -i '' 's/add_weekdays2df/annotate_weekdays/' \
-    src/oemof/demand/particular_profiles.py</span>
-<span class="c">$ python -m pytest tests -q</span>
-<span class="k">50 passed</span> in 4.21s
-<span class="c">[hook] coordination: up to date with main 4f1a2c9</span></div>
-          </div></div>
-        </div>
-
-        <!-- 04 -->
-        <div class="stage" id="s4">
-          <div>
-            <div class="n">04 · Verify</div>
-            <h3>Judged by checks the agent never saw</h3>
-            <p>Verification runs from a snapshot of the worktree with trusted commands from the policy: the project suite, hidden acceptance tests, hidden invariant tests, deterministic AST architecture rules, a scope check and architectural-surprise signals. The agent's "all tests pass" is stored and ignored; status comes only from executed checks.</p>
-            <ul>
-              <li>Machine-readable findings go back to the same thread for at most two repairs</li>
-              <li>Forged test reports are detected; a missing hidden test fails closed</li>
-            </ul>
-          </div>
-          <div class="mock"><div class="bar"><strong>verification.json</strong> · attempt 1 · <span class="pill good">REVIEW_READY</span></div><div class="body"><div class="report">
-            <div class="row"><span>pytest_project · functional</span><b>50 / 50 <span class="pill good">passed</span></b></div>
-            <div class="row"><span>pytest_hidden_task · acceptance, authored by gpt-5.6-terra</span><b>3 / 3 <span class="pill good">passed</span></b></div>
-            <div class="row"><span>pytest_invariants · 39 approved rules</span><b>39 / 39 <span class="pill good">passed</span></b></div>
-            <div class="row"><span>architecture_rules · AST, 5 rules</span><b>0 findings <span class="pill good">clean</span></b></div>
-            <div class="row"><span>scope_check · allowed and protected paths</span><b>1 file <span class="pill good">in scope</span></b></div>
-            <div class="row"><span>architecture_surprise · advisory</span><b>0 signals</b></div>
-            <div class="row"><span>coordination · base 4f1a2c9</span><b><span class="pill good">up to date</span></b></div>
-            <div class="row"><span>precedent #43</span><b><span class="pill">PRECEDENT-FOLLOWED</span></b></div>
-          </div></div></div>
-        </div>
-
-        <!-- 05 -->
-        <div class="stage" id="s5">
-          <div>
-            <div class="n">05 · Merge</div>
-            <h3>A gate that merges onto the main of right now</h3>
-            <p><code>merge</code> opens a PR with a review tier computed from the diff (0, 1 or 2 humans; at least one whenever IntentOS asked for review), takes head-bound approvals from the names <em>you</em> give, merges the branch onto current main, re-runs the hidden tests on the merged result, then fast-forwards main and records it in a ledger.</p>
-            <ul>
-              <li>A green branch that uses a symbol main just renamed is refused with the exact fix</li>
-              <li>If main is red anyway, <code>guard</code> bisects to the culprit merge, names its partner, and opens a validated undo PR</li>
-            </ul>
-          </div>
-          <div class="mock"><div class="bar"><strong>merge</strong> · run P2 · approval: Priya</div><div class="body">
-            <div class="refuse"><b>Refused.</b> This branch is green on its own but stale against main: <code>add_weekdays2df</code> was renamed to <code>annotate_weekdays</code> in commit <code>4f1a2c9</code>. Your code uses it at <code>src/oemof/demand/particular_profiles.py:61</code>. First bring main into your branch.</div>
-            <div class="code" style="margin-top:12px"><span class="c"># after syncing</span>
-PR #3  tier 1  approvals: priya ✓ (bound to head 7e02ab1)
-branch CI ............ <span class="k">green</span>
-sync check ........... <span class="k">up to date</span>
-merged-result verify . project 50/50 · invariants 39/39
-                       acceptance 2/2
-mergeguard suite ..... <span class="k">green</span>
-main ................. 4f1a2c9 → <span class="n">9b7d13e</span> · ledger #3 · re-indexed</div>
-          </div></div>
-        </div>
-      </div>
+  <dialog class="diagram-dialog evaluation-dialog" id="evaluationDetail" aria-labelledby="evaluationDetailTitle" aria-describedby="evaluationDetailSummary">
+    <div class="evaluation-header">
+      <button class="diagram-close" type="button" aria-label="Close evaluation details">×</button>
+      <p class="kicker" id="evaluationDetailGroup"></p>
+      <h2 id="evaluationDetailTitle"></h2>
+      <p id="evaluationDetailSummary"></p>
     </div>
-  </section>
+    <div class="evaluation-body" id="evaluationDetailBody" tabindex="0" aria-label="Evaluation method, results, and implications"></div>
+  </dialog>
 
-  <!-- ============ FEATURES ============ -->
-  <section class="block" id="features">
-    <div class="wrap">
-      <div class="kicker">What you get</div>
-      <h2 class="h2">The parts that make it hold up</h2>
-      <div class="grid c3">
-        <div class="card feature">
-          <h3><span class="glyph">⚖</span>Rules mined by a second model</h3>
-          <p>The model that writes the rules is never the one that later implements under them. Set <code>INTENTOS_MINING_MODEL</code> or say "mine with gpt-6-astra". Candidates without a passing test never reach the policy. Human review is optional; unreviewed rules carry an <code>auto:&lt;model&gt;</code> label.</p>
-        </div>
-        <div class="card feature">
-          <h3><span class="glyph">⌁</span>Precedents from ticket history</h3>
-          <p>Closed issues, the PR that fixed each one, and what it changed, linked to today's code and marked current, partially stale or stale. The planner may cite them; the verifier reports whether the diff followed them.</p>
-        </div>
-        <div class="card feature">
-          <h3><span class="glyph">◫</span>Acceptance tests before the code</h3>
-          <p>A different model writes the ticket's acceptance tests in a read-only thread. They must fail at base, they are kept outside the worktree, and the implementer never sees them.</p>
-        </div>
-        <div class="card feature">
-          <h3><span class="glyph">⇄</span>mergeguard coordination</h3>
-          <p>Deterministic, no model inside: AST diff of main against the worktree's imports, sync notes, a Stop gate, review tiers, merged-result verification, a ledger, and a guardian that bisects and undoes.</p>
-        </div>
-        <div class="card feature">
-          <h3><span class="glyph">▤</span>Local dashboard</h3>
-          <p>Live runs with the pipeline stage and event timeline, the repository's policy with inline editing, the knowledge base of evidence and precedents, and per-role model and skill settings. Localhost only.</p>
-        </div>
-        <div class="card feature">
-          <h3><span class="glyph">✳</span>One-sentence operation</h3>
-          <p>"Set up IntentOS for this repository" runs the setup skill end to end. Afterwards <code>status</code> tells Codex which tool comes next. Approver names come from you; the model cannot invent them.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+  <template id="coordinationEvaluation">
+    <section class="evaluation-section" aria-labelledby="coordination-method">
+      <h3 id="coordination-method">How we ran it</h3>
+      <ol>
+        <li>Start with two clones of a fresh repository. While one agent works, another change merges into main.</li>
+        <li>Run five scenarios three times each: an API rename, a new required parameter, a module move, dollars changing to cents, and an unrelated change.</li>
+        <li>Use the same Codex model in both setups. Compare ordinary Git merges with coordination hooks, a merge gate, and recovery.</li>
+      </ol>
+    </section>
+    <section class="evaluation-section" aria-labelledby="coordination-results">
+      <h3 id="coordination-results">What happened</h3>
+      <table class="evaluation-results">
+        <thead><tr><th scope="col">Main’s state</th><th scope="col">Without</th><th scope="col">With coordination</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Healthy immediately after integration</th><td>3/15</td><td>12/15</td></tr>
+          <tr><th scope="row">Healthy at the end, including recovery</th><td>3/15</td><td>15/15</td></tr>
+        </tbody>
+      </table>
+      <p class="evaluation-result-note">Nine API clashes were fixed before merge. Three changes in meaning escaped the sync check; main broke, then the guardian recovered it.</p>
+    </section>
+    <section class="evaluation-implication" aria-labelledby="coordination-meaning">
+      <h3 id="coordination-meaning">What this tells us</h3>
+      <p>Specific notes about changes on main helped agents fix the tested conflicts while they worked. Recovery handled the failures that still slipped through.</p>
+    </section>
+    <details class="evaluation-more">
+      <summary>Scope, timing, and the full record</summary>
+      <p>These were small synthetic repositories and simulated approvals, with live Codex runs using gpt-6-astra. Hooks fetched every five seconds in the evaluation.</p>
+      <p>Average time including integration and recovery was 52.6 seconds with coordination versus 32.5 seconds without it. Twelve runs in the faster setup ended with main broken.</p>
+      <p>The result covers these scenarios. It does not estimate production incident rates or time saved in human review.</p>
+      <a href="case-studies/mergeguard.html" target="_blank" rel="noopener">Full evaluation record ↗</a>
+    </details>
+  </template>
 
-  <!-- ============ EVIDENCE ============ -->
-  <section class="block soft" id="evidence">
-    <div class="wrap">
-      <div class="kicker">Evidence</div>
-      <h2 class="h2">Measured, with the caveats attached</h2>
-      <p class="lede">Two published evaluations, both reproducible from the repository. We show the raw numbers and say what they do not prove.</p>
+  <template id="rulesEvaluation">
+    <section class="evaluation-section" aria-labelledby="rules-method">
+      <h3 id="rules-method">How we ran it</h3>
+      <ol>
+        <li>Give both setups the same ticket: validate building inputs early while preserving valid heat-profile behavior.</li>
+        <li>Hold the repository revision, coding model, independent verifier, and repair budget constant.</li>
+        <li>Give IntentOS repository evidence, a plan, and a change contract carrying the existing rules. The comparison starts from the ticket alone.</li>
+      </ol>
+    </section>
+    <section class="evaluation-section" aria-labelledby="rules-results">
+      <h3 id="rules-results">What happened</h3>
+      <table class="evaluation-results">
+        <thead><tr><th scope="col">Check</th><th scope="col">Comparison</th><th scope="col">IntentOS</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Project tests on the first attempt</th><td>Passed</td><td>Passed</td></tr>
+          <tr><th scope="row">Failed rule checks on the first attempt</th><td>21</td><td>0</td></tr>
+          <tr><th scope="row">Repairs needed</th><td>1</td><td>0</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="evaluation-implication" aria-labelledby="rules-meaning">
+      <h3 id="rules-meaning">What this tells us</h3>
+      <p>The project suite missed a regression in an existing rule. Supplying the rules before coding helped this attempt pass the independent checks without a repair.</p>
+    </section>
+    <details class="evaluation-more">
+      <summary>Scope, comparison setup, and the full record</summary>
+      <p>This is T09 from a 15-ticket demandlib evaluation: one run per setup, using gpt-6-astra at the same base revision.</p>
+      <p>Both setups ultimately passed. The comparison also received the independent verifier’s findings and repaired its change; the headline measures the first attempt, before that feedback.</p>
+      <p>The 21 failures are test cases from one change. This example covers preserving existing rules; deciding which rules should change after a pivot requires separate validation.</p>
+      <a href="case-studies/demandlib.html" target="_blank" rel="noopener">Full evaluation record ↗</a>
+    </details>
+  </template>
 
-      <div class="evidence-block">
-        <div class="evidence-head">
-          <div>
-            <h3>Does repository context change what an agent does?</h3>
-            <p><a href="https://github.com/Cyr-Ch/oemof-demand/issues?q=is%3Aissue+state%3Aopen" target="_blank" rel="noopener">Fifteen fresh tickets</a> on <code>oemof/demandlib</code>, one run per ticket per arm, same Codex implementer, same verifier and repair budget. The IntentOS arm added the evidence pack, planner, contract and coordination hooks.</p>
-          </div>
-          <a class="btn" href="case-studies/demandlib.html">Read the case study</a>
-        </div>
-        <div class="metrics">
-          <div class="metric"><strong>3 / 3</strong><span>Correct routes on the clarify-or-abstain control tickets. Comparison arm: 0 / 3.</span></div>
-          <div class="metric"><strong>4 vs 8</strong><span>Repair rounds across the batch, IntentOS versus comparison arm.</span></div>
-          <div class="metric"><strong>21% fewer</strong><span>Total tokens (5.28M vs 6.68M), at the same wall time.</span></div>
-        </div>
-        <p class="footnote">The comparison arm's attempt on <a href="https://github.com/Cyr-Ch/oemof-demand/issues/52" target="_blank" rel="noopener">T09</a> broke 21 hidden invariant tests; IntentOS broke none.</p>
-      </div>
-
-      <div class="evidence-block">
-        <div class="evidence-head">
-          <div>
-            <h3>Can two agents share one main without breaking it?</h3>
-            <p>Two agents work on the same repository at once. While the second is mid-task, the first one's change lands on main and alters something the second is using: a renamed function, a new required parameter, a moved module, or a function that now returns cents instead of dollars with the same signature. A fifth scenario changes something unrelated, to check for false alarms. Each scenario ran three times with and three times without IntentOS's coordination: 15 runs per arm.</p>
-          </div>
-          <a class="btn" href="case-studies/mergeguard.html">Read the case study</a>
-        </div>
-        <div class="metrics">
-          <div class="metric"><strong>12 → 0</strong><span>Runs that ended with main broken. Without coordination 12 of 15; with it, 0 of 15.</span></div>
-          <div class="metric"><strong>9 / 9</strong><span>Rename, parameter and module-move runs where the agent was told mid-task what had changed and fixed it before merging. No false alarm on the unrelated change.</span></div>
-          <div class="metric"><strong>+16 s</strong><span>What the coordination cost per run: about 16 seconds, 3 more tool calls and 400 more output tokens.</span></div>
-        </div>
-        <p class="footnote">The one case the mid-task check cannot see is a change of meaning behind an unchanged signature (dollars to cents). In all three of those runs the branch merged and main broke; the guardian then found the culprit merge and opened an undo PR that restored it, 3 of 3. That is why the merge gate also runs the hidden tests on the merged result. Scenarios were synthetic and reviewers were simulated.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ TRUST ============ -->
-  <section class="block" id="trust">
-    <div class="wrap trust-grid">
-      <div>
-        <div class="kicker">Security and trust</div>
-        <h2 class="h2">The model proposes. It never gets to decide.</h2>
-        <p class="lede narrow">Every authority boundary in IntentOS is enforced in code, not in a prompt. These are the properties the test suite checks.</p>
-      </div>
-      <ul class="trust">
-        <li><strong>Your base branch never changes</strong>Implementation happens in a detached worktree; the verifier checks its HEAD still equals the base before trusting anything.</li>
-        <li><strong>Ground truth is out of reach</strong>Policies, hidden tests and run artifacts live outside the worktree and outside the target repository. The compiler refuses to make protected globs writable.</li>
-        <li><strong>Only trusted commands run</strong>Verification commands are <code>id → argv</code> entries in the policy; model output can only name an ID. No repository text ever reaches a shell.</li>
-        <li><strong>Model claims are inert</strong>A fake "all tests pass" does not change the outcome. Forged JUnit reports are caught by a static inventory cross-check and a forbidden-names rule.</li>
-        <li><strong>The implementing agent never writes the rules</strong>Rules are mined by a different model and enter the policy only after their references and tests check out. Reviewing them is optional; rules nobody reviewed are labelled <code>auto:&lt;model&gt;</code> so you can see which is which. The tools that edit policy are app-only and need a token the model never receives.</li>
-        <li><strong>Fail closed, optionally in a container</strong>With <code>INTENTOS_VERIFIER=docker</code> candidate code runs with no network, a read-only root, dropped capabilities and limits; if Docker is missing nothing falls back to the host.</li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- ============ INSTALL ============ -->
-  <section class="block soft" id="install">
-    <div class="wrap install-grid">
-      <div>
-        <div class="kicker">Install</div>
-        <h2 class="h2">Three commands, then one sentence</h2>
-        <p class="lede">IntentOS ships as a Codex plugin: an MCP server plus the <code>intentos-setup</code> and <code>intentos-policy-mining</code> skills. The checkout is its own local marketplace.</p>
-        <div class="terminal">
-          <div class="bar"><span>zsh</span><button type="button" data-copy="install-cmds">Copy</button></div>
-<pre id="install-cmds"><span class="c"># get the plugin</span>
-<span class="p">$</span> git clone https://github.com/Cyr-Ch/Intentos ~/intentos
-<span class="p">$</span> cd ~/intentos &amp;&amp; npm install &amp;&amp; npm run setup:python
-
-<span class="c"># register it with Codex</span>
-<span class="p">$</span> codex plugin marketplace add ~/intentos
-<span class="p">$</span> codex plugin add intentos@intentos
-
-<span class="c"># in the repository you want to bring under IntentOS</span>
-<span class="p">$</span> codex
-<span class="u">&gt; Set up IntentOS for this repository</span></pre>
-        </div>
-        <p class="caption">The setup skill checks the installation, registers the server, onboards the repository, mines its rules with a model other than the session's, loads ticket history if you give it a GitHub repo, and confirms a first run can start. It asks you only for what it cannot know.</p>
-      </div>
-      <div>
-        <h3 style="font-size:17px;margin-bottom:14px">Requirements</h3>
-        <ul class="reqs">
-          <li><b>Node.js</b><span>22.6 or later. The sources run without a build step.</span></li>
-          <li><b>Python</b><span>3.11 or later with <code>venv</code>. pytest is installed into <code>.intentos/venv</code>.</span></li>
-          <li><b>Git</b><span>2.30 or later, for worktrees and rename detection.</span></li>
-          <li><b>Codex</b><span>The Codex CLI or app with a signed-in account or <code>CODEX_API_KEY</code>.</span></li>
-          <li><b>Optional</b><span>Docker for the isolated verifier; the <code>gh</code> CLI for ticket precedents.</span></li>
-        </ul>
-        <h3 style="font-size:17px;margin:28px 0 10px">After setup, inside any Codex session</h3>
-        <p style="font-size:14.5px;color:var(--ink-2)">"What does IntentOS know about this repository?" · "Is issue #42 ready for planning?" · "Implement this ticket under IntentOS" · "Merge that run, approvals from Priya and Sam" · "Main is red. Investigate."</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ OPEN SOURCE ============ -->
-  <section class="block" id="pricing">
-    <div class="wrap oss">
-      <div>
-        <div class="kicker">Pricing</div>
-        <h2 class="big">Free and open source.<br>No tiers, no accounts.</h2>
-        <p class="lede narrow" style="margin-bottom:18px">IntentOS is MIT-licensed and runs entirely on your machine beside Codex. It adds no hosted service of its own: the only network calls are the ones Codex already makes, plus <code>gh</code> when you ask for ticket history. All state lives under <code>.intentos/</code>.</p>
-        <div class="cta" style="display:flex;gap:12px;flex-wrap:wrap">
-          <a class="btn accent" href="https://github.com/Cyr-Ch/Intentos" target="_blank" rel="noopener">Star on GitHub</a>
-          <a class="btn" href="https://github.com/Cyr-Ch/Intentos/blob/main/README.md" target="_blank" rel="noopener">Read the README</a>
-        </div>
-      </div>
-      <div class="roadmap">
-        <h4>Where it stands</h4>
-        <ul>
-          <li><span>Index, evidence, contracts, isolated runs</span><span class="pill good">Shipped</span></li>
-          <li><span>Independent verification, repair, reports</span><span class="pill good">Shipped</span></li>
-          <li><span>Policy mining, review UI, MCP widget</span><span class="pill good">Shipped</span></li>
-          <li><span>mergeguard: hooks, gate, guardian</span><span class="pill good">Shipped</span></li>
-          <li><span>Container-isolated verifier</span><span class="pill good">Shipped, opt-in</span></li>
-          <li><span>Local dashboard and agent skills</span><span class="pill good">Shipped</span></li>
-          <li><span>GitHub App, hosted runners, tenant isolation</span><span class="pill warn">Roadmap</span></li>
-          <li><span>TypeScript (vitest/jest): index, rules, hidden tests</span><span class="pill good">Shipped</span></li>
-          <li><span>Languages beyond Python and TypeScript</span><span class="pill warn">Roadmap</span></li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ FAQ ============ -->
-  <section class="block soft tight" id="faq">
-    <div class="wrap">
-      <div class="kicker">FAQ</div>
-      <h2 class="h2" style="margin-bottom:30px">Questions we get</h2>
-      <div class="faq">
-        <details>
-          <summary>Does IntentOS replace code review?</summary>
-          <div class="a"><p>It replaces the part that does not scale. Every change is verified independently, and the review tier (0, 1 or 2 humans) is computed from what the diff actually does under your policy. Set the tiers so that most changes merge with no human at all, or require one or two named approvals for protected paths and edited tests; both are a policy setting. When a human does look, they get a report of what held first: acceptance tests, invariants, architecture rules, scope and precedents.</p></div>
-        </details>
-        <details>
-          <summary>Who writes the rules, and does a human have to approve them?</summary>
-          <div class="a"><p>A model writes them, and no, a human does not have to. The rules are mined by a model other than the one implementing, from your tests, fix commits and documents. Every reference is checked against the repository and every invariant must come with a test that passes at the current revision; only then is it written into the policy, labelled <code>approved_by: auto:&lt;model&gt;</code>. You can review and edit them in the dashboard whenever you like. What the implementing agent can never do is change them: the policy lives outside the repository and the tools that edit it require a token the model never sees.</p></div>
-        </details>
-        <details>
-          <summary>Which languages and hosts does it support?</summary>
-          <div class="a"><p>Python repositories with pytest and TypeScript repositories with vitest or jest: the indexer is AST-based (Python <code>ast</code>, the TypeScript compiler API), the verifier runs pytest in the repository's own virtual environment or the repository's own test runner with its <code>node_modules</code>, and architecture rules are checked in both languages. Container-isolated verification is Python-only for now. Codex is the primary host (plugin, skills, elicitation forms in the CLI, the review widget in the app). Any MCP host can call the tools; hosts that render MCP Apps, such as Claude or VS Code, get the review as an inline widget.</p></div>
-        </details>
-        <details>
-          <summary>What does it cost per run?</summary>
-          <div class="a"><p>In the mergeguard evaluation the Codex arm paid about 16 seconds, 2.9 tool calls and 388 output tokens more per run than raw git. In the demandlib batch IntentOS used 21% fewer tokens overall, mostly because its runs needed half the repairs. Onboarding a repository and mining its rules is a one-time cost of a few minutes.</p></div>
-        </details>
-        <details>
-          <summary>What happens when a rule is wrong?</summary>
-          <div class="a"><p>A wrong blocking rule stops every run in its scope until you edit it. Rules live in one YAML file under version control; the dashboard's Policy tab edits a rule's statement or switches it between blocking and advisory, validates the file and re-indexes. Nothing is hidden in a database.</p></div>
-        </details>
-        <details>
-          <summary>Can I try it without Codex credentials?</summary>
-          <div class="a"><p>Yes. The offline mode replays a known-good or known-bad patch through the full pipeline against the bundled fixture, so you can watch the gates work: the bad patch passes the project's own tests and is still blocked by an invariant, an architecture rule and the hidden acceptance tests.</p></div>
-        </details>
-        <details>
-          <summary>What does mergeguard miss?</summary>
-          <div class="a"><p>A change of meaning behind an unchanged signature. The sync check is an AST comparison, so it cannot see that a function now returns cents instead of dollars. That is why the gate also runs the hidden tests on the merged result before main moves, and why the guardian exists for the cases that still get through. The evaluation reports that blind spot rather than hiding it.</p></div>
-        </details>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ FINAL CTA ============ -->
-  <section class="final">
-    <div class="wrap">
-      <h2>Let the agents build. Merge what belongs.</h2>
-      <p>Install the plugin, onboard one repository, and watch the first ticket go from evidence to a verified merge.</p>
-      <div class="cta">
-        <a class="btn accent lg" href="#install">Install the plugin</a>
-        <a class="btn lg" href="https://github.com/Cyr-Ch/Intentos" target="_blank" rel="noopener">View on GitHub</a>
-      </div>
-    </div>
-  </section>
-</main>
-
-<footer>
-  <div class="wrap">
-    <div>
-      <a class="brand" href="#top"><span class="mark">◈</span>IntentOS</a>
-      <p class="tag">Verification and coordination for Codex coding agents. The code works. But does it belong?</p>
-      <p>MIT License · Built by <a href="https://github.com/Cyr-Ch" target="_blank" rel="noopener">Cyr-Ch</a></p>
-    </div>
-    <div>
-      <h5>Product</h5>
-      <ul>
-        <li><a href="#how">How it works</a></li>
-        <li><a href="#features">Features</a></li>
-        <li><a href="#trust">Security</a></li>
-        <li><a href="#install">Install</a></li>
-      </ul>
-    </div>
-    <div>
-      <h5>Evidence</h5>
-      <ul>
-        <li><a href="case-studies/demandlib.html">Repository-aware agents</a></li>
-        <li><a href="case-studies/mergeguard.html">Parallel-agent coordination</a></li>
-        <li><a href="https://github.com/Cyr-Ch/Intentos/blob/main/docs/evaluation.md" target="_blank" rel="noopener">Evaluation notes</a></li>
-      </ul>
-    </div>
-    <div>
-      <h5>Resources</h5>
-      <ul>
-        <li><a href="https://github.com/Cyr-Ch/Intentos" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="https://github.com/Cyr-Ch/Intentos/blob/main/README.md" target="_blank" rel="noopener">README</a></li>
-        <li><a href="https://github.com/Cyr-Ch/Intentos/blob/main/docs/security.md" target="_blank" rel="noopener">Security notes</a></li>
-        <li><a href="https://github.com/Cyr-Ch/Intentos/blob/main/docs/policies.md" target="_blank" rel="noopener">Writing a policy</a></li>
-      </ul>
-    </div>
-  </div>
-</footer>
-
-<script>
-  (function () {
-    var toggle = document.getElementById('menuToggle');
-    var nav = document.getElementById('nav');
-    toggle.addEventListener('click', function () {
-      var open = nav.classList.toggle('open');
-      toggle.setAttribute('aria-expanded', String(open));
-    });
-    nav.addEventListener('click', function (e) {
-      if (e.target.tagName === 'A') { nav.classList.remove('open'); toggle.setAttribute('aria-expanded', 'false'); }
-    });
-    var scenes = document.getElementById('scenes');
-    if (scenes) {
-      var tabs = Array.prototype.slice.call(scenes.querySelectorAll('.scene-tab'));
-      var panels = Array.prototype.slice.call(scenes.querySelectorAll('.scene-panel'));
-      var current = 0, timer = null;
-      var show = function (i, focus) {
-        current = (i + tabs.length) % tabs.length;
-        tabs.forEach(function (t, k) {
-          var on = k === current;
-          t.setAttribute('aria-selected', String(on));
-          t.setAttribute('tabindex', on ? '0' : '-1');
-          t.classList.toggle('is-active', on);
-          panels[k].hidden = !on;
-        });
-        if (focus) tabs[current].focus();
-      };
-      var stop = function () { if (timer) { clearInterval(timer); timer = null; scenes.classList.remove('auto'); } };
-      var settle = function () { stop(); scenes.classList.add('done'); };
-      tabs.forEach(function (t, k) {
-        t.addEventListener('click', function () { settle(); show(k); });
-        t.addEventListener('keydown', function (e) {
-          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); settle(); show(k + 1, true); }
-          if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); settle(); show(k - 1, true); }
-        });
-      });
-      show(0);
-      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!reduce && 'IntersectionObserver' in window) {
-        var io = new IntersectionObserver(function (entries) {
-          if (entries[0].isIntersecting && !timer && !scenes.classList.contains('done')) {
-            scenes.classList.add('auto');
-            timer = setInterval(function () {
-              if (current === tabs.length - 1) { stop(); scenes.classList.add('done'); return; }
-              show(current + 1);
-            }, 5000);
-          } else if (!entries[0].isIntersecting) { stop(); }
-        }, { threshold: 0.5 });
-        io.observe(scenes);
-        scenes.addEventListener('pointerenter', settle);
-      }
-    }
-    document.querySelectorAll('[data-copy]').forEach(function (button) {
-      button.addEventListener('click', function () {
-        var pre = document.getElementById(button.getAttribute('data-copy'));
-        var lines = pre.innerText.split('\n').filter(function (l) { return l.trim() && l.trim()[0] !== '#' && l.trim()[0] !== '>'; })
-          .map(function (l) { return l.replace(/^\$\s*/, ''); });
-        var text = lines.join('\n');
-        var done = function () { var old = button.textContent; button.textContent = 'Copied'; setTimeout(function () { button.textContent = old; }, 1600); };
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
-        else { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (err) {} document.body.removeChild(ta); done(); }
-      });
-    });
-  })();
-</script>
+  <footer><div class="wrap"><a class="brand" href="#people"><span class="mark" aria-hidden="true">◈</span>IntentOS</a><span>Make intent explicit. Make review easier.</span></div></footer>
 </body>
 </html>

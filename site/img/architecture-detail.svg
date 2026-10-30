@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 604" role="img" aria-labelledby="diag-title diag-desc" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Inter, Roboto, sans-serif">
+          <title id="diag-title">How IntentOS works, from onboarding to the merge gate and the guardian</title>
+          <desc id="diag-desc">Three lanes: people, the IntentOS plugin, and model threads, over a band of trusted state. Onboard indexes the repository; a mining model proposes rules from an evidence digest, IntentOS checks each reference and runs each test, and the ones that pass are written into the policy; a person can review and edit them, but does not have to. For each ticket a QA thread fills the gaps the repository can answer, flags contradictions with the policy and sends the remaining questions back to the team; once the ticket is ready, a planner proposes a contract the compiler validates, an implementer works in a git worktree, verification runs hidden tests and deterministic checks from a snapshot with bounded repairs, the merge gate requires approvals, CI, a sync check and merged-result verification before fast-forwarding main, and the guardian bisects a red main and opens a validated undo PR.</desc>
+          <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#686c66"/></marker><marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#315e50"/></marker></defs>
+          <rect width="1280" height="604" fill="#fff"/>
+          <rect x="124" y="172" width="1148" height="204" rx="10" fill="#f5f6f2"/>
+          <rect x="124" y="494" width="1148" height="58" rx="10" fill="#e8f0ec" stroke="#315e50" stroke-opacity="0.35"/>
+          <text x="12" y="108" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">People</text>
+          <text x="12" y="123" font-size="10" fill="#686c66" text-anchor="start">owner; review optional</text>
+          <text x="12" y="274" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">IntentOS</text>
+          <text x="12" y="289" font-size="10" fill="#686c66" text-anchor="start">the plugin</text>
+          <text x="12" y="432" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">Models</text>
+          <text x="12" y="447" font-size="10" fill="#686c66" text-anchor="start">Codex threads</text>
+          <text x="12" y="521" font-size="12" fill="#20211f" text-anchor="start" font-weight="600">Trusted state</text>
+          <text x="12" y="536" font-size="10" fill="#686c66" text-anchor="start">outside the repo</text>
+          <path d="M132,36 v-6 H544 v6" fill="none" stroke="#dedfd9" stroke-width="1.2"/>
+          <text x="338" y="22" font-size="10.5" fill="#686c66" text-anchor="middle" font-weight="600">Learn the repository · once, then per revision</text>
+          <path d="M558,36 v-6 H970 v6" fill="none" stroke="#dedfd9" stroke-width="1.2"/>
+          <text x="764" y="22" font-size="10.5" fill="#686c66" text-anchor="middle" font-weight="600">Every ticket</text>
+          <path d="M984,36 v-6 H1254 v6" fill="none" stroke="#dedfd9" stroke-width="1.2"/>
+          <text x="1119" y="22" font-size="10.5" fill="#686c66" text-anchor="middle" font-weight="600">Main</text>
+          <text x="132" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">01</text>
+          <text x="154" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Onboard</text>
+          <text x="274" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">02</text>
+          <text x="296" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Mine</text>
+          <text x="416" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">03</text>
+          <text x="438" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Policy</text>
+          <text x="558" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">04</text>
+          <text x="580" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Contract</text>
+          <text x="700" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">05</text>
+          <text x="722" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Implement</text>
+          <text x="842" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">06</text>
+          <text x="864" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Verify</text>
+          <text x="984" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">07</text>
+          <text x="1006" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Merge</text>
+          <text x="1126" y="60" font-size="10" fill="#315e50" text-anchor="start" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">08</text>
+          <text x="1148" y="60" font-size="12.5" fill="#20211f" text-anchor="start" font-weight="600">Guard</text>
+          <rect x="132" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
+          <text x="196" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">“Set up IntentOS</text>
+          <text x="196" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">for this repository”</text>
+          <rect x="416" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="480" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Optional review</text>
+          <text x="480" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">in the dashboard</text>
+          <rect x="558" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
+          <text x="622" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Ticket</text>
+          <text x="622" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">unfinished → planned</text>
+          <rect x="984" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
+          <text x="1048" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Approvers</text>
+          <text x="1048" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">named, head-bound</text>
+          <rect x="1126" y="78" width="128" height="64" rx="8" fill="#fafaf8" stroke="#dedfd9" stroke-width="1"/>
+          <text x="1190" y="97" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">Undo PR</text>
+          <text x="1190" y="114" font-size="10.5" fill="#686c66" text-anchor="middle">to review, validated</text>
+          <rect x="132" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="196" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">onboard</text>
+          <text x="196" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">index the repository</text>
+          <text x="196" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">draft policy · run suite</text>
+          <rect x="274" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="338" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">mine</text>
+          <text x="338" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">tests, commits, docs</text>
+          <text x="338" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">refs exist · tests pass</text>
+          <rect x="416" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="480" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">policy</text>
+          <text x="480" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">checked rules → YAML</text>
+          <text x="480" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">review optional</text>
+          <rect x="558" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="622" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">contract</text>
+          <text x="622" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">triage: fill · ask · flag</text>
+          <text x="622" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">validated plan</text>
+          <rect x="700" y="226" width="128" height="100" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="764" y="245" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">implement</text>
+          <text x="764" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">detached worktree</text>
+          <text x="764" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">scope · sync hooks</text>
+          <rect x="842" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
+          <text x="906" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">verify</text>
+          <text x="906" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">hidden tests · AST rules</text>
+          <text x="906" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">scope · ≤ 2 repairs</text>
+          <rect x="984" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
+          <text x="1048" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">merge gate</text>
+          <text x="1048" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">tier · approvals · sync</text>
+          <text x="1048" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">merged-result verify</text>
+          <rect x="1126" y="226" width="128" height="100" rx="8" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
+          <text x="1190" y="245" font-size="12" fill="#173b31" text-anchor="middle" font-weight="600">guard</text>
+          <text x="1190" y="268" font-size="10.5" fill="#686c66" text-anchor="middle">bisect a red main</text>
+          <text x="1190" y="284" font-size="10.5" fill="#686c66" text-anchor="middle">validated undo PR</text>
+          <rect x="274" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="338" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">mining model</text>
+          <text x="338" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">a second model</text>
+          <text x="338" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">proposes rules</text>
+          <rect x="558" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="622" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">triage · planner</text>
+          <text x="622" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">read-only threads</text>
+          <text x="622" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">questions, then a plan</text>
+          <rect x="700" y="396" width="128" height="76" rx="8" fill="#fff" stroke="#dedfd9" stroke-width="1"/>
+          <text x="764" y="415" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">implementer</text>
+          <text x="764" y="438" font-size="10.5" fill="#686c66" text-anchor="middle">edits in the worktree</text>
+          <text x="764" y="454" font-size="10.5" fill="#686c66" text-anchor="middle">“tests pass” is ignored</text>
+          <rect x="842" y="396" width="412" height="76" rx="8" fill="none" stroke="#686c66" stroke-dasharray="4 3"/>
+          <text x="1048" y="422" font-size="12" fill="#20211f" text-anchor="middle" font-weight="600">No model from here on</text>
+          <text x="1048" y="448" font-size="10.5" fill="#686c66" text-anchor="middle">verification, the gate and the guardian are deterministic code</text>
+          <line x1="260" y1="276" x2="274" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <line x1="402" y1="276" x2="416" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <line x1="544" y1="276" x2="558" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <line x1="686" y1="276" x2="700" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <line x1="828" y1="276" x2="842" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <line x1="970" y1="276" x2="984" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <line x1="1112" y1="276" x2="1126" y2="276" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <path d="M870,226 v-20 H800 v20" fill="none" stroke="#315e50" stroke-width="1.2" marker-end="url(#arrA)"/>
+          <text x="835" y="201" font-size="10" fill="#315e50" text-anchor="middle" font-weight="600">repair, at most twice</text>
+          <line x1="196" y1="142" x2="196" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <line x1="466" y1="226" x2="466" y2="142" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+          <text x="460" y="190" font-size="9.5" fill="#686c66" text-anchor="end">rules</text>
+          <line x1="494" y1="142" x2="494" y2="226" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+          <text x="500" y="190" font-size="9.5" fill="#686c66" text-anchor="start">edits</text>
+          <line x1="608" y1="142" x2="608" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="602" y="190" font-size="9.5" fill="#686c66" text-anchor="end">ticket</text>
+          <line x1="636" y1="226" x2="636" y2="142" stroke="#686c66" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+          <text x="642" y="190" font-size="9.5" fill="#686c66" text-anchor="start">questions</text>
+          <line x1="1048" y1="142" x2="1048" y2="226" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="1054" y="190" font-size="9.5" fill="#686c66" text-anchor="start">approvals, if the tier asks</text>
+          <line x1="1190" y1="226" x2="1190" y2="142" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="1196" y="190" font-size="9.5" fill="#686c66" text-anchor="start">if main is red</text>
+          <line x1="324" y1="326" x2="324" y2="396" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="318" y="360" font-size="9.5" fill="#686c66" text-anchor="end">digest</text>
+          <line x1="352" y1="396" x2="352" y2="326" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="358" y="360" font-size="9.5" fill="#686c66" text-anchor="start">rules + tests</text>
+          <line x1="608" y1="326" x2="608" y2="396" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="602" y="360" font-size="9.5" fill="#686c66" text-anchor="end">evidence</text>
+          <line x1="636" y1="396" x2="636" y2="326" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="642" y="360" font-size="9.5" fill="#686c66" text-anchor="start">plan</text>
+          <line x1="750" y1="326" x2="750" y2="396" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="744" y="360" font-size="9.5" fill="#686c66" text-anchor="end">contract</text>
+          <line x1="778" y1="396" x2="778" y2="326" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="784" y="360" font-size="9.5" fill="#686c66" text-anchor="start">diff</text>
+          <path d="M260,310 H267 V492" fill="none" stroke="#315e50" stroke-width="1.2" marker-end="url(#arrA)"/>
+          <text x="271" y="486" font-size="9.5" fill="#315e50" text-anchor="start" font-weight="600">writes index</text>
+          <path d="M416,310 H409 V492" fill="none" stroke="#315e50" stroke-width="1.2" marker-end="url(#arrA)"/>
+          <text x="413" y="486" font-size="9.5" fill="#315e50" text-anchor="start" font-weight="600">writes policy + hidden test</text>
+          <path d="M551,494 V310 H560" fill="none" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
+          <text x="555" y="486" font-size="9.5" fill="#315e50" text-anchor="start" font-weight="600">reads index + policy</text>
+          <path d="M835,494 V310 H844" fill="none" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
+          <text x="831" y="486" font-size="9.5" fill="#315e50" text-anchor="end" font-weight="600">reads policy + hidden tests</text>
+          <text x="138" y="512" font-size="11" fill="#173b31" text-anchor="start" font-weight="700">Trusted state</text>
+          <text x="228" y="512" font-size="10.5" fill="#173b31" text-anchor="start">outside the repository · written only by IntentOS after its checks</text>
+          <rect x="138" y="522" width="176" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
+          <text x="226" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">repository model @ commit</text>
+          <rect x="322" y="522" width="359" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
+          <text x="502" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">policy YAML: invariants · architecture rules · decisions</text>
+          <rect x="689" y="522" width="91" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
+          <text x="734" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">hidden tests</text>
+          <rect x="788" y="522" width="176" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
+          <text x="876" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">precedents (tickets → PRs)</text>
+          <rect x="972" y="522" width="91" height="20" rx="10" fill="#fff" stroke="#315e50" stroke-opacity="0.5"/>
+          <text x="1018" y="536" font-size="10.5" fill="#173b31" text-anchor="middle">merge ledger</text>
+          <line x1="132" y1="582" x2="166" y2="582" stroke="#686c66" stroke-width="1.2" marker-end="url(#arr)"/>
+          <text x="174" y="586" font-size="10.5" fill="#686c66" text-anchor="start">flow</text>
+          <line x1="222" y1="582" x2="256" y2="582" stroke="#315e50" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrA)"/>
+          <text x="264" y="586" font-size="10.5" fill="#686c66" text-anchor="start">reads trusted state</text>
+          <rect x="392" y="574" width="22" height="16" rx="4" fill="#e8f0ec" stroke="#315e50" stroke-width="1.4"/>
+          <text x="422" y="586" font-size="10.5" fill="#686c66" text-anchor="start">where a change is judged</text>
+          <rect x="572" y="574" width="22" height="16" rx="4" fill="none" stroke="#686c66" stroke-dasharray="4 3"/>
+          <text x="602" y="586" font-size="10.5" fill="#686c66" text-anchor="start">deterministic, no model</text>
+          </svg>
